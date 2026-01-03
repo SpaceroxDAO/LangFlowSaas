@@ -1,368 +1,194 @@
-# Claude Code Universal Starter
+# Teach Charlie AI
 
-A production-ready, project-agnostic starter template for Claude Code with a minimal CORE and optional PACKS architecture.
+**Educational AI Agent Builder for Non-Technical Teams**
 
-## Philosophy
+> "We're not innovating on Langflow - we're packaging it brilliantly for a market that's desperate to learn."
 
-- **CORE stays small and stable**: 10 commands, 5 agents, 3 hooks
-- **PACKS provide specialization**: Install only what you need
-- **No project-specific code**: Generic and reusable across any project type
-- **Proven patterns**: Adapted from 8+ upstream Claude Code repositories
+## Overview
+
+Teach Charlie AI is an educational platform that uses a "Dog Trainer" metaphor to demystify AI for non-technical users. Built on Langflow, it combines live workshops with a simplified SaaS platform that teaches users AI fundamentals while helping them build production-ready agents.
+
+**Target Users**: Small business owners, marketing teams, workshop attendees, and anyone who wants to learn AI without coding.
+
+**Core Differentiator**: Education-first approach with progressive complexity reveal (3-step Q&A → Playground → Flow Canvas).
+
+## Project Status
+
+**Phase**: Discovery Complete → Ready to Build
+**Target Launch**: 5-6 weeks (MVP with 5-10 beta testers)
+**Stack**: React + Langflow + FastAPI + PostgreSQL + Clerk + DataStax
 
 ## Quick Start
 
-```bash
-# Clone or copy this starter
-git clone <this-repo> my-project
-cd my-project
+### Prerequisites
+- Node.js 18+
+- Python 3.9+
+- Docker Desktop (for local PostgreSQL)
+- Git
 
-# Bootstrap the project
-./scripts/bootstrap.sh
+### Setup
 
-# Check environment
-/ops/doctor
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/SpaceroxDAO/LangFlowSaas.git
+   cd LangFlowSaas
+   ```
 
-# Optional: Enable packs for your stack
-./scripts/enable-pack.sh webapp        # For frontend projects
-./scripts/enable-pack.sh backend-python # For Python backends
-./scripts/enable-pack.sh db-postgres   # For PostgreSQL projects
-```
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env and fill in your API keys (OpenAI, Clerk, etc.)
+   ```
 
-## What's Included
-
-### CORE (Always Enabled)
-
-**Commands (10)**:
-- `/plan/spec` - Create project specification
-- `/plan/issues` - Break down into tasks
-- `/setup/mcp` - Configure MCP servers
-- `/setup/permissions` - Configure permissions
-- `/build/feature` - Build a complete feature
-- `/build/test` - Run tests and fix failures
-- `/docs/update` - Update documentation
-- `/ops/worktree-new` - Create git worktree
-- `/ops/worktree-clean` - Remove git worktrees
-- `/ops/doctor` - Diagnose environment
-
-**Agents (5)**:
-- `core-architect` - Design architecture
-- `core-implementer` - Write code
-- `core-reviewer` - Review code
-- `core-security` - Security audits
-- `core-docs` - Documentation
-
-**Hooks (3)**:
-- `pre-tool-use` - Safety warnings
-- `post-edit` - Auto-format (if tools exist)
-- `pre-commit` - Run tests before commit
-
-### PACKS (Optional)
-
-| Pack | Description |
-|------|-------------|
-| `core-workflows` | PSB workflow integration |
-| `webapp` | Frontend development tools |
-| `backend-python` | Python backend utilities |
-| `db-postgres` | PostgreSQL integration |
-| `browser-testing` | E2E testing with Playwright |
-| `session-tooling` | Session management |
-| `skills-advanced` | Advanced commands |
-| `subagents-library` | 20+ specialized agents |
-| `lsp` | LSP integration templates |
+3. **Fork and setup Langflow** (Coming Soon)
+   ```bash
+   # Instructions for forking Langflow and setting up local dev environment
+   # Will be added in Week 1 of development
+   ```
 
 ## Documentation
 
-Comprehensive guides in `docs/`:
+Comprehensive documentation in `docs/`:
 
-- **[Workflows](docs/WORKFLOWS.md)** - PSB workflow, single-feature, multi-agent patterns
-- **[Permissions & Hooks](docs/PERMISSIONS_AND_HOOKS.md)** - Configure safety and automation
-- **[MCP Guide](docs/MCP_GUIDE.md)** - Database, browser, and service integrations
-- **[Plugins & Packs](docs/PLUGINS_AND_PACKS.md)** - Extend functionality
-- **[IDE Setup](docs/IDE_SETUP.md)** - VS Code, Cursor, JetBrains, Vim
+- **[00_PROJECT_SPEC.md](docs/00_PROJECT_SPEC.md)** - Product requirements, personas, user journeys, success criteria
+- **[01_ARCHITECTURE.md](docs/01_ARCHITECTURE.md)** - Technical architecture, database schema, API design
+- **[02_CHANGELOG.md](docs/02_CHANGELOG.md)** - Major decisions, rationale, alternatives considered
+- **[03_STATUS.md](docs/03_STATUS.md)** - Current status, risks, next steps, weekly roadmap
+- **[claude.md](claude.md)** - Instructions for Claude Code (coding guidelines, project conventions)
 
-## Project Templates
+**Start here**: Read `docs/00_PROJECT_SPEC.md` for product context, then `docs/01_ARCHITECTURE.md` for technical details.
 
-Use bootstrap to initialize project-specific docs:
+## Architecture
 
-```bash
-./scripts/bootstrap.sh
-```
-
-Creates:
-- `docs/00_PROJECT_SPEC.md` - Product & engineering requirements
-- `docs/01_ARCHITECTURE.md` - Technical architecture
-- `docs/02_CHANGELOG.md` - Release history
-- `docs/03_STATUS.md` - Current project status
-
-## Workflows
-
-### PSB Workflow (Plan → Setup → Build)
-
-```bash
-# 1. Plan
-/plan/spec              # Define requirements
-/plan/issues            # Break into tasks
-
-# 2. Setup
-/setup/mcp              # Configure integrations
-/setup/permissions      # Set permissions
-
-# 3. Build
-/build/feature [name]   # Implement feature
-/build/test             # Verify with tests
-/docs/update            # Update documentation
-```
-
-### Single Feature Workflow
-
-```bash
-# Quick feature implementation
-/build/feature "add user authentication"
-
-# Review and test
-/build/test
-
-# Update docs and commit
-/docs/update
-```
-
-### Multi-Agent Worktree Workflow
-
-```bash
-# Create parallel workspaces
-/ops/worktree-new feature-a
-/ops/worktree-new feature-b
-
-# Work on multiple features simultaneously
-# Each worktree has independent file state
-
-# Clean up when done
-/ops/worktree-clean feature-a
-```
-
-## Pack Management
-
-```bash
-# List available packs
-ls packs/
-
-# View pack documentation
-cat packs/webapp/README.md
-
-# Enable a pack
-./scripts/enable-pack.sh webapp
-
-# Verify installation
-/ops/doctor
-```
-
-## MCP Integration
-
-Example `.mcp.json` configuration:
-
-```json
-{
-  "mcpServers": {
-    "postgres": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres"],
-      "env": {"DATABASE_URL": "${DATABASE_URL}"}
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-playwright"]
-    }
-  }
-}
-```
-
-See `.mcp.json.example` and `docs/MCP_GUIDE.md` for details.
-
-## Hooks Configuration
-
-### Safe Mode (Default)
-Hooks warn but don't block:
-
-```json
-{
-  "features": {
-    "strictHooks": false,
-    "autoFormat": false
-  }
-}
-```
-
-### Strict Mode
-Hooks block on failures (recommended for production):
-
-```json
-{
-  "features": {
-    "strictHooks": true,
-    "autoFormat": true
-  }
-}
-```
-
-Configure in `.claude/settings.local.json`.
-
-## Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `bootstrap.sh` | Initialize project from templates |
-| `enable-pack.sh` | Enable optional packs |
-| `doctor.sh` | Diagnose environment |
-| `smoke.sh` | Validate structure |
-| `worktree-new.sh` | Create git worktree |
-| `worktree-clean.sh` | Remove git worktrees |
-| `update-upstreams.sh` | Check/update upstream sources |
-
-All scripts have PowerShell (.ps1) versions for Windows.
-
-## Local Marketplace
-
-Browse and install plugins from the local marketplace:
-
-```bash
-# Add marketplace
-claude plugins add-marketplace ./marketplaces/local-marketplace
-
-# Browse plugins
-claude plugins search
-
-# Install plugin
-claude plugins install core-workflows
-```
-
-## Upstream Attribution
-
-This starter adapts content from 8 upstream repositories (see `upstreams.lock.json`):
-
-- [claude-starter-kit](https://github.com/serpro69/claude-starter-kit) - Patterns
-- [cclsp](https://github.com/ktnyt/cclsp) - LSP integration
-- [claude-code-tools](https://github.com/pchalasani/claude-code-tools) - Session tools
-- [raintree-claude-starter](https://github.com/Raintree-Technology/claude-starter) - Skills library
-- [wshobson/agents](https://github.com/wshobson/agents) - Agent patterns
-- [claude-marketplace](https://github.com/claude-market/marketplace) - Marketplace structure
-- [compound-engineering](https://github.com/EveryInc/compound-engineering-plugin) - Workflows
-- [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) - Conventions
-
-All upstream commits are pinned in `upstreams.lock.json` for reproducibility.
-
-## Project Structure
+### High-Level Overview
 
 ```
-claude-code-universal-starter/
-├─ .claude/                 # CORE configuration
-│  ├─ agents/              # 5 core agents
-│  ├─ commands/            # 10 core commands
-│  ├─ hooks/               # 3 core hooks
-│  ├─ settings.json        # Default settings
-│  └─ settings.local.json.example
-├─ docs/                   # Documentation
-│  ├─ 00_PROJECT_SPEC.template.md
-│  ├─ 01_ARCHITECTURE.template.md
-│  ├─ 02_CHANGELOG.template.md
-│  ├─ 03_STATUS.template.md
-│  ├─ WORKFLOWS.md
-│  ├─ PERMISSIONS_AND_HOOKS.md
-│  ├─ MCP_GUIDE.md
-│  ├─ PLUGINS_AND_PACKS.md
-│  └─ IDE_SETUP.md
-├─ scripts/                # Utility scripts
-├─ packs/                  # Optional packs
-├─ marketplaces/           # Local plugin marketplace
-├─ .vscode/                # VS Code configuration
-├─ upstreams.lock.json     # Upstream commit SHAs
-├─ .mcp.json.example       # MCP configuration template
-└─ .worktreeinclude        # Worktree shared files
-
+┌─────────────────────────────────────────────────────┐
+│ Frontend (React + React Flow)                       │
+│  • Landing Page                                     │
+│  • 3-Step Q&A Onboarding (Who? Rules? Tricks?)     │
+│  • Playground (Chat Interface)                      │
+│  • Flow Canvas (Langflow UI - unlockable)          │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│ Backend (FastAPI + Python)                          │
+│  • Template Mapping Engine (Q&A → Flow)            │
+│  • Agent Runtime (Langflow)                         │
+│  • Authentication (Clerk)                           │
+└─────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│ Database (PostgreSQL + pgvector)                    │
+│  • Users, Agents, Conversations, Messages           │
+└─────────────────────────────────────────────────────┘
 ```
 
-## Health Checks
+### Key Features (MVP)
 
-```bash
-# Full environment diagnostic
-/ops/doctor
+- ✅ **3-Step Q&A Onboarding**: Simple questions to create an agent (no code, no technical jargon)
+- ✅ **Playground**: Test agents in a ChatGPT-style interface
+- ✅ **Agent Persistence**: Save and load agents
+- ⏸️ **Flow Canvas Unlock**: See underlying Langflow nodes (Phase 2)
+- ⏸️ **Multi-Tenancy**: Org management, team features (Phase 2)
 
-# Validate repository structure
-./scripts/smoke.sh
+### Technology Stack
 
-# Check for upstream updates
-./scripts/update-upstreams.sh check
-```
+| Layer | Technology | Rationale |
+|-------|------------|-----------|
+| Frontend | React + React Flow | Inherit from Langflow, proven for node-based UIs |
+| Backend | FastAPI (Python) | Langflow's backend, great async support |
+| Database | PostgreSQL + pgvector | Production-ready, vector support for future RAG |
+| Auth | Clerk | Easy integration, org management for Phase 2 |
+| Hosting | DataStax (RAGStack AI) | Langflow-optimized, low ops overhead |
+| Testing | Playwright | E2E testing, reliable for critical flows |
 
-## Best Practices
+## Development Roadmap
 
-### Do's
-- ✅ Run `/ops/doctor` after setup and changes
-- ✅ Use worktrees for parallel feature development
-- ✅ Enable only the packs you need
-- ✅ Review pack code before enabling
-- ✅ Keep `strictHooks: false` during development
-- ✅ Enable `strictHooks: true` for production
+### Week 1: Local Setup
+- Fork Langflow repository
+- Install dependencies (Node, Python)
+- Run Langflow locally
+- Review DataStax RAGStack AI Langflow deployment
 
-### Don'ts
-- ❌ Don't modify CORE files directly (use packs)
-- ❌ Don't commit secrets in `.mcp.json` or `.env`
-- ❌ Don't install all packs at once
-- ❌ Don't skip the bootstrap step
-- ❌ Don't delete `upstreams.lock.json`
+### Week 2-3: Custom Onboarding Layer
+- Build 3-step Q&A React component
+- Build template mapping FastAPI endpoint
+- Build playground chat UI
+- Test end-to-end locally
 
-## Troubleshooting
+### Week 3-4: Auth + Database
+- Integrate Clerk authentication
+- Set up PostgreSQL locally (Docker)
+- Implement database schema
+- Test auth flow
 
-### Setup Issues
-```bash
-# Re-run bootstrap
-./scripts/bootstrap.sh
+### Week 5-6: Testing + Deployment
+- Write 3 critical E2E tests (Playwright)
+- Deploy to DataStax
+- Manual smoke testing
+- Invite 5-10 beta testers
+- **Launch MVP** 🚀
 
-# Check environment
-/ops/doctor
+## Success Criteria (Year 1)
 
-# Validate structure
-./scripts/smoke.sh
-```
+**User Metrics**:
+- Signups: 100-500 total users
+- Activation Rate: >70% (create first agent)
+- Retention: >30% (return 3+ times)
 
-### Pack Issues
-```bash
-# List what's installed
-ls .claude/commands/ .claude/agents/ .claude/hooks/
+**Business Metrics**:
+- Paying Customers: TBD (freemium conversion)
+- MRR: $5K-$25K by end of Year 1
+- Workshops: 5+ successful workshops
 
-# Re-enable pack
-./scripts/enable-pack.sh [pack-name]
-```
+**Technical Metrics**:
+- Page Load: < 2 seconds
+- Agent Response: < 3 seconds (LLM)
+- Uptime: Best effort (no SLA for MVP)
 
-### Hook Issues
-```bash
-# Disable hooks temporarily
-# In .claude/settings.local.json:
-{"hooks": {"enabled": false}}
+## Key Decisions
 
-# Or disable strict mode
-{"features": {"strictHooks": false}}
-```
+1. **Wrapper over Deep Fork** - Lightweight customization of Langflow, not a deep fork
+2. **Defer Multi-Tenancy to Phase 2** - Single-user agents for MVP (reduce complexity)
+3. **Template Mapping (Rule-Based)** - Use predefined templates, not AI-generated flows
+4. **3-Step Q&A Before Canvas** - Educational onboarding flow (progressive complexity)
+5. **E2E Testing Priority** - Playwright tests, defer unit tests to Phase 2
+
+See [docs/02_CHANGELOG.md](docs/02_CHANGELOG.md) for full rationale.
 
 ## Contributing
 
-To add new packs or improve existing ones:
+This is currently a solo project by Adam (founder). If you're interested in contributing:
 
-1. Fork this repository
-2. Create new pack in `packs/my-pack/`
-3. Test with `./scripts/enable-pack.sh my-pack`
-4. Document in pack's README.md
-5. Submit pull request
+1. Read the documentation in `docs/`
+2. Check `docs/03_STATUS.md` for current status and next steps
+3. Open an issue or reach out
+
+## References
+
+- [Langflow GitHub](https://github.com/logspace-ai/langflow)
+- [RAGStack AI Langflow (DataStax Deployment)](https://github.com/datastax/ragstack-ai-langflow)
+- [Langflow Docs](https://docs.langflow.org/)
+- [React Flow Docs](https://reactflow.dev/)
+- [FastAPI Docs](https://fastapi.tiangolo.com/)
+- [Clerk Docs](https://clerk.com/docs)
 
 ## License
 
-MIT License - feel free to use this starter for any project.
-
-## Support
-
-- Documentation: `docs/` directory
-- Issues: File an issue in this repository
-- Upstream sources: See `upstreams.lock.json`
+MIT License - See LICENSE file for details
 
 ---
 
-Built with ❤️ using patterns from the Claude Code community.
+**Built with**:
+- Langflow (AI agent engine)
+- React + React Flow (UI)
+- FastAPI (backend)
+- PostgreSQL + pgvector (database)
+- Clerk (authentication)
+- DataStax (hosting)
+
+**Founder**: Adam Boyle
+**Repository**: https://github.com/SpaceroxDAO/LangFlowSaas
