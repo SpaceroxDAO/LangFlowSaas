@@ -1,0 +1,102 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: teachcharlie-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-teachcharlie}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teachcharlie-network
+
+  # Langflow AI Agent Engine
+  langflow:
+    image: langflowai/langflow:latest
+    container_name: teachcharlie-langflow
+    environment:
+      # Database configuration
+      LANGFLOW_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/langflow
+      # Server configuration
+      LANGFLOW_HOST: 0.0.0.0
+      LANGFLOW_PORT: 7860
+      LANGFLOW_WORKERS: 1
+      LANGFLOW_CONFIG_DIR: /app/langflow
+      # Authentication - trusted mode (our backend handles auth)
+      LANGFLOW_AUTO_LOGIN: "true"
+      # API key for backend-to-langflow communication
+      LANGFLOW_API_KEY: ${LANGFLOW_API_KEY:-dev-langflow-api-key}
+      # LLM API Keys (passed through to flows)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Security
+      LANGFLOW_SECRET_KEY: ${LANGFLOW_SECRET_KEY:-dev-secret-key-change-in-production}
+    ports:
+      - "7860:7860"
+    volumes:
+      - langflow_data:/app/langflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/api/v1/health_check"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - teachcharlie-network
+
+  # Custom FastAPI Backend
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    container_name: teachcharlie-backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/teachcharlie
+      # Langflow connection
+      LANGFLOW_API_URL: http://langflow:7860
+      LANGFLOW_API_KEY: ${LANGFLOW_API_KEY:-dev-langflow-api-key}
+      # Clerk authentication
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
+      CLERK_JWT_ISSUER: ${CLERK_JWT_ISSUER:-}
+      # Server
+      HOST: 0.0.0.0
+      PORT: 8000
+      DEBUG: ${DEBUG:-true}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src/backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      langflow:
+        condition: service_healthy
+    networks:
+      - teachcharlie-network
+    # Development: hot reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  teachcharlie-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  langflow_data:

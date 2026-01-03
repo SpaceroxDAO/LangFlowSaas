@@ -1,0 +1,309 @@
+{
+  "name": "Support Bot Template",
+  "description": "A simple support bot template with ChatInput, Prompt, OpenAI LLM, and ChatOutput",
+  "is_component": false,
+  "data": {
+    "nodes": [
+      {
+        "id": "ChatInput-tcai1",
+        "type": "genericNode",
+        "position": {
+          "x": 100,
+          "y": 200
+        },
+        "data": {
+          "id": "ChatInput-tcai1",
+          "type": "ChatInput",
+          "node": {
+            "base_classes": ["Message"],
+            "display_name": "Chat Input",
+            "description": "Get chat inputs from the user",
+            "documentation": "",
+            "template": {
+              "_type": "Component",
+              "input_value": {
+                "_input_type": "MessageTextInput",
+                "display_name": "Text",
+                "info": "Message to be passed as input",
+                "input_types": ["Message"],
+                "name": "input_value",
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "display_name": "Store Messages",
+                "info": "Store the message in the history",
+                "name": "should_store_message",
+                "type": "bool",
+                "value": true
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "display_name": "Sender Type",
+                "info": "Type of sender",
+                "name": "sender",
+                "options": ["Machine", "User"],
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "display_name": "Sender Name",
+                "info": "Name of the sender",
+                "name": "sender_name",
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "display_name": "Session ID",
+                "info": "Session ID for the message",
+                "name": "session_id",
+                "type": "str",
+                "value": ""
+              }
+            },
+            "outputs": [
+              {
+                "display_name": "Message",
+                "method": "message_response",
+                "name": "message",
+                "types": ["Message"]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "Prompt-tcai2",
+        "type": "genericNode",
+        "position": {
+          "x": 450,
+          "y": 100
+        },
+        "data": {
+          "id": "Prompt-tcai2",
+          "type": "Prompt",
+          "node": {
+            "base_classes": ["Message"],
+            "display_name": "Prompt",
+            "description": "Create a prompt message with a template",
+            "documentation": "",
+            "template": {
+              "_type": "Component",
+              "template": {
+                "_input_type": "PromptInput",
+                "display_name": "Template",
+                "info": "The prompt template. Use {variable} for variables.",
+                "name": "template",
+                "type": "prompt",
+                "value": "You are a helpful assistant.\n\nRespond to the user's message:\n{user_message}"
+              }
+            },
+            "outputs": [
+              {
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "types": ["Message"]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "OpenAIModel-tcai3",
+        "type": "genericNode",
+        "position": {
+          "x": 800,
+          "y": 200
+        },
+        "data": {
+          "id": "OpenAIModel-tcai3",
+          "type": "OpenAIModel",
+          "node": {
+            "base_classes": ["Message", "LanguageModel"],
+            "display_name": "OpenAI",
+            "description": "Generates text using OpenAI LLMs",
+            "documentation": "",
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "display_name": "OpenAI API Key",
+                "info": "The OpenAI API Key",
+                "name": "api_key",
+                "password": true,
+                "type": "str",
+                "value": ""
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "display_name": "Model Name",
+                "info": "The name of the OpenAI model to use",
+                "name": "model_name",
+                "options": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
+              "temperature": {
+                "_input_type": "FloatInput",
+                "display_name": "Temperature",
+                "info": "Controls randomness (0-1)",
+                "name": "temperature",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.1
+                },
+                "type": "float",
+                "value": 0.7
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "display_name": "Max Tokens",
+                "info": "Maximum number of tokens to generate",
+                "name": "max_tokens",
+                "type": "int",
+                "value": 1024
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "display_name": "Input",
+                "info": "The input to the model",
+                "input_types": ["Message"],
+                "name": "input_value",
+                "type": "str",
+                "value": ""
+              },
+              "system_message": {
+                "_input_type": "MessageTextInput",
+                "display_name": "System Message",
+                "info": "System message to send to the model",
+                "name": "system_message",
+                "type": "str",
+                "value": ""
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "display_name": "Stream",
+                "info": "Stream the response",
+                "name": "stream",
+                "type": "bool",
+                "value": true
+              }
+            },
+            "outputs": [
+              {
+                "display_name": "Text",
+                "method": "text_response",
+                "name": "text_output",
+                "types": ["Message"]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "ChatOutput-tcai4",
+        "type": "genericNode",
+        "position": {
+          "x": 1150,
+          "y": 200
+        },
+        "data": {
+          "id": "ChatOutput-tcai4",
+          "type": "ChatOutput",
+          "node": {
+            "base_classes": ["Message"],
+            "display_name": "Chat Output",
+            "description": "Display a chat message in the Playground",
+            "documentation": "",
+            "template": {
+              "_type": "Component",
+              "input_value": {
+                "_input_type": "MessageInput",
+                "display_name": "Text",
+                "info": "Message to be displayed",
+                "input_types": ["Message"],
+                "name": "input_value",
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "display_name": "Store Messages",
+                "info": "Store the message in the history",
+                "name": "should_store_message",
+                "type": "bool",
+                "value": true
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "display_name": "Sender Type",
+                "info": "Type of sender",
+                "name": "sender",
+                "options": ["Machine", "User"],
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "display_name": "Sender Name",
+                "info": "Name of the sender",
+                "name": "sender_name",
+                "type": "str",
+                "value": "Charlie"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "display_name": "Session ID",
+                "info": "Session ID for the message",
+                "name": "session_id",
+                "type": "str",
+                "value": ""
+              }
+            },
+            "outputs": [
+              {
+                "display_name": "Message",
+                "method": "message_response",
+                "name": "message",
+                "types": ["Message"]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-input-to-prompt",
+        "source": "ChatInput-tcai1",
+        "target": "Prompt-tcai2",
+        "sourceHandle": "{\"dataType\":\"ChatInput\",\"id\":\"ChatInput-tcai1\",\"name\":\"message\",\"output_types\":[\"Message\"]}",
+        "targetHandle": "{\"fieldName\":\"user_message\",\"id\":\"Prompt-tcai2\",\"inputTypes\":[\"Message\"],\"type\":\"str\"}"
+      },
+      {
+        "id": "edge-prompt-to-llm",
+        "source": "Prompt-tcai2",
+        "target": "OpenAIModel-tcai3",
+        "sourceHandle": "{\"dataType\":\"Prompt\",\"id\":\"Prompt-tcai2\",\"name\":\"prompt\",\"output_types\":[\"Message\"]}",
+        "targetHandle": "{\"fieldName\":\"input_value\",\"id\":\"OpenAIModel-tcai3\",\"inputTypes\":[\"Message\"],\"type\":\"str\"}"
+      },
+      {
+        "id": "edge-llm-to-output",
+        "source": "OpenAIModel-tcai3",
+        "target": "ChatOutput-tcai4",
+        "sourceHandle": "{\"dataType\":\"OpenAIModel\",\"id\":\"OpenAIModel-tcai3\",\"name\":\"text_output\",\"output_types\":[\"Message\"]}",
+        "targetHandle": "{\"fieldName\":\"input_value\",\"id\":\"ChatOutput-tcai4\",\"inputTypes\":[\"Message\"],\"type\":\"str\"}"
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 0.8
+    }
+  }
+}
