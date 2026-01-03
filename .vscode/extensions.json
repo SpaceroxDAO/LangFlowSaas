@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "anthropics.claude-code",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "eamodio.gitlens",
+    "editorconfig.editorconfig"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres"
+      ],
+      "env": {
+        "POSTGRES_URL": "${DATABASE_URL}"
+      },
+      "disabled": true,
+      "comment": "PostgreSQL database integration. Set DATABASE_URL in .env and enable this."
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-playwright"
+      ],
+      "disabled": true,
+      "comment": "Browser automation for testing and scraping. Enable for E2E tests."
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "./data.db"
+      ],
+      "disabled": true,
+      "comment": "SQLite database integration. Good for local development."
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "disabled": true,
+      "comment": "Advanced file operations. Usually not needed."
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "."
+      ],
+      "disabled": true,
+      "comment": "Advanced git operations. Enable if needed."
+    }
+  },
+  "comment": "Copy this file to .mcp.json and enable the servers you need. Set disabled: false to enable. Configure environment variables in .env file. See docs/MCP_GUIDE.md for details."
+}

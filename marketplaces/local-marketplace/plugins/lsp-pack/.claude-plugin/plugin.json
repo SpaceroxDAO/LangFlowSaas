@@ -1,0 +1,14 @@
+{
+  "name": "lsp-pack",
+  "version": "1.0.0",
+  "description": "Language Server Protocol integration templates and documentation",
+  "author": "Claude Code Universal Starter",
+  "homepage": "https://github.com/your-org/claude-code-universal-starter",
+  "entrypoint": ".claude/",
+  "dependencies": [],
+  "provides": {
+    "commands": ["lsp-setup"],
+    "agents": [],
+    "hooks": []
+  }
+}

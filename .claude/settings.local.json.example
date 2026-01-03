@@ -1,0 +1,23 @@
+{
+  "description": "Local overrides - copy this to settings.local.json and customize",
+
+  "features": {
+    "strictHooks": true,
+    "verboseLogs": true
+  },
+
+  "permissions": {
+    "bash": {
+      "allowedCommands": [
+        "npm run *",
+        "pnpm *",
+        "pytest *",
+        "docker ps"
+      ]
+    }
+  },
+
+  "agents": {
+    "defaultModel": "opus"
+  }
+}

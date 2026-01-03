@@ -1,0 +1,16 @@
+{
+  "name": "db-postgres",
+  "version": "1.0.0",
+  "description": "PostgreSQL integration and utilities",
+  "author": "Claude Code Universal Starter",
+  "dependencies": {
+    "core": ">=1.0.0"
+  },
+  "adds": {
+    "commands": ["db-migrate", "db-query"],
+    "agents": ["db-architect"],
+    "hooks": []
+  },
+  "conflicts": [],
+  "mcpServers": ["postgres"]
+}

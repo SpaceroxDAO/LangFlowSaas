@@ -1,0 +1,17 @@
+{
+  "name": "subagents-library",
+  "version": "1.0.0",
+  "description": "Catalog of specialized agents (not installed by default)",
+  "author": "Claude Code Universal Starter",
+  "dependencies": {
+    "core": ">=1.0.0"
+  },
+  "adds": {
+    "commands": [],
+    "agents": [],
+    "hooks": []
+  },
+  "conflicts": [],
+  "mcpServers": [],
+  "note": "This pack provides a catalog in catalog/ subdirectory. Agents are not auto-installed."
+}
