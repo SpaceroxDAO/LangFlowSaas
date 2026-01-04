@@ -143,6 +143,7 @@ class TemplateMapper:
         Inject the system prompt into the template.
 
         This finds the Prompt component in the flow and sets its template value.
+        Preserves the {memory} placeholder for conversation history.
 
         Args:
             template: Flow template data
@@ -171,7 +172,14 @@ class TemplateMapper:
                     .get("template", {})
                 )
                 if template_field:
-                    template_field["value"] = system_prompt
+                    # Create prompt with system instructions and memory placeholder
+                    full_prompt = f"""{system_prompt}
+
+Use markdown to format your answer when appropriate.
+
+Conversation History:
+{{memory}}"""
+                    template_field["value"] = full_prompt
                     break
 
         return flow_data

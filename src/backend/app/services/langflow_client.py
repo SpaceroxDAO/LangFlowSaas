@@ -38,14 +38,32 @@ class LangflowClient:
         self.base_url = (base_url or settings.langflow_api_url).rstrip("/")
         self.api_key = api_key or settings.langflow_api_key
         self.timeout = timeout
+        self._access_token: Optional[str] = None
 
-    def _get_headers(self) -> Dict[str, str]:
+    async def _get_access_token(self) -> str:
+        """Get access token from Langflow auto_login endpoint."""
+        if self._access_token:
+            return self._access_token
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(f"{self.base_url}/api/v1/auto_login")
+            if response.status_code == 200:
+                data = response.json()
+                self._access_token = data.get("access_token")
+                return self._access_token
+        return None
+
+    async def _get_headers(self) -> Dict[str, str]:
         """Get headers for API requests."""
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        if self.api_key:
+        # Try auto_login token first, fall back to API key
+        token = await self._get_access_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        elif self.api_key:
             headers["x-api-key"] = self.api_key
         return headers
 
@@ -73,7 +91,7 @@ class LangflowClient:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/v1/flows/",
-                headers=self._get_headers(),
+                headers=await self._get_headers(),
                 json={
                     "name": name,
                     "data": data,
@@ -103,7 +121,7 @@ class LangflowClient:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(
                 f"{self.base_url}/api/v1/flows/{flow_id}",
-                headers=self._get_headers(),
+                headers=await self._get_headers(),
             )
 
             if response.status_code != 200:
@@ -138,7 +156,7 @@ class LangflowClient:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.patch(
                 f"{self.base_url}/api/v1/flows/{flow_id}",
-                headers=self._get_headers(),
+                headers=await self._get_headers(),
                 json=payload,
             )
 
@@ -163,7 +181,7 @@ class LangflowClient:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.delete(
                 f"{self.base_url}/api/v1/flows/{flow_id}",
-                headers=self._get_headers(),
+                headers=await self._get_headers(),
             )
 
             if response.status_code not in [200, 204]:
@@ -204,7 +222,7 @@ class LangflowClient:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/v1/run/{flow_id}",
-                headers=self._get_headers(),
+                headers=await self._get_headers(),
                 params={"stream": str(stream).lower()},
                 json={
                     "input_value": message,
@@ -255,7 +273,6 @@ class LangflowClient:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.base_url}/api/v1/health_check",
-                    headers=self._get_headers(),
                 )
                 return response.status_code == 200
         except Exception:

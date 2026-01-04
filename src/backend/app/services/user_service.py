@@ -80,12 +80,9 @@ class UserService:
         user_email = email or clerk_user.email
 
         if not user_email:
-            # If no email available, we can't create the user
-            # This shouldn't happen with properly configured Clerk
-            raise ValueError(
-                "Email not available from Clerk token. "
-                "Please configure Clerk to include email in JWT."
-            )
+            # Generate placeholder email from Clerk user ID
+            # This allows the app to work even if Clerk JWT doesn't include email
+            user_email = f"{clerk_user.user_id}@clerk.placeholder"
 
         user_create = UserCreate(
             clerk_id=clerk_user.user_id,

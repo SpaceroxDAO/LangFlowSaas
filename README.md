@@ -14,16 +14,22 @@ Teach Charlie AI is an educational platform that uses a "Dog Trainer" metaphor t
 
 ## Project Status
 
-**Phase**: Discovery Complete → Ready to Build
-**Target Launch**: 5-6 weeks (MVP with 5-10 beta testers)
-**Stack**: React + Langflow + FastAPI + PostgreSQL + Clerk + DataStax
+**Phase**: MVP Complete - Ready for Beta Testing
+**Stack**: React + Vite + TypeScript + Tailwind CSS + Clerk + FastAPI + Langflow + PostgreSQL
+
+### What's Working
+
+- **3-Step Q&A Onboarding**: Create AI agents by answering simple questions (Who? Rules? Tricks?)
+- **Chat Playground**: Test agents in a real-time chat interface with conversation memory
+- **Clerk Authentication**: Secure signup/login with JWT validation
+- **Langflow Integration**: Full flow execution using Anthropic Claude models
+- **Docker Compose**: One-command local development setup
 
 ## Quick Start
 
 ### Prerequisites
+- Docker Desktop
 - Node.js 18+
-- Python 3.9+
-- Docker Desktop (for local PostgreSQL)
 - Git
 
 ### Setup
@@ -37,144 +43,205 @@ Teach Charlie AI is an educational platform that uses a "Dog Trainer" metaphor t
 2. **Set up environment variables**
    ```bash
    cp .env.example .env
-   # Edit .env and fill in your API keys (OpenAI, Clerk, etc.)
    ```
 
-3. **Fork and setup Langflow** (Coming Soon)
+   Edit `.env` and fill in your API keys:
+   ```env
+   # Required
+   CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
+   CLERK_JWKS_URL=https://your-clerk-domain/.well-known/jwks.json
+   CLERK_ISSUER=https://your-clerk-domain
+   ANTHROPIC_API_KEY=sk-ant-...
+
+   # Optional (defaults provided for local dev)
+   POSTGRES_USER=postgres
+   POSTGRES_PASSWORD=postgres
+   LANGFLOW_SECRET_KEY=<generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">
+   ```
+
+3. **Start all services with Docker Compose**
    ```bash
-   # Instructions for forking Langflow and setting up local dev environment
-   # Will be added in Week 1 of development
+   docker compose up -d
    ```
 
-## Documentation
+   This starts:
+   - PostgreSQL (port 5432)
+   - Langflow (port 7860)
+   - FastAPI Backend (port 8000)
 
-Comprehensive documentation in `docs/`:
+4. **Start the frontend**
+   ```bash
+   cd src/frontend
+   npm install
+   npm run dev
+   ```
 
-- **[00_PROJECT_SPEC.md](docs/00_PROJECT_SPEC.md)** - Product requirements, personas, user journeys, success criteria
-- **[01_ARCHITECTURE.md](docs/01_ARCHITECTURE.md)** - Technical architecture, database schema, API design
-- **[02_CHANGELOG.md](docs/02_CHANGELOG.md)** - Major decisions, rationale, alternatives considered
-- **[03_STATUS.md](docs/03_STATUS.md)** - Current status, risks, next steps, weekly roadmap
-- **[claude.md](claude.md)** - Instructions for Claude Code (coding guidelines, project conventions)
+   Open http://localhost:3000
 
-**Start here**: Read `docs/00_PROJECT_SPEC.md` for product context, then `docs/01_ARCHITECTURE.md` for technical details.
+5. **Create your first agent!**
+   - Sign in with Clerk
+   - Click "Create Agent"
+   - Answer the 3 questions
+   - Chat with your agent in the Playground
 
 ## Architecture
 
-### High-Level Overview
-
 ```
 ┌─────────────────────────────────────────────────────┐
-│ Frontend (React + React Flow)                       │
-│  • Landing Page                                     │
-│  • 3-Step Q&A Onboarding (Who? Rules? Tricks?)     │
-│  • Playground (Chat Interface)                      │
-│  • Flow Canvas (Langflow UI - unlockable)          │
+│ Frontend (React + Vite + TypeScript)                │
+│  • Clerk Authentication                             │
+│  • 3-Step Q&A Wizard                                │
+│  • Chat Playground with Memory                      │
+│  • Dashboard (Agent Management)                     │
 └─────────────────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────┐
 │ Backend (FastAPI + Python)                          │
-│  • Template Mapping Engine (Q&A → Flow)            │
-│  • Agent Runtime (Langflow)                         │
-│  • Authentication (Clerk)                           │
+│  • Clerk JWT Validation                             │
+│  • Template Mapping Engine (Q&A → Langflow Flow)    │
+│  • Agent CRUD API                                   │
+│  • Chat API (Langflow Execution)                    │
 └─────────────────────────────────────────────────────┘
                          │
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│ Database (PostgreSQL + pgvector)                    │
-│  • Users, Agents, Conversations, Messages           │
-└─────────────────────────────────────────────────────┘
+              ┌──────────┴──────────┐
+              ▼                     ▼
+┌─────────────────────┐   ┌─────────────────────┐
+│ Langflow            │   │ PostgreSQL          │
+│  • Flow Execution   │   │  • Users            │
+│  • Anthropic Claude │   │  • Agents           │
+│  • Conversation     │   │  • Conversations    │
+│    Memory           │   │  • Messages         │
+└─────────────────────┘   └─────────────────────┘
 ```
 
-### Key Features (MVP)
+## API Endpoints
 
-- ✅ **3-Step Q&A Onboarding**: Simple questions to create an agent (no code, no technical jargon)
-- ✅ **Playground**: Test agents in a ChatGPT-style interface
-- ✅ **Agent Persistence**: Save and load agents
-- ⏸️ **Flow Canvas Unlock**: See underlying Langflow nodes (Phase 2)
-- ⏸️ **Multi-Tenancy**: Org management, team features (Phase 2)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/agents` | GET | List user's agents |
+| `/api/v1/agents/create-from-qa` | POST | Create agent from Q&A |
+| `/api/v1/agents/{id}` | GET | Get agent details |
+| `/api/v1/agents/{id}` | PATCH | Update agent |
+| `/api/v1/agents/{id}` | DELETE | Delete agent |
+| `/api/v1/agents/{id}/chat` | POST | Send message to agent |
+| `/health` | GET | Health check |
 
-### Technology Stack
+## Technology Stack
 
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| Frontend | React + React Flow | Inherit from Langflow, proven for node-based UIs |
-| Backend | FastAPI (Python) | Langflow's backend, great async support |
-| Database | PostgreSQL + pgvector | Production-ready, vector support for future RAG |
-| Auth | Clerk | Easy integration, org management for Phase 2 |
-| Hosting | DataStax (RAGStack AI) | Langflow-optimized, low ops overhead |
-| Testing | Playwright | E2E testing, reliable for critical flows |
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| Frontend | React + Vite + TypeScript | Fast, type-safe UI |
+| Styling | Tailwind CSS | Utility-first CSS |
+| Auth | Clerk | Authentication + user management |
+| Backend | FastAPI | Async Python API |
+| Database | PostgreSQL | Relational data storage |
+| AI Engine | Langflow | Flow-based agent execution |
+| LLM | Anthropic Claude | AI model provider |
+| Containerization | Docker Compose | Local development |
 
-## Development Roadmap
+## Project Structure
 
-### Week 1: Local Setup
-- Fork Langflow repository
-- Install dependencies (Node, Python)
-- Run Langflow locally
-- Review DataStax RAGStack AI Langflow deployment
+```
+LangflowSaaS/
+├── src/
+│   ├── frontend/              # React + Vite frontend
+│   │   ├── src/
+│   │   │   ├── components/    # React components
+│   │   │   ├── pages/         # Page components
+│   │   │   ├── services/      # API client
+│   │   │   └── App.tsx        # Main app
+│   │   └── package.json
+│   │
+│   └── backend/               # FastAPI backend
+│       ├── app/
+│       │   ├── api/           # API routes
+│       │   ├── models/        # SQLAlchemy models
+│       │   ├── schemas/       # Pydantic schemas
+│       │   ├── services/      # Business logic
+│       │   └── middleware/    # Auth middleware
+│       ├── templates/         # Langflow flow templates
+│       └── requirements.txt
+│
+├── docker-compose.yml         # Docker services config
+├── .env                       # Environment variables
+└── docs/                      # Documentation
+```
 
-### Week 2-3: Custom Onboarding Layer
-- Build 3-step Q&A React component
-- Build template mapping FastAPI endpoint
-- Build playground chat UI
-- Test end-to-end locally
+## Development
 
-### Week 3-4: Auth + Database
-- Integrate Clerk authentication
-- Set up PostgreSQL locally (Docker)
-- Implement database schema
-- Test auth flow
+### Running Tests
 
-### Week 5-6: Testing + Deployment
-- Write 3 critical E2E tests (Playwright)
-- Deploy to DataStax
-- Manual smoke testing
-- Invite 5-10 beta testers
-- **Launch MVP** 🚀
+```bash
+# Backend tests
+cd src/backend
+pytest
 
-## Success Criteria (Year 1)
+# E2E tests with Playwright (coming soon)
+```
 
-**User Metrics**:
-- Signups: 100-500 total users
-- Activation Rate: >70% (create first agent)
-- Retention: >30% (return 3+ times)
+### Useful Commands
 
-**Business Metrics**:
-- Paying Customers: TBD (freemium conversion)
-- MRR: $5K-$25K by end of Year 1
-- Workshops: 5+ successful workshops
+```bash
+# View logs
+docker compose logs -f backend
+docker compose logs -f langflow
 
-**Technical Metrics**:
-- Page Load: < 2 seconds
-- Agent Response: < 3 seconds (LLM)
-- Uptime: Best effort (no SLA for MVP)
+# Restart a service
+docker compose restart backend
+
+# Rebuild after code changes
+docker compose up -d --build backend
+
+# Stop all services
+docker compose down
+
+# Clean restart (including volumes)
+docker compose down -v && docker compose up -d
+```
+
+## Documentation
+
+- **[docs/00_PROJECT_SPEC.md](docs/00_PROJECT_SPEC.md)** - Product requirements, personas, user journeys
+- **[docs/01_ARCHITECTURE.md](docs/01_ARCHITECTURE.md)** - Technical architecture, database schema
+- **[docs/02_CHANGELOG.md](docs/02_CHANGELOG.md)** - Development history, decisions made
+- **[docs/04_DEVELOPMENT_PLAN.md](docs/04_DEVELOPMENT_PLAN.md)** - Roadmap and milestones
 
 ## Key Decisions
 
 1. **Wrapper over Deep Fork** - Lightweight customization of Langflow, not a deep fork
-2. **Defer Multi-Tenancy to Phase 2** - Single-user agents for MVP (reduce complexity)
-3. **Template Mapping (Rule-Based)** - Use predefined templates, not AI-generated flows
-4. **3-Step Q&A Before Canvas** - Educational onboarding flow (progressive complexity)
-5. **E2E Testing Priority** - Playwright tests, defer unit tests to Phase 2
+2. **Template Mapping** - Use predefined templates + Q&A injection, not AI-generated flows
+3. **3-Step Q&A First** - Educational onboarding before exposing flow complexity
+4. **Clerk for Auth** - Easy integration with org management for Phase 2
+5. **Docker Compose** - Consistent local development environment
 
-See [docs/02_CHANGELOG.md](docs/02_CHANGELOG.md) for full rationale.
+## Roadmap
+
+### Phase 1: MVP (Complete)
+- [x] 3-Step Q&A onboarding
+- [x] Chat playground with memory
+- [x] Clerk authentication
+- [x] Langflow integration
+- [x] Docker Compose setup
+
+### Phase 2: Beta Testing (Next)
+- [ ] Deploy to production (DataStax)
+- [ ] E2E test suite (Playwright)
+- [ ] Flow canvas unlock feature
+- [ ] Usage analytics
+
+### Phase 3: Launch
+- [ ] Multi-tenancy (organizations)
+- [ ] Billing integration (Stripe)
+- [ ] Additional templates
+- [ ] Mobile optimization
 
 ## Contributing
 
-This is currently a solo project by Adam (founder). If you're interested in contributing:
-
 1. Read the documentation in `docs/`
-2. Check `docs/03_STATUS.md` for current status and next steps
+2. Check current status in `docs/02_CHANGELOG.md`
 3. Open an issue or reach out
-
-## References
-
-- [Langflow GitHub](https://github.com/logspace-ai/langflow)
-- [RAGStack AI Langflow (DataStax Deployment)](https://github.com/datastax/ragstack-ai-langflow)
-- [Langflow Docs](https://docs.langflow.org/)
-- [React Flow Docs](https://reactflow.dev/)
-- [FastAPI Docs](https://fastapi.tiangolo.com/)
-- [Clerk Docs](https://clerk.com/docs)
 
 ## License
 
@@ -182,13 +249,7 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Built with**:
-- Langflow (AI agent engine)
-- React + React Flow (UI)
-- FastAPI (backend)
-- PostgreSQL + pgvector (database)
-- Clerk (authentication)
-- DataStax (hosting)
+**Built with**: Langflow + React + FastAPI + PostgreSQL + Clerk + Anthropic Claude
 
 **Founder**: Adam Boyle
 **Repository**: https://github.com/SpaceroxDAO/LangFlowSaas
