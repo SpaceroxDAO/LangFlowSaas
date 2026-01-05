@@ -22,10 +22,23 @@ class ClerkUser:
     session_id: Optional[str]  # Clerk session ID (sid claim)
     email: Optional[str]  # Email if included in token
     authorized_party: Optional[str]  # Origin that generated token (azp claim)
-    expires_at: int  # Token expiration timestamp
-    issued_at: int  # Token issued timestamp
-    organization: Optional[dict]  # Organization data if present
-    raw_claims: dict  # Full token payload for advanced use
+    expires_at: Optional[int]  # Token expiration timestamp
+    issued_at: Optional[int]  # Token issued timestamp
+    organization: Optional[dict] = None  # Organization data if present
+    raw_claims: Optional[dict] = None  # Full token payload for advanced use
+
+
+# Development mode mock user - used when DEV_MODE=true
+DEV_USER = ClerkUser(
+    user_id="dev_user_123",
+    session_id="dev_session",
+    email="dev@teachcharlie.ai",
+    authorized_party="http://localhost:5173",
+    expires_at=None,
+    issued_at=None,
+    organization=None,
+    raw_claims=None,
+)
 
 
 @lru_cache(maxsize=1)
@@ -142,6 +155,10 @@ async def get_current_user(
         async def protected_route(user: ClerkUser = Depends(get_current_user)):
             return {"user_id": user.user_id}
     """
+    # Development mode - skip auth entirely and return mock user
+    if settings.dev_mode:
+        return DEV_USER
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -177,6 +194,10 @@ async def get_optional_user(
                 return {"message": f"Hello, {user.user_id}"}
             return {"message": "Hello, anonymous"}
     """
+    # Development mode - always return mock user
+    if settings.dev_mode:
+        return DEV_USER
+
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return None

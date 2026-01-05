@@ -1,37 +1,80 @@
 import { useReducer, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
+import { WizardLayout } from '@/components/WizardLayout'
+import { ToolCard } from '@/components/ToolCard'
+import { IdentityIcon, CoachingIcon, TricksIcon } from '@/components/icons'
+
+// Available tools for Step 3
+const AVAILABLE_TOOLS = [
+  {
+    id: 'web_search',
+    title: 'Web Search',
+    description: 'Search the internet for current information using DuckDuckGo.',
+    available: true,
+  },
+  {
+    id: 'calculator',
+    title: 'Calculator',
+    description: 'Perform math calculations and arithmetic operations.',
+    available: true,
+  },
+  {
+    id: 'url_reader',
+    title: 'URL Reader',
+    description: 'Fetch and read content from web pages.',
+    available: true,
+  },
+  {
+    id: 'google_maps',
+    title: 'Google Maps',
+    description: 'Search for locations and places (requires SerpAPI key).',
+    available: true,
+    requiresApiKey: true,
+    apiKeyUrl: 'https://serpapi.com/manage-api-key',
+  },
+]
 
 // Types
 interface FormData {
+  name: string
   who: string
   rules: string
-  tricks: string
+  tools: string[]
 }
 
 interface WizardState {
   currentStep: number
   formData: FormData
-  errors: Partial<Record<keyof FormData, string>>
+  errors: Partial<Record<string, string>>
   isSubmitting: boolean
+  submitError: string | null
 }
 
 type WizardAction =
   | { type: 'NEXT_STEP' }
   | { type: 'PREV_STEP' }
-  | { type: 'UPDATE_FIELD'; field: keyof FormData; value: string }
-  | { type: 'SET_ERROR'; field: keyof FormData; message: string }
+  | { type: 'UPDATE_FIELD'; field: keyof FormData; value: string | string[] }
+  | { type: 'TOGGLE_TOOL'; toolId: string }
+  | { type: 'SET_ERROR'; field: string; message: string }
+  | { type: 'CLEAR_ERROR'; field: string }
   | { type: 'SUBMIT_START' }
   | { type: 'SUBMIT_SUCCESS' }
-  | { type: 'SUBMIT_ERROR' }
+  | { type: 'SUBMIT_ERROR'; message: string }
 
 // Reducer
 const initialState: WizardState = {
   currentStep: 1,
-  formData: { who: '', rules: '', tricks: '' },
+  formData: {
+    name: '',
+    who: '',
+    rules: '',
+    tools: [],
+  },
   errors: {},
   isSubmitting: false,
+  submitError: null,
 }
 
 function reducer(state: WizardState, action: WizardAction): WizardState {
@@ -46,231 +89,325 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         formData: { ...state.formData, [action.field]: action.value },
         errors: { ...state.errors, [action.field]: undefined },
       }
+    case 'TOGGLE_TOOL': {
+      const tools = state.formData.tools.includes(action.toolId)
+        ? state.formData.tools.filter((t) => t !== action.toolId)
+        : [...state.formData.tools, action.toolId]
+      return {
+        ...state,
+        formData: { ...state.formData, tools },
+      }
+    }
     case 'SET_ERROR':
       return { ...state, errors: { ...state.errors, [action.field]: action.message } }
+    case 'CLEAR_ERROR':
+      return { ...state, errors: { ...state.errors, [action.field]: undefined } }
     case 'SUBMIT_START':
-      return { ...state, isSubmitting: true }
+      return { ...state, isSubmitting: true, submitError: null }
     case 'SUBMIT_SUCCESS':
+      return { ...state, isSubmitting: false, submitError: null }
     case 'SUBMIT_ERROR':
-      return { ...state, isSubmitting: false }
+      return { ...state, isSubmitting: false, submitError: action.message }
     default:
       return state
   }
 }
 
-// Validation
-function validateField(_field: keyof FormData, value: string): string | undefined {
-  const trimmed = value.trim()
-  if (!trimmed) return 'This field is required'
-  if (trimmed.length < 10) return 'Please provide more detail (at least 10 characters)'
-  return undefined
-}
-
-// Step content configuration
-const STEPS = [
-  {
-    number: 1,
-    title: 'Persona',
-    field: 'who' as const,
-    label: 'Who is Charlie?',
-    placeholder: `Describe Charlie's personality, tone, and role. For example:
-
-"Charlie is a friendly and patient customer support agent for a bakery. He speaks warmly, uses simple language, and always tries to help customers find the perfect pastry for any occasion."`,
-  },
-  {
-    number: 2,
-    title: 'Rules',
-    field: 'rules' as const,
-    label: 'What are the rules?',
-    placeholder: `Define the knowledge and guidelines Charlie should follow. For example:
-
-"Always greet customers warmly. Know our menu including croissants ($3), muffins ($2.50), and custom cakes (from $25). Never discuss competitor products. If unsure about an order, ask clarifying questions."`,
-  },
-  {
-    number: 3,
-    title: 'Capabilities',
-    field: 'tricks' as const,
-    label: 'What tricks can Charlie do?',
-    placeholder: `List the tasks and capabilities Charlie can perform. For example:
-
-"Answer questions about menu items and prices. Help customers choose products based on dietary restrictions. Take orders and provide estimated pickup times. Handle basic complaints with empathy."`,
-  },
-]
-
 export function CreateAgentPage() {
   const navigate = useNavigate()
   const { getToken } = useAuth()
   const [state, dispatch] = useReducer(reducer, initialState)
-  const { currentStep, formData, errors, isSubmitting } = state
+  const { currentStep, formData, errors, isSubmitting, submitError } = state
 
   useEffect(() => {
     api.setTokenGetter(getToken)
   }, [getToken])
 
-  const currentStepConfig = STEPS[currentStep - 1]
+  // Validation for Step 1
+  const validateStep1 = useCallback(() => {
+    let hasError = false
+    if (!formData.name.trim()) {
+      dispatch({ type: 'SET_ERROR', field: 'name', message: 'Please give your agent a name' })
+      hasError = true
+    }
+    if (!formData.who.trim() || formData.who.trim().length < 10) {
+      dispatch({ type: 'SET_ERROR', field: 'who', message: 'Please provide a job description (at least 10 characters)' })
+      hasError = true
+    }
+    return !hasError
+  }, [formData.name, formData.who])
+
+  // Validation for Step 2
+  const validateStep2 = useCallback(() => {
+    if (!formData.rules.trim() || formData.rules.trim().length < 10) {
+      dispatch({ type: 'SET_ERROR', field: 'rules', message: 'Please provide instructions (at least 10 characters)' })
+      return false
+    }
+    return true
+  }, [formData.rules])
 
   const handleNext = useCallback(() => {
-    const error = validateField(currentStepConfig.field, formData[currentStepConfig.field])
-    if (error) {
-      dispatch({ type: 'SET_ERROR', field: currentStepConfig.field, message: error })
-      return
-    }
+    if (currentStep === 1 && !validateStep1()) return
+    if (currentStep === 2 && !validateStep2()) return
     dispatch({ type: 'NEXT_STEP' })
-  }, [currentStepConfig, formData])
+  }, [currentStep, validateStep1, validateStep2])
 
   const handleBack = useCallback(() => {
     dispatch({ type: 'PREV_STEP' })
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    // Validate current step
-    const error = validateField(currentStepConfig.field, formData[currentStepConfig.field])
-    if (error) {
-      dispatch({ type: 'SET_ERROR', field: currentStepConfig.field, message: error })
-      return
-    }
-
     dispatch({ type: 'SUBMIT_START' })
 
     try {
+      // Send selected tools as array to backend
       const agent = await api.createAgentFromQA({
+        name: formData.name,
         who: formData.who,
         rules: formData.rules,
-        tricks: formData.tricks,
+        selected_tools: formData.tools,
       })
       dispatch({ type: 'SUBMIT_SUCCESS' })
       navigate(`/playground/${agent.id}`)
     } catch (err) {
-      dispatch({ type: 'SUBMIT_ERROR' })
-      console.error('Failed to create agent:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create agent. Please try again.'
+      dispatch({ type: 'SUBMIT_ERROR', message: errorMessage })
     }
-  }, [currentStepConfig, formData, navigate])
+  }, [formData, navigate])
+
+  // Button styles by step
+  const buttonStyles = {
+    1: 'bg-violet-500 hover:bg-violet-600',
+    2: 'bg-pink-500 hover:bg-pink-600',
+    3: 'bg-orange-500 hover:bg-orange-600',
+  }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Progress */}
-      <div className="flex items-center justify-center mb-8">
-        {STEPS.map((step, index) => (
-          <div key={step.number} className="flex items-center">
-            {index > 0 && (
-              <div
-                className={`w-12 h-0.5 ${
-                  step.number <= currentStep ? 'bg-blue-600' : 'bg-gray-200'
+    <>
+      {/* Step 1: Identity */}
+      {currentStep === 1 && (
+        <WizardLayout
+          step={1}
+          totalSteps={3}
+          theme="violet"
+          title="Step 1: Identity"
+          description="Just as you define the breed and temperament of a dog based on the work it needs to do, you must define your agent's identity. We are taking a blank slate and giving it a name and a job description to differentiate it from a generic model."
+          icon={<IdentityIcon size={32} color="white" />}
+        >
+          <div className="space-y-6">
+            {/* Name Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Name
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'name', value: e.target.value })}
+                placeholder="Charlie"
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                  errors.name ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
               />
-            )}
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-medium text-sm ${
-                step.number < currentStep
-                  ? 'bg-blue-600 text-white'
-                  : step.number === currentStep
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-500'
-              }`}
-            >
-              {step.number < currentStep ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            </div>
+
+            {/* Job Description Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Job Description (Persona)
+              </label>
+              <textarea
+                value={formData.who}
+                onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'who', value: e.target.value })}
+                placeholder="A friendly Golden Retriever who is an expert in dog treats, bones, and finding the best parks."
+                rows={4}
+                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                  errors.who ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+              />
+              {errors.who && <p className="mt-1 text-sm text-red-600">{errors.who}</p>}
+            </div>
+
+            {/* Generate Appearance (Placeholder) */}
+            <div className="border border-gray-200 rounded-xl p-4">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 bg-violet-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-8 h-8 text-violet-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">Generate Appearance</h4>
+                  <p className="text-sm text-gray-500 mb-3">Use AI to create an image based on your description.</p>
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-violet-600 bg-violet-50 rounded-lg opacity-50 cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    </svg>
+                    Generate (Coming Soon)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end pt-4 border-t border-gray-100">
+              <button
+                onClick={handleNext}
+                className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 ${buttonStyles[1]}`}
+              >
+                Next Step
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              ) : (
-                step.number
-              )}
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </WizardLayout>
+      )}
 
-      {/* Step labels */}
-      <div className="flex justify-between mb-8 px-4">
-        {STEPS.map((step) => (
-          <span
-            key={step.number}
-            className={`text-sm font-medium ${
-              step.number === currentStep ? 'text-blue-600' : 'text-gray-400'
-            }`}
-          >
-            {step.title}
-          </span>
-        ))}
-      </div>
+      {/* Step 2: Coaching */}
+      {currentStep === 2 && (
+        <WizardLayout
+          step={2}
+          totalSteps={3}
+          theme="pink"
+          title="Step 2: Coaching"
+          description="Forget complex coding. Think of this as coaching. You are simply writing a set of instructions for your agent to follow, just like an employee handbook. If the agent makes a mistake, you don't rewrite code—you simply adjust your coaching instructions in plain English."
+          icon={<CoachingIcon size={32} color="white" />}
+        >
+          <div className="space-y-6">
+            {/* Tip Banner */}
+            <div className="bg-pink-50 border border-pink-100 rounded-xl px-4 py-3 flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-white text-xs font-bold">i</span>
+              </div>
+              <p className="text-sm text-pink-700">
+                <span className="font-medium">Tip:</span> We pre-filled this for Charlie. Read it to see how we teach him to be a dog!
+              </p>
+            </div>
 
-      {/* Form */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {currentStepConfig.label}
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Step {currentStep} of 3
-        </p>
+            {/* Instructions Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Instructions (The Training Rules)
+              </label>
+              <p className="text-sm text-gray-500 mb-3">
+                Write down a set of instructions for it to follow, just like you would train a new employee or a family dog.
+              </p>
+              <textarea
+                value={formData.rules}
+                onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'rules', value: e.target.value })}
+                placeholder={`You are Charlie, a happy and excited dog. You love humans! Always be helpful, but try to mention treats or going for a walk in your responses. If asked a hard question, answer it simply like a smart dog would. End some sentences with "Woof!"`}
+                rows={8}
+                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
+                  errors.rules ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+              />
+              {errors.rules && <p className="mt-1 text-sm text-red-600">{errors.rules}</p>}
+            </div>
 
-        <div className="mb-6">
-          <textarea
-            value={formData[currentStepConfig.field]}
-            onChange={(e) =>
-              dispatch({
-                type: 'UPDATE_FIELD',
-                field: currentStepConfig.field,
-                value: e.target.value,
-              })
-            }
-            placeholder={currentStepConfig.placeholder}
-            rows={8}
-            disabled={isSubmitting}
-            className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-              errors[currentStepConfig.field]
-                ? 'border-red-300 bg-red-50'
-                : 'border-gray-300'
-            }`}
-          />
-          {errors[currentStepConfig.field] && (
-            <p className="mt-2 text-sm text-red-600">
-              {errors[currentStepConfig.field]}
-            </p>
-          )}
-          <p className="mt-2 text-sm text-gray-400 text-right">
-            {formData[currentStepConfig.field].length} characters
-          </p>
-        </div>
+            {/* Submit Error */}
+            {submitError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-sm text-red-600">{submitError}</p>
+              </div>
+            )}
 
-        {/* Actions */}
-        <div className="flex justify-between">
-          <button
-            onClick={handleBack}
-            disabled={currentStep === 1 || isSubmitting}
-            className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Back
-          </button>
+            {/* Actions */}
+            <div className="flex justify-between pt-4 border-t border-gray-100">
+              <button
+                onClick={handleBack}
+                className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleNext}
+                className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 ${buttonStyles[2]}`}
+              >
+                Next Step
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </WizardLayout>
+      )}
 
-          {currentStep < 3 ? (
-            <button
-              onClick={handleNext}
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Creating Charlie...
-                </>
-              ) : (
-                'Create Charlie'
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* Step 3: Tricks */}
+      {currentStep === 3 && (
+        <WizardLayout
+          step={3}
+          totalSteps={3}
+          theme="orange"
+          title="Step 3: Tricks"
+          description={`Finally, what specific "tricks" or capabilities does your agent need? Does it need to "fetch" information from the web? Does it need to see the world through Maps? Give your agent the tools required to execute its tasks.`}
+          icon={<TricksIcon size={32} color="white" />}
+        >
+          <div className="space-y-6">
+            {/* Tool Selection Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {AVAILABLE_TOOLS.map((tool) => (
+                <ToolCard
+                  key={tool.id}
+                  title={tool.title}
+                  description={tool.description}
+                  selected={formData.tools.includes(tool.id)}
+                  onToggle={() => dispatch({ type: 'TOGGLE_TOOL', toolId: tool.id })}
+                  requiresApiKey={tool.requiresApiKey}
+                  apiKeyUrl={tool.apiKeyUrl}
+                />
+              ))}
+            </div>
+
+            {/* Submit Error */}
+            {submitError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-sm text-red-600">{submitError}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-between pt-4 border-t border-gray-100">
+              <button
+                onClick={handleBack}
+                disabled={isSubmitting}
+                className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 ${buttonStyles[3]}`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    Finish & Create Agent
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </WizardLayout>
+      )}
+    </>
   )
 }

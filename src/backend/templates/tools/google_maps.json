@@ -1,0 +1,79 @@
+{
+  "id_prefix": "SerpAPIComponent",
+  "component_type": "SerpAPIComponent",
+  "display_name": "Google Maps",
+  "description": "Search for locations and places using SerpAPI Google Maps",
+  "icon": "map-pin",
+  "requires_api_key": true,
+  "api_key_name": "SERPAPI_API_KEY",
+  "api_key_url": "https://serpapi.com/manage-api-key",
+  "node": {
+    "data": {
+      "description": "Search for locations and places using SerpAPI Google Maps integration.",
+      "display_name": "Google Maps",
+      "id": "__ID_PLACEHOLDER__",
+      "node": {
+        "base_classes": ["Data"],
+        "description": "Search for locations and places using SerpAPI Google Maps integration.",
+        "display_name": "Google Maps",
+        "icon": "map-pin",
+        "outputs": [
+          {
+            "types": ["Tool"],
+            "name": "component_as_tool",
+            "display_name": "Toolset",
+            "method": "to_toolkit"
+          },
+          {
+            "types": ["Data"],
+            "name": "results",
+            "display_name": "Search Results"
+          }
+        ],
+        "template": {
+          "_type": "Component",
+          "query": {
+            "_input_type": "MessageTextInput",
+            "type": "str",
+            "value": "",
+            "display_name": "Search Query",
+            "tool_mode": true,
+            "info": "Location or place to search for (e.g., 'coffee shops near Times Square')"
+          },
+          "serpapi_api_key": {
+            "_input_type": "SecretStrInput",
+            "type": "str",
+            "value": "",
+            "display_name": "SerpAPI API Key",
+            "password": true,
+            "load_from_db": true,
+            "info": "Get your API key at https://serpapi.com/manage-api-key"
+          },
+          "engine": {
+            "_input_type": "DropdownInput",
+            "type": "str",
+            "value": "google_maps",
+            "display_name": "Search Engine",
+            "options": ["google_maps", "google_local"],
+            "advanced": true
+          },
+          "num_results": {
+            "_input_type": "IntInput",
+            "type": "int",
+            "value": 5,
+            "display_name": "Number of Results",
+            "advanced": true
+          }
+        }
+      },
+      "type": "SerpAPIComponent"
+    },
+    "id": "__ID_PLACEHOLDER__",
+    "position": {"x": 100, "y": 700},
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "component_as_tool",
+    "output_types": ["Tool"]
+  }
+}

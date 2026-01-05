@@ -1,0 +1,246 @@
+{
+  "summary": {
+    "description": "Key Langflow component structures extracted from local instance",
+    "extracted_date": "2026-01-05",
+    "components_found": [
+      "Agent (models_and_agents)",
+      "DuckDuckGoSearchComponent (duckduckgo)",
+      "CalculatorTool (tools)",
+      "CalculatorComponent (utilities)",
+      "URLComponent (data_source)",
+      "ChatInput (input_output)",
+      "ChatOutput (input_output)"
+    ]
+  },
+  "agent_component": {
+    "type": "Agent",
+    "module": "lfx.components.models_and_agents.agent.AgentComponent",
+    "base_classes": ["Message"],
+    "display_name": "Agent",
+    "description": "Define the agent's instructions, then enter a task to complete using tools.",
+    "icon": "bot",
+    "key_fields": {
+      "agent_llm": {
+        "type": "DropdownInput",
+        "display_name": "Model Provider",
+        "options": ["Anthropic", "Google Generative AI", "OpenAI", "IBM watsonx.ai", "Ollama"],
+        "default": "OpenAI",
+        "info": "The provider of the language model that the agent will use to generate responses."
+      },
+      "api_key": {
+        "type": "SecretStrInput",
+        "display_name": "OpenAI API Key",
+        "password": true
+      },
+      "system_prompt": {
+        "type": "MultilineInput",
+        "display_name": "Agent Instructions",
+        "default": "You are a helpful assistant that can use tools to answer questions and perform tasks.",
+        "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior."
+      },
+      "tools": {
+        "type": "HandleInput",
+        "display_name": "Tools",
+        "input_types": ["Tool"],
+        "is_list": true,
+        "info": "Tools the agent can use"
+      },
+      "input_value": {
+        "type": "MessageTextInput",
+        "display_name": "Input",
+        "input_types": ["Message"],
+        "info": "The input message to the agent"
+      },
+      "temperature": {
+        "type": "FloatInput",
+        "display_name": "Temperature",
+        "default": 0.1,
+        "range": {"min": 0, "max": 1, "step": 0.05}
+      },
+      "model_name": {
+        "type": "DropdownInput",
+        "display_name": "Model Name",
+        "options": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
+        "default": "gpt-4o"
+      },
+      "max_iterations": {
+        "type": "IntInput",
+        "display_name": "Max Iterations",
+        "default": 15,
+        "info": "Maximum number of iterations the agent can perform"
+      },
+      "add_current_date_tool": {
+        "type": "BoolInput",
+        "display_name": "Current Date",
+        "default": true,
+        "info": "If true, will add a tool to the agent that returns the current date"
+      }
+    },
+    "outputs": [
+      {
+        "name": "response",
+        "display_name": "Response",
+        "types": ["Message"],
+        "method": "message_response"
+      }
+    ]
+  },
+  "calculator_component": {
+    "type": "CalculatorComponent",
+    "module": "lfx.components.utilities.calculator_core.CalculatorComponent",
+    "base_classes": ["Data"],
+    "display_name": "Calculator",
+    "description": "Perform basic arithmetic operations on a given expression.",
+    "icon": "calculator",
+    "key_fields": {
+      "expression": {
+        "type": "MessageTextInput",
+        "display_name": "Expression",
+        "tool_mode": true,
+        "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20')."
+      }
+    },
+    "outputs": [
+      {
+        "name": "component_as_tool",
+        "display_name": "Toolset",
+        "types": ["Tool"],
+        "method": "to_toolkit",
+        "note": "Used to connect to Agent's tools input"
+      }
+    ]
+  },
+  "duckduckgo_search_component": {
+    "type": "DuckDuckGoSearchComponent",
+    "module": "lfx.components.duckduckgo.duck_duck_go_search_run.DuckDuckGoSearchComponent",
+    "base_classes": ["DataFrame"],
+    "display_name": "DuckDuckGo Search",
+    "description": "Search the web using DuckDuckGo with customizable result limits",
+    "icon": "DuckDuckGo",
+    "key_fields": {
+      "input_value": {
+        "type": "MessageTextInput",
+        "display_name": "Search Query",
+        "tool_mode": true,
+        "required": true,
+        "info": "The search query to execute with DuckDuckGo"
+      },
+      "max_results": {
+        "type": "IntInput",
+        "display_name": "Max Results",
+        "default": 5,
+        "advanced": true,
+        "info": "Maximum number of search results to return"
+      },
+      "max_snippet_length": {
+        "type": "IntInput",
+        "display_name": "Max Snippet Length",
+        "default": 100,
+        "advanced": true,
+        "info": "Maximum length of each result snippet"
+      }
+    },
+    "outputs": [
+      {
+        "name": "dataframe",
+        "display_name": "DataFrame",
+        "types": ["DataFrame"],
+        "method": "fetch_content_dataframe"
+      }
+    ],
+    "note": "This component needs to be converted to a Tool to connect to Agent"
+  },
+  "url_component": {
+    "type": "URLComponent",
+    "module": "lfx.components.data_source.url.URLComponent",
+    "base_classes": ["DataFrame", "Message"],
+    "display_name": "URL",
+    "description": "Fetch content from one or more web pages, following links recursively.",
+    "icon": "layout-template",
+    "key_fields": {
+      "urls": {
+        "type": "MessageTextInput",
+        "display_name": "URLs",
+        "is_list": true,
+        "tool_mode": true,
+        "info": "Enter one or more URLs to crawl recursively"
+      },
+      "max_depth": {
+        "type": "SliderInput",
+        "display_name": "Depth",
+        "default": 1,
+        "range": {"min": 1, "max": 5, "step": 1},
+        "info": "Controls how many 'clicks' away from the initial page the crawler will go"
+      },
+      "format": {
+        "type": "DropdownInput",
+        "display_name": "Output Format",
+        "options": ["Text", "HTML"],
+        "default": "Text",
+        "info": "Use 'Text' to extract the text from the HTML or 'HTML' for the raw HTML content"
+      }
+    },
+    "outputs": [
+      {
+        "name": "page_results",
+        "display_name": "Extracted Pages",
+        "types": ["DataFrame"],
+        "method": "fetch_content"
+      },
+      {
+        "name": "raw_results",
+        "display_name": "Raw Content",
+        "types": ["Message"],
+        "method": "fetch_content_as_message"
+      },
+      {
+        "name": "component_as_tool",
+        "display_name": "Toolset",
+        "types": ["Tool"],
+        "method": "to_toolkit",
+        "note": "Used to connect to Agent's tools input"
+      }
+    ]
+  },
+  "edge_structure": {
+    "description": "How edges connect tools to Agent in Langflow",
+    "example": {
+      "source": "CalculatorComponent-YmuTn",
+      "target": "Agent-7ffAH",
+      "sourceHandle": {
+        "dataType": "CalculatorComponent",
+        "id": "CalculatorComponent-YmuTn",
+        "name": "component_as_tool",
+        "output_types": ["Tool"]
+      },
+      "targetHandle": {
+        "fieldName": "tools",
+        "id": "Agent-7ffAH",
+        "inputTypes": ["Tool"],
+        "type": "other"
+      }
+    },
+    "key_points": [
+      "Tool components output via 'component_as_tool' with type 'Tool'",
+      "Agent receives tools via 'tools' field which accepts type 'Tool'",
+      "Multiple tools can connect to the same Agent (tools field is a list)",
+      "The 'tool_mode: true' on inputs indicates it can be used as tool parameter"
+    ]
+  },
+  "simple_agent_flow_structure": {
+    "description": "Structure of the Simple Agent starter flow",
+    "nodes": [
+      {"id": "ChatInput-*", "type": "ChatInput", "display_name": "Chat Input"},
+      {"id": "Agent-*", "type": "Agent", "display_name": "Agent"},
+      {"id": "ChatOutput-*", "type": "ChatOutput", "display_name": "Chat Output"},
+      {"id": "CalculatorComponent-*", "type": "CalculatorComponent", "display_name": "Calculator"},
+      {"id": "URLComponent-*", "type": "URLComponent", "display_name": "URL"}
+    ],
+    "edges": [
+      {"from": "ChatInput.message", "to": "Agent.input_value"},
+      {"from": "CalculatorComponent.component_as_tool", "to": "Agent.tools"},
+      {"from": "URLComponent.component_as_tool", "to": "Agent.tools"},
+      {"from": "Agent.response", "to": "ChatOutput.input_value"}
+    ]
+  }
+}

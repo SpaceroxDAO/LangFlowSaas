@@ -5,8 +5,7 @@ import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import String, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy import String, Text, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel
@@ -33,7 +32,7 @@ class Message(BaseModel):
 
     # Conversation relationship
     conversation_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+        String(36),
         ForeignKey("conversations.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -53,7 +52,7 @@ class Message(BaseModel):
 
     # Optional metadata from Langflow response
     message_metadata: Mapped[Optional[dict]] = mapped_column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="Additional metadata from Langflow response",
     )

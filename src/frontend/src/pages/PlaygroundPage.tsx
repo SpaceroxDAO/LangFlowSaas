@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useAuth } from '@clerk/clerk-react'
+import { useAuth } from '@/providers/DevModeProvider'
 import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import { api } from '@/lib/api'
+import { EmbedModal } from '@/components/EmbedModal'
 import type { ChatMessage } from '@/types'
 
 export function PlaygroundPage() {
@@ -13,6 +14,7 @@ export function PlaygroundPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -114,15 +116,35 @@ export function PlaygroundPage() {
               <p className="text-sm text-gray-500">Chat Playground</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setMessages([])
-              setConversationId(null)
-            }}
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            Clear chat
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsEmbedModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+              Share
+            </button>
+            <Link
+              to={`/edit/${agentId}`}
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Agent
+            </Link>
+            <button
+              onClick={() => {
+                setMessages([])
+                setConversationId(null)
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Clear chat
+            </button>
+          </div>
         </div>
       </div>
 
@@ -130,8 +152,8 @@ export function PlaygroundPage() {
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
@@ -179,7 +201,7 @@ export function PlaygroundPage() {
               disabled={isLoading}
               rows={1}
               className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 pr-12
-                         focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200
+                         focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200
                          disabled:bg-gray-50 disabled:cursor-not-allowed
                          max-h-[150px] overflow-y-auto transition-colors"
             />
@@ -187,8 +209,8 @@ export function PlaygroundPage() {
           <button
             onClick={sendMessage}
             disabled={!input.trim() || isLoading}
-            className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-600 text-white
-                       hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-200
+            className="flex-shrink-0 w-12 h-12 rounded-xl bg-orange-500 text-white
+                       hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-200
                        disabled:bg-gray-300 disabled:cursor-not-allowed
                        transition-colors flex items-center justify-center"
           >
@@ -208,6 +230,15 @@ export function PlaygroundPage() {
           Press Enter to send, Shift+Enter for new line
         </p>
       </div>
+
+      {/* Embed Modal */}
+      {agent && (
+        <EmbedModal
+          agent={agent}
+          isOpen={isEmbedModalOpen}
+          onClose={() => setIsEmbedModalOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -220,7 +251,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
           isUser
-            ? 'bg-blue-600 text-white rounded-br-sm'
+            ? 'bg-orange-500 text-white rounded-br-sm'
             : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
         }`}
       >

@@ -1,4 +1,7 @@
-import type { Agent, AgentCreateFromQA, ChatRequest, ChatResponse, Conversation } from '@/types'
+import type { Agent, AgentCreateFromQA, AgentUpdate, ChatRequest, ChatResponse, Conversation } from '@/types'
+
+// Check dev mode from environment
+const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
 
 class ApiClient {
   private baseUrl: string
@@ -9,6 +12,10 @@ class ApiClient {
   }
 
   setTokenGetter(getter: () => Promise<string | null>) {
+    // Skip token getter in dev mode - backend accepts unauthenticated requests
+    if (isDevMode) {
+      return
+    }
     this.getToken = getter
   }
 
@@ -21,7 +28,8 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     }
 
-    if (this.getToken) {
+    // Only add auth header in production mode
+    if (!isDevMode && this.getToken) {
       const token = await this.getToken()
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
@@ -36,6 +44,11 @@ class ApiClient {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Request failed' }))
       throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    // Handle 204 No Content (e.g., DELETE responses)
+    if (response.status === 204) {
+      return undefined as T
     }
 
     return response.json()
@@ -59,6 +72,13 @@ class ApiClient {
 
   async deleteAgent(id: string): Promise<void> {
     return this.request(`/api/v1/agents/${id}`, { method: 'DELETE' })
+  }
+
+  async updateAgent(id: string, data: AgentUpdate): Promise<Agent> {
+    return this.request<Agent>(`/api/v1/agents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
   }
 
   // Chat

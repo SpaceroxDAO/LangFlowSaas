@@ -7,15 +7,27 @@ export interface Agent {
   qa_tricks: string
   system_prompt: string
   langflow_flow_id: string
+  template_name: string
   is_active: boolean
   created_at: string
   updated_at: string
 }
 
 export interface AgentCreateFromQA {
+  name?: string
   who: string
   rules: string
-  tricks: string
+  tricks?: string
+  selected_tools?: string[]
+}
+
+export interface AgentUpdate {
+  name?: string
+  description?: string
+  qa_who?: string
+  qa_rules?: string
+  qa_tricks?: string
+  is_active?: boolean
 }
 
 export interface ChatMessage {

@@ -41,33 +41,44 @@ LangflowSaaS/
 
 ## 🚀 Common Bash Commands
 
-### Development Setup
+### Development Setup (Docker Compose - REQUIRED)
+
+**IMPORTANT**: This project uses Docker Compose for Langflow. DO NOT use:
+- ❌ Langflow Desktop App
+- ❌ `langflow run` command directly
+- ❌ Any standalone Langflow installation
+
 ```bash
-# Fork Langflow (first time setup)
-git clone https://github.com/logspace-ai/langflow.git src/langflow
-cd src/langflow
+# Start ALL services (Langflow + PostgreSQL)
+docker-compose up -d
 
-# Install frontend dependencies
-cd src/frontend
-npm install
+# Or start just Langflow (if postgres already running)
+docker-compose up -d langflow
 
-# Install Python dependencies (using uv)
-cd ../..
-uv run langflow run
+# View logs
+docker-compose logs -f langflow
 
-# Verify Langflow runs at http://localhost:7860
+# Stop all services
+docker-compose down
+
+# Verify Langflow is running
+curl http://localhost:7860/health
+# Should return: {"status":"ok"}
 ```
 
-### Docker Development (PostgreSQL + Langflow)
+### Frontend Development
 ```bash
-# Start local PostgreSQL with pgvector
-docker-compose up -d postgres
+cd src/frontend
+npm install
+npm run dev
+# Frontend runs at http://localhost:3001
+```
 
-# Run Langflow with PostgreSQL
-LANGFLOW_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/teachcharlie uv run langflow run
-
-# Stop containers
-docker-compose down
+### Backend Development
+```bash
+cd src/backend
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Backend runs at http://localhost:8000
 ```
 
 ### Testing

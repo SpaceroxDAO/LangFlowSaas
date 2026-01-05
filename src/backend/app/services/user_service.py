@@ -20,7 +20,9 @@ class UserService:
 
     async def get_by_id(self, user_id: uuid.UUID) -> Optional[User]:
         """Get user by ID."""
-        stmt = select(User).where(User.id == user_id)
+        # Convert UUID to string for SQLite/PostgreSQL compatibility
+        user_id_str = str(user_id)
+        stmt = select(User).where(User.id == user_id_str)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

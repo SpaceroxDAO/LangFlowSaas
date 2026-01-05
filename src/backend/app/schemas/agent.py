@@ -22,25 +22,35 @@ class AgentCreateFromQA(BaseModel):
     """
 
     # Q&A answers (required)
+    # Max 5000 chars each to prevent abuse while allowing detailed descriptions
     who: str = Field(
         ...,
-        min_length=1,
+        min_length=10,
+        max_length=5000,
         description="Who is Charlie? What kind of job does he have?",
         examples=["A friendly bakery assistant who helps customers find the perfect pastries"],
     )
 
     rules: str = Field(
         ...,
-        min_length=1,
+        min_length=10,
+        max_length=5000,
         description="What are the rules to his job? What does he need to know?",
         examples=["Always be polite, know the menu, suggest pairings with coffee"],
     )
 
     tricks: str = Field(
-        ...,
-        min_length=1,
-        description="What tricks does Charlie know? What can he do?",
+        default="",
+        max_length=5000,
+        description="What tricks does Charlie know? (Legacy field, use selected_tools instead)",
         examples=["Answer questions about ingredients, take orders, give recommendations"],
+    )
+
+    # Tool selection (new)
+    selected_tools: List[str] = Field(
+        default=[],
+        description="List of tool IDs to enable (e.g., ['web_search', 'calculator'])",
+        examples=[["web_search", "calculator"]],
     )
 
     # Optional name (auto-generated if not provided)
@@ -86,6 +96,7 @@ class AgentResponse(BaseModel):
     qa_rules: str
     qa_tricks: str
     system_prompt: str
+    langflow_flow_id: str
     template_name: str
     is_active: bool
     created_at: datetime

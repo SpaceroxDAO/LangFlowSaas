@@ -4,8 +4,7 @@ Agent model - stores Charlie AI agents created by users.
 import uuid
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String, Text, ForeignKey, Boolean
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy import String, Text, ForeignKey, Boolean, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel
@@ -28,7 +27,7 @@ class Agent(BaseModel):
 
     # Owner relationship
     user_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+        String(36),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
@@ -94,7 +93,7 @@ class Agent(BaseModel):
 
     # Optional: store the full flow JSON for reference
     flow_data: Mapped[Optional[dict]] = mapped_column(
-        JSONB,
+        JSON,
         nullable=True,
         comment="Cached copy of Langflow flow JSON",
     )

@@ -272,7 +272,7 @@ class LangflowClient:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/v1/health_check",
+                    f"{self.base_url}/health",
                 )
                 return response.status_code == 200
         except Exception:

@@ -6,15 +6,22 @@ import { SignInPage } from '@/pages/SignInPage'
 import { SignUpPage } from '@/pages/SignUpPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { CreateAgentPage } from '@/pages/CreateAgentPage'
+import { EditAgentPage } from '@/pages/EditAgentPage'
 import { PlaygroundPage } from '@/pages/PlaygroundPage'
+import { FrameworkPage } from '@/pages/FrameworkPage'
+import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
+
+// Use dev mode or Clerk components based on environment
+const AuthSignedIn = isDevMode ? DevSignedIn : SignedIn
+const AuthSignedOut = isDevMode ? DevSignedOut : SignedOut
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <SignedIn>{children}</SignedIn>
-      <SignedOut>
+      <AuthSignedIn>{children}</AuthSignedIn>
+      <AuthSignedOut>
         <Navigate to="/sign-in" replace />
-      </SignedOut>
+      </AuthSignedOut>
     </>
   )
 }
@@ -27,6 +34,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
+        <Route path="/framework" element={<FrameworkPage />} />
 
         {/* Protected routes */}
         <Route
@@ -45,6 +53,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <CreateAgentPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/edit/:agentId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <EditAgentPage />
               </Layout>
             </ProtectedRoute>
           }

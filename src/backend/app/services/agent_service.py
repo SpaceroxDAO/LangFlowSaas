@@ -1,11 +1,14 @@
 """
 Agent service for managing AI agents.
 """
+import logging
 import uuid
 from typing import List, Optional, Tuple
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.models.agent import Agent
 from app.models.user import User
@@ -50,10 +53,13 @@ class AgentService:
         Returns:
             Agent if found, None otherwise
         """
-        stmt = select(Agent).where(Agent.id == agent_id)
+        # Convert UUID to string for SQLite/PostgreSQL compatibility
+        agent_id_str = str(agent_id)
+        stmt = select(Agent).where(Agent.id == agent_id_str)
 
         if user_id:
-            stmt = stmt.where(Agent.user_id == user_id)
+            user_id_str = str(user_id)
+            stmt = stmt.where(Agent.user_id == user_id_str)
 
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -71,8 +77,10 @@ class AgentService:
         Returns:
             Tuple of (agents list, total count)
         """
+        # Convert UUID to string for SQLite/PostgreSQL compatibility
+        user_id_str = str(user_id)
         # Base query
-        stmt = select(Agent).where(Agent.user_id == user_id)
+        stmt = select(Agent).where(Agent.user_id == user_id_str)
 
         if active_only:
             stmt = stmt.where(Agent.is_active == True)
@@ -95,51 +103,81 @@ class AgentService:
         self,
         user: User,
         qa_data: AgentCreateFromQA,
-        template_name: str = "support_bot",
+        template_name: str = "agent_base",
     ) -> Agent:
         """
         Create an agent from Q&A answers.
 
         This is the main entry point for creating agents from the
         3-step onboarding flow.
+
+        Uses a "Langflow-first" strategy: create flow in Langflow first,
+        then persist to DB. If DB fails, we clean up Langflow.
         """
-        # Generate flow from Q&A
+        # Check Langflow health before starting
+        if not await self.langflow.health_check():
+            raise AgentServiceError(
+                "Charlie's brain isn't responding right now. Please try again in a moment."
+            )
+
+        # Generate flow from Q&A with selected tools
         flow_data, system_prompt, auto_name = self.mapper.create_flow_from_qa(
             who=qa_data.who,
             rules=qa_data.rules,
             tricks=qa_data.tricks,
+            selected_tools=qa_data.selected_tools,
             template_name=template_name,
         )
 
         # Use provided name or auto-generated
         agent_name = qa_data.name or auto_name
 
-        # Create flow in Langflow
-        flow_id = await self.langflow.create_flow(
-            name=f"{agent_name} - {user.id}",
-            data=flow_data.get("data", {}),
-            description=f"Agent for user {user.email}",
-        )
+        # Create flow in Langflow FIRST (easier to clean up if DB fails)
+        flow_id = None
+        try:
+            flow_id = await self.langflow.create_flow(
+                name=f"{agent_name} - {user.id}",
+                data=flow_data.get("data", {}),
+                description=f"Agent for user {user.email}",
+            )
+        except Exception as e:
+            logger.error(f"Failed to create Langflow flow: {e}")
+            raise AgentServiceError(
+                "Charlie couldn't learn his new skills. Please try again."
+            )
 
-        # Create agent in our database
-        agent = Agent(
-            user_id=user.id,
-            name=agent_name,
-            description=f"Created from 3-step Q&A",
-            qa_who=qa_data.who,
-            qa_rules=qa_data.rules,
-            qa_tricks=qa_data.tricks,
-            system_prompt=system_prompt,
-            langflow_flow_id=flow_id,
-            template_name=template_name,
-            flow_data=flow_data,
-        )
+        # Now create agent in our database
+        try:
+            agent = Agent(
+                user_id=user.id,
+                name=agent_name,
+                description=f"Created from 3-step Q&A",
+                qa_who=qa_data.who,
+                qa_rules=qa_data.rules,
+                qa_tricks=qa_data.tricks,
+                system_prompt=system_prompt,
+                langflow_flow_id=flow_id,
+                template_name=template_name,
+                flow_data=flow_data,
+            )
 
-        self.session.add(agent)
-        await self.session.flush()
-        await self.session.refresh(agent)
+            self.session.add(agent)
+            await self.session.flush()
+            await self.session.refresh(agent)
 
-        return agent
+            logger.info(f"Created agent {agent.id} for user {user.id}")
+            return agent
+
+        except Exception as e:
+            # DB creation failed - clean up the Langflow flow we created
+            logger.error(f"Failed to save agent to DB, cleaning up Langflow flow: {e}")
+            try:
+                await self.langflow.delete_flow(flow_id)
+            except Exception as cleanup_error:
+                logger.error(f"Failed to clean up Langflow flow {flow_id}: {cleanup_error}")
+            raise AgentServiceError(
+                "Charlie was created but couldn't be saved. Please try again."
+            )
 
     async def update(
         self,
@@ -191,9 +229,12 @@ class AgentService:
         # Delete from Langflow
         try:
             await self.langflow.delete_flow(agent.langflow_flow_id)
-        except Exception:
+        except Exception as e:
             # Log but don't fail if Langflow deletion fails
-            pass
+            # Agent should still be deleted from our DB even if Langflow cleanup fails
+            logger.warning(
+                f"Failed to delete Langflow flow {agent.langflow_flow_id}: {e}"
+            )
 
         # Delete from our database
         await self.session.delete(agent)
@@ -222,10 +263,14 @@ class AgentService:
         """
         # Get or create conversation
         if conversation_id:
+            # Convert UUIDs to strings for SQLite/PostgreSQL compatibility
+            conv_id_str = str(conversation_id)
+            user_id_str = str(user.id)
+            agent_id_str = str(agent.id)
             stmt = select(Conversation).where(
-                Conversation.id == conversation_id,
-                Conversation.user_id == user.id,
-                Conversation.agent_id == agent.id,
+                Conversation.id == conv_id_str,
+                Conversation.user_id == user_id_str,
+                Conversation.agent_id == agent_id_str,
             )
             result = await self.session.execute(stmt)
             conversation = result.scalar_one_or_none()
@@ -252,21 +297,33 @@ class AgentService:
         self.session.add(user_message)
         await self.session.flush()
 
-        # Call Langflow
-        response = await self.langflow.run_flow(
-            flow_id=agent.langflow_flow_id,
-            message=message,
-            session_id=conversation.langflow_session_id,
-        )
+        # Call Langflow with proper error handling
+        response = {}
+        response_metadata = None
+        try:
+            response = await self.langflow.run_flow(
+                flow_id=agent.langflow_flow_id,
+                message=message,
+                session_id=conversation.langflow_session_id,
+            )
+            response_text = response.get("text", "")
+            response_metadata = response.get("metadata")
 
-        response_text = response.get("text", "")
+            # Handle empty responses
+            if not response_text or response_text == "{}":
+                logger.warning(f"Empty response from Langflow for agent {agent.id}")
+                response_text = "I'm having trouble thinking right now. Could you try asking that again?"
+
+        except Exception as e:
+            logger.error(f"Langflow chat error for agent {agent.id}: {e}")
+            response_text = "Charlie ran into a problem and couldn't respond. Please try again in a moment."
 
         # Save assistant message
         assistant_message = Message(
             conversation_id=conversation.id,
             role="assistant",
             content=response_text,
-            metadata=response.get("metadata"),
+            message_metadata=response_metadata,
         )
         self.session.add(assistant_message)
         await self.session.flush()
@@ -280,11 +337,14 @@ class AgentService:
         user_id: uuid.UUID,
     ) -> Optional[Conversation]:
         """Get conversation with messages."""
+        # Convert UUIDs to strings for SQLite/PostgreSQL compatibility
+        conv_id_str = str(conversation_id)
+        user_id_str = str(user_id)
         stmt = (
             select(Conversation)
             .where(
-                Conversation.id == conversation_id,
-                Conversation.user_id == user_id,
+                Conversation.id == conv_id_str,
+                Conversation.user_id == user_id_str,
             )
         )
         result = await self.session.execute(stmt)

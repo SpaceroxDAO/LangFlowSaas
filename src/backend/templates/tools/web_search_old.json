@@ -1,0 +1,226 @@
+{
+  "id_prefix": "DuckDuckGoSearchComponent",
+  "component_type": "DuckDuckGoSearchComponent",
+  "display_name": "Web Search",
+  "description": "Search the web using DuckDuckGo",
+  "icon": "DuckDuckGo",
+  "node": {
+    "data": {
+      "id": "DuckDuckGoSearchComponent-fmglM",
+      "node": {
+        "base_classes": [
+          "DataFrame"
+        ],
+        "beta": false,
+        "conditional_paths": [],
+        "custom_fields": {},
+        "description": "Search the web using DuckDuckGo with customizable result limits",
+        "display_name": "DuckDuckGo Search",
+        "documentation": "https://python.langchain.com/docs/integrations/tools/ddg",
+        "edited": false,
+        "field_order": [
+          "input_value",
+          "max_results",
+          "max_snippet_length"
+        ],
+        "frozen": false,
+        "icon": "DuckDuckGo",
+        "last_updated": "2026-01-05T16:55:28.802Z",
+        "legacy": false,
+        "metadata": {
+          "code_hash": "2e522a5a4389",
+          "dependencies": {
+            "dependencies": [
+              {
+                "name": "langchain_community",
+                "version": "0.3.21"
+              },
+              {
+                "name": "lfx",
+                "version": "0.2.1"
+              }
+            ],
+            "total_dependencies": 2
+          },
+          "module": "lfx.components.duckduckgo.duck_duck_go_search_run.DuckDuckGoSearchComponent"
+        },
+        "minimized": false,
+        "output_types": [],
+        "outputs": [
+          {
+            "allows_loop": false,
+            "cache": true,
+            "display_name": "Toolset",
+            "group_outputs": false,
+            "hidden": null,
+            "loop_types": null,
+            "method": "to_toolkit",
+            "name": "component_as_tool",
+            "options": null,
+            "required_inputs": null,
+            "selected": "Tool",
+            "tool_mode": true,
+            "types": [
+              "Tool"
+            ],
+            "value": "__UNDEFINED__"
+          }
+        ],
+        "pinned": false,
+        "template": {
+          "_frontend_node_flow_id": {
+            "value": "668898e3-0608-4c29-a77f-2b73f0047378"
+          },
+          "_frontend_node_folder_id": {
+            "value": "afe00a3b-7693-4a52-b169-bfcd32c8ec22"
+          },
+          "_type": "Component",
+          "code": {
+            "advanced": true,
+            "dynamic": true,
+            "fileTypes": [],
+            "file_path": "",
+            "info": "",
+            "list": false,
+            "load_from_db": false,
+            "multiline": true,
+            "name": "code",
+            "password": false,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "code",
+            "value": "from langchain_community.tools import DuckDuckGoSearchRun\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import IntInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.template.field.base import Output\n\n\nclass DuckDuckGoSearchComponent(Component):\n    \"\"\"Component for performing web searches using DuckDuckGo.\"\"\"\n\n    display_name = \"DuckDuckGo Search\"\n    description = \"Search the web using DuckDuckGo with customizable result limits\"\n    documentation = \"https://python.langchain.com/docs/integrations/tools/ddg\"\n    icon = \"DuckDuckGo\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Search Query\",\n            required=True,\n            info=\"The search query to execute with DuckDuckGo\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            value=5,\n            required=False,\n            advanced=True,\n            info=\"Maximum number of search results to return\",\n        ),\n        IntInput(\n            name=\"max_snippet_length\",\n            display_name=\"Max Snippet Length\",\n            value=100,\n            required=False,\n            advanced=True,\n            info=\"Maximum length of each result snippet\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"fetch_content_dataframe\"),\n    ]\n\n    def _build_wrapper(self) -> DuckDuckGoSearchRun:\n        \"\"\"Build the DuckDuckGo search wrapper.\"\"\"\n        return DuckDuckGoSearchRun()\n\n    def run_model(self) -> DataFrame:\n        return self.fetch_content_dataframe()\n\n    def fetch_content(self) -> list[Data]:\n        \"\"\"Execute the search and return results as Data objects.\"\"\"\n        try:\n            wrapper = self._build_wrapper()\n\n            full_results = wrapper.run(f\"{self.input_value} (site:*)\")\n\n            result_list = full_results.split(\"\\n\")[: self.max_results]\n\n            data_results = []\n            for result in result_list:\n                if result.strip():\n                    snippet = result[: self.max_snippet_length]\n                    data_results.append(\n                        Data(\n                            text=snippet,\n                            data={\n                                \"content\": result,\n                                \"snippet\": snippet,\n                            },\n                        )\n                    )\n        except (ValueError, AttributeError) as e:\n            error_data = [Data(text=str(e), data={\"error\": str(e)})]\n            self.status = error_data\n            return error_data\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_dataframe(self) -> DataFrame:\n        \"\"\"Convert the search results to a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the search results.\n        \"\"\"\n        data = self.fetch_content()\n        return DataFrame(data)\n"
+          },
+          "input_value": {
+            "_input_type": "MessageTextInput",
+            "advanced": false,
+            "display_name": "Search Query",
+            "dynamic": false,
+            "info": "The search query to execute with DuckDuckGo",
+            "input_types": [
+              "Message"
+            ],
+            "list": false,
+            "list_add_label": "Add More",
+            "load_from_db": false,
+            "name": "input_value",
+            "override_skip": false,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "tool_mode": true,
+            "trace_as_input": true,
+            "trace_as_metadata": true,
+            "track_in_telemetry": false,
+            "type": "str",
+            "value": ""
+          },
+          "is_refresh": false,
+          "max_results": {
+            "_input_type": "IntInput",
+            "advanced": true,
+            "display_name": "Max Results",
+            "dynamic": false,
+            "info": "Maximum number of search results to return",
+            "list": false,
+            "list_add_label": "Add More",
+            "name": "max_results",
+            "override_skip": false,
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "trace_as_metadata": true,
+            "track_in_telemetry": true,
+            "type": "int",
+            "value": 5
+          },
+          "max_snippet_length": {
+            "_input_type": "IntInput",
+            "advanced": true,
+            "display_name": "Max Snippet Length",
+            "dynamic": false,
+            "info": "Maximum length of each result snippet",
+            "list": false,
+            "list_add_label": "Add More",
+            "name": "max_snippet_length",
+            "override_skip": false,
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "trace_as_metadata": true,
+            "track_in_telemetry": true,
+            "type": "int",
+            "value": 100
+          },
+          "tools_metadata": {
+            "_input_type": "ToolsInput",
+            "advanced": false,
+            "display_name": "Actions",
+            "dynamic": false,
+            "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+            "is_list": true,
+            "list_add_label": "Add More",
+            "name": "tools_metadata",
+            "override_skip": false,
+            "placeholder": "",
+            "real_time_refresh": true,
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "trace_as_metadata": true,
+            "track_in_telemetry": false,
+            "type": "tools",
+            "value": [
+              {
+                "args": {
+                  "input_value": {
+                    "description": "The search query to execute with DuckDuckGo",
+                    "title": "Input Value",
+                    "type": "string"
+                  }
+                },
+                "description": "Search the web using DuckDuckGo with customizable result limits",
+                "display_description": "Search the web using DuckDuckGo with customizable result limits",
+                "display_name": "fetch_content_dataframe",
+                "name": "fetch_content_dataframe",
+                "readonly": false,
+                "status": true,
+                "tags": [
+                  "fetch_content_dataframe"
+                ]
+              }
+            ]
+          }
+        },
+        "tool_mode": true
+      },
+      "showNode": true,
+      "type": "DuckDuckGoSearchComponent"
+    },
+    "id": "DuckDuckGoSearchComponent-fmglM",
+    "measured": {
+      "height": 218,
+      "width": 320
+    },
+    "position": {
+      "x": 1295.289571694103,
+      "y": 263.44629952564907
+    },
+    "selected": true,
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "component_as_tool",
+    "output_types": [
+      "Tool"
+    ]
+  }
+}

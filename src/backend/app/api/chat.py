@@ -4,11 +4,14 @@ Chat endpoints for interacting with agents.
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
+from app.middleware.rate_limit import check_rate_limit
 from app.models.user import User
+from app.models.conversation import Conversation
 from app.schemas.message import (
     ChatRequest,
     ChatResponse,
@@ -36,6 +39,7 @@ async def get_user_from_clerk(
     response_model=ChatResponse,
     summary="Chat with agent",
     description="Send a message to an agent and get a response.",
+    dependencies=[Depends(check_rate_limit)],
 )
 async def chat_with_agent(
     agent_id: uuid.UUID,
@@ -104,9 +108,6 @@ async def list_conversations(
     clerk_user: CurrentUser,
 ):
     """List all conversations with a specific agent."""
-    from sqlalchemy import select
-    from app.models.conversation import Conversation
-
     user = await get_user_from_clerk(clerk_user, session)
     agent_service = AgentService(session)
 
@@ -183,9 +184,6 @@ async def delete_conversation(
     clerk_user: CurrentUser,
 ):
     """Delete a conversation."""
-    from app.models.conversation import Conversation
-    from sqlalchemy import select
-
     user = await get_user_from_clerk(clerk_user, session)
 
     stmt = select(Conversation).where(

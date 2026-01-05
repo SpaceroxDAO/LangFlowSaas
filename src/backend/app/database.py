@@ -1,13 +1,13 @@
 """
-Async SQLAlchemy 2.0 database setup for FastAPI with PostgreSQL.
+Async SQLAlchemy 2.0 database setup for FastAPI.
+Supports both SQLite (development) and PostgreSQL (production).
 """
 import uuid
 from datetime import datetime
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends
-from sqlalchemy import DateTime, text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import DateTime, String, event
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncSession,
@@ -19,15 +19,26 @@ from sqlalchemy.sql import func
 
 from app.config import settings
 
-# Create async engine
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.debug,
-    pool_size=5,
-    max_overflow=10,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-)
+# Detect database type
+is_sqlite = settings.database_url.startswith("sqlite")
+
+# Create async engine with appropriate settings
+if is_sqlite:
+    engine = create_async_engine(
+        settings.database_url,
+        echo=settings.debug,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    # PostgreSQL settings
+    engine = create_async_engine(
+        settings.database_url,
+        echo=settings.debug,
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+    )
 
 # Create async session factory
 async_session_maker = async_sessionmaker(
@@ -46,20 +57,21 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 # Type annotations for common column patterns
+# Use String(36) for UUID to support both SQLite and PostgreSQL
 UUIDPrimaryKey = Annotated[
     uuid.UUID,
     mapped_column(
-        PG_UUID(as_uuid=True),
+        String(36),
         primary_key=True,
-        server_default=text("gen_random_uuid()"),
+        default=lambda: str(uuid.uuid4()),
     ),
 ]
 
 CreatedAt = Annotated[
     datetime,
     mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
+        DateTime(),
+        default=datetime.utcnow,
         nullable=False,
     ),
 ]
@@ -67,9 +79,9 @@ CreatedAt = Annotated[
 UpdatedAt = Annotated[
     datetime,
     mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
+        DateTime(),
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
         nullable=False,
     ),
 ]
