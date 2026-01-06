@@ -126,6 +126,9 @@ export function LangflowCanvasViewer({
   const [currentLevel, setCurrentLevel] = useState(level);
   const { completeTour } = useTour();
 
+  // For same-origin deployment via Nginx proxy, use '/langflow'
+  // For development, use 'http://localhost:7860'
+  // CSS injection ONLY works with same-origin (production proxy setup)
   const langflowHost = import.meta.env.VITE_LANGFLOW_HOST || 'http://localhost:7860';
   const canvasUrl = `${langflowHost}/flow/${flowId}`;
 

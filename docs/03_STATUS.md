@@ -161,13 +161,24 @@ cd src/backend && pytest
 
 ## Git Status
 
-Latest commit: `3a06565` - feat: Add agent editing, embed modal, E2E tests, and tool templates
+Latest commit: `e2a352d` - feat: Add Phase 5-7 features, fix E2E tests, improve production readiness
+
+## Recent Improvements (2026-01-05)
+
+- ✅ Fixed E2E test assertions to match actual error messages
+- ✅ Fixed docker-compose security (Langflow non-root user)
+- ✅ Enabled Playwright webServer for CI/CD
+- ✅ Added environment variable validation on backend startup
+- ✅ Created production deployment guide (`docs/11_PRODUCTION_DEPLOYMENT.md`)
 
 ## Next Steps
 
-1. **Production Deployment Planning**
-   - Configure same-origin deployment for CSS injection
-   - Set up Nginx proxy for Langflow iframe
+1. **Production Deployment** (see `docs/11_PRODUCTION_DEPLOYMENT.md`)
+   - ✅ Nginx proxy configuration documented
+   - ✅ Same-origin deployment for CSS injection documented
+   - [ ] Choose deployment platform (DataStax recommended)
+   - [ ] Purchase domain and configure SSL
+   - [ ] Deploy and test CSS injection
 
 2. **Phase 8: RAG Research**
    - Manual RAG flow testing in Langflow
@@ -180,4 +191,4 @@ Latest commit: `3a06565` - feat: Add agent editing, embed modal, E2E tests, and 
 
 ---
 
-**Status Summary**: 🟢 Green - Phases 5-7 verified working. No blockers. Ready for production deployment planning.
+**Status Summary**: 🟢 Green - Phases 5-7 verified. Production deployment guide complete. Ready to deploy.
