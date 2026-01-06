@@ -41,7 +41,7 @@ export function CanvasViewerPage() {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-64px)]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mx-auto mb-3"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500 mx-auto mb-3"></div>
           <p className="text-gray-600">Loading canvas...</p>
         </div>
       </div>
@@ -61,7 +61,7 @@ export function CanvasViewerPage() {
           <p className="text-gray-600 mb-4">{error || 'Agent not found'}</p>
           <Link
             to="/dashboard"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
           >
             Back to Dashboard
           </Link>
@@ -86,7 +86,7 @@ export function CanvasViewerPage() {
           </p>
           <Link
             to={`/playground/${agentId}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500 text-white rounded-lg hover:bg-violet-600"
           >
             Go to Playground
           </Link>
@@ -124,7 +124,7 @@ export function CanvasViewerPage() {
             </Link>
             <Link
               to={`/edit/${agentId}`}
-              className="px-4 py-2 text-white bg-orange-500 rounded-lg hover:bg-orange-600 text-sm"
+              className="px-4 py-2 text-white bg-violet-500 rounded-lg hover:bg-violet-600 text-sm"
             >
               Edit Agent
             </Link>

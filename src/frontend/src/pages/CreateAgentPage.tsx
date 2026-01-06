@@ -1,5 +1,5 @@
 import { useReducer, useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { WizardLayout } from '@/components/WizardLayout'
@@ -117,6 +117,8 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 
 export function CreateAgentPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const projectId = searchParams.get('project')
   const { getToken } = useAuth()
   const [state, dispatch] = useReducer(reducer, initialState)
   const { currentStep, formData, errors, isSubmitting, submitError } = state
@@ -186,12 +188,13 @@ export function CreateAgentPage() {
     dispatch({ type: 'SUBMIT_START' })
 
     try {
-      // Send selected tools as array to backend
+      // Send selected tools as array to backend, include project_id if provided
       const agent = await api.createAgentFromQA({
         name: formData.name,
         who: formData.who,
         rules: formData.rules,
         selected_tools: formData.tools,
+        project_id: projectId || undefined,
       })
       dispatch({ type: 'SUBMIT_SUCCESS' })
       navigate(`/playground/${agent.id}`)
@@ -199,13 +202,13 @@ export function CreateAgentPage() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create agent. Please try again.'
       dispatch({ type: 'SUBMIT_ERROR', message: errorMessage })
     }
-  }, [formData, navigate])
+  }, [formData, navigate, projectId])
 
   // Button styles by step
   const buttonStyles = {
     1: 'bg-violet-500 hover:bg-violet-600',
     2: 'bg-pink-500 hover:bg-pink-600',
-    3: 'bg-orange-500 hover:bg-orange-600',
+    3: 'bg-violet-500 hover:bg-violet-600',
   }
 
   return (

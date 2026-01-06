@@ -43,7 +43,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-violet-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">C</span>
               </div>
               <span className="font-semibold text-gray-900">Teach Charlie</span>
@@ -55,7 +55,7 @@ export function Layout({ children }: LayoutProps) {
                 to="/dashboard"
                 className={`text-sm font-medium transition-colors ${
                   isActive('/dashboard')
-                    ? 'text-orange-600'
+                    ? 'text-violet-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -65,7 +65,7 @@ export function Layout({ children }: LayoutProps) {
                 to="/create"
                 className={`text-sm font-medium transition-colors ${
                   isActive('/create')
-                    ? 'text-orange-600'
+                    ? 'text-violet-600'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >

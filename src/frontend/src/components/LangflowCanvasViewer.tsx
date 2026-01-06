@@ -218,7 +218,7 @@ export function LangflowCanvasViewer({
                 onClick={() => handleLevelChange(lvl as 1 | 2 | 3 | 4)}
                 className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
                   currentLevel === lvl
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-violet-500 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
                 title={levelLabels[lvl].title}
@@ -246,7 +246,7 @@ export function LangflowCanvasViewer({
           <div className="absolute inset-0 z-10 pointer-events-none">
             <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-lg max-w-xs">
               <p className="text-sm text-gray-700">
-                <span className="font-medium text-orange-600">Peek Mode:</span> You're viewing {agentName}'s brain in read-only mode. See how messages flow through the components!
+                <span className="font-medium text-violet-600">Peek Mode:</span> You're viewing {agentName}'s brain in read-only mode. See how messages flow through the components!
               </p>
             </div>
           </div>
@@ -257,7 +257,7 @@ export function LangflowCanvasViewer({
       {isLoading && (
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mx-auto mb-3"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500 mx-auto mb-3"></div>
             <p className="text-sm text-gray-600">Loading {agentName}'s brain...</p>
           </div>
         </div>

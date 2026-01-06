@@ -11,6 +11,8 @@ from app.database import BaseModel
 if TYPE_CHECKING:
     from app.models.agent import Agent
     from app.models.conversation import Conversation
+    from app.models.project import Project
+    from app.models.user_settings import UserSettings
 
 
 class User(BaseModel):
@@ -68,6 +70,21 @@ class User(BaseModel):
         "Conversation",
         back_populates="user",
         lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    projects: Mapped[List["Project"]] = relationship(
+        "Project",
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    settings: Mapped[Optional["UserSettings"]] = relationship(
+        "UserSettings",
+        back_populates="user",
+        lazy="joined",
+        uselist=False,
         cascade="all, delete-orphan",
     )
 

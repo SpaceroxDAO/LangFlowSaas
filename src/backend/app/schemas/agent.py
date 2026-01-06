@@ -61,6 +61,12 @@ class AgentCreateFromQA(BaseModel):
         description="Agent name (auto-generated from 'who' if not provided)",
     )
 
+    # Project to assign to (optional - uses default project if not provided)
+    project_id: Optional[uuid.UUID] = Field(
+        None,
+        description="Project ID to assign agent to (uses default project if not provided)",
+    )
+
 
 class AgentCreate(AgentBase):
     """Schema for direct agent creation (advanced)."""
@@ -90,6 +96,7 @@ class AgentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    project_id: Optional[uuid.UUID]
     name: str
     description: Optional[str]
     qa_who: str

@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 from app.models.agent import Agent
 from app.models.user import User
+from app.models.project import Project
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.schemas.agent import AgentCreateFromQA, AgentUpdate
@@ -67,12 +68,20 @@ class AgentService:
     async def list_by_user(
         self,
         user_id: uuid.UUID,
+        project_id: uuid.UUID = None,
         page: int = 1,
         page_size: int = 20,
         active_only: bool = True,
     ) -> Tuple[List[Agent], int]:
         """
         List agents for a user with pagination.
+
+        Args:
+            user_id: User UUID
+            project_id: Optional project UUID to filter by
+            page: Page number (1-indexed)
+            page_size: Number of agents per page
+            active_only: Only return active agents
 
         Returns:
             Tuple of (agents list, total count)
@@ -81,6 +90,11 @@ class AgentService:
         user_id_str = str(user_id)
         # Base query
         stmt = select(Agent).where(Agent.user_id == user_id_str)
+
+        # Filter by project if specified
+        if project_id:
+            project_id_str = str(project_id)
+            stmt = stmt.where(Agent.project_id == project_id_str)
 
         if active_only:
             stmt = stmt.where(Agent.is_active == True)
@@ -120,6 +134,50 @@ class AgentService:
                 "Charlie's brain isn't responding right now. Please try again in a moment."
             )
 
+        # Determine project_id - use provided or get/create default
+        project_id = None
+        if qa_data.project_id:
+            # Verify project exists and belongs to user
+            project_id_str = str(qa_data.project_id)
+            user_id_str = str(user.id)
+            stmt = select(Project).where(
+                Project.id == project_id_str,
+                Project.user_id == user_id_str,
+            )
+            result = await self.session.execute(stmt)
+            project = result.scalar_one_or_none()
+            if project:
+                project_id = str(project.id)
+            else:
+                logger.warning(f"Project {qa_data.project_id} not found for user {user.id}, will use default")
+
+        # If no valid project_id, get or create default project
+        if not project_id:
+            stmt = select(Project).where(
+                Project.user_id == str(user.id),
+                Project.is_default == True,
+            )
+            result = await self.session.execute(stmt)
+            default_project = result.scalar_one_or_none()
+
+            if default_project:
+                project_id = str(default_project.id)
+            else:
+                # Create default project
+                default_project = Project(
+                    user_id=str(user.id),
+                    name="My Projects",
+                    description="Your default project for organizing agents",
+                    icon="star",
+                    color="#f97316",
+                    is_default=True,
+                    sort_order=0,
+                )
+                self.session.add(default_project)
+                await self.session.flush()
+                project_id = str(default_project.id)
+                logger.info(f"Created default project for user {user.id}")
+
         # Generate flow from Q&A with selected tools
         flow_data, system_prompt, auto_name = self.mapper.create_flow_from_qa(
             who=qa_data.who,
@@ -150,6 +208,7 @@ class AgentService:
         try:
             agent = Agent(
                 user_id=user.id,
+                project_id=project_id,
                 name=agent_name,
                 description=f"Created from 3-step Q&A",
                 qa_who=qa_data.who,
@@ -165,7 +224,7 @@ class AgentService:
             await self.session.flush()
             await self.session.refresh(agent)
 
-            logger.info(f"Created agent {agent.id} for user {user.id}")
+            logger.info(f"Created agent {agent.id} for user {user.id} in project {project_id}")
             return agent
 
         except Exception as e:
@@ -241,6 +300,75 @@ class AgentService:
         await self.session.flush()
 
         return True
+
+    async def duplicate(
+        self,
+        agent: Agent,
+        new_name: str,
+    ) -> Agent:
+        """
+        Create a duplicate of an agent with a new name.
+
+        Args:
+            agent: The agent to duplicate
+            new_name: Name for the new agent
+
+        Returns:
+            The newly created agent
+        """
+        # Check Langflow health before starting
+        if not await self.langflow.health_check():
+            raise AgentServiceError(
+                "Charlie's brain isn't responding right now. Please try again in a moment."
+            )
+
+        # Create a new flow in Langflow with the same data
+        flow_id = None
+        try:
+            flow_id = await self.langflow.create_flow(
+                name=f"{new_name} - {agent.user_id}",
+                data=agent.flow_data.get("data", {}) if agent.flow_data else {},
+                description=f"Duplicated from {agent.name}",
+            )
+        except Exception as e:
+            logger.error(f"Failed to create Langflow flow for duplicate: {e}")
+            raise AgentServiceError(
+                "Charlie couldn't be duplicated. Please try again."
+            )
+
+        # Create the new agent in our database
+        try:
+            new_agent = Agent(
+                user_id=agent.user_id,
+                project_id=agent.project_id,
+                name=new_name,
+                description=f"Copy of {agent.name}",
+                qa_who=agent.qa_who,
+                qa_rules=agent.qa_rules,
+                qa_tricks=agent.qa_tricks,
+                system_prompt=agent.system_prompt,
+                langflow_flow_id=flow_id,
+                template_name=agent.template_name,
+                flow_data=agent.flow_data,
+            )
+
+            self.session.add(new_agent)
+            await self.session.flush()
+            await self.session.refresh(new_agent)
+
+            logger.info(f"Duplicated agent {agent.id} as {new_agent.id}")
+            return new_agent
+
+        except Exception as e:
+            # DB creation failed - clean up the Langflow flow we created
+            logger.error(f"Failed to save duplicated agent to DB: {e}")
+            try:
+                await self.langflow.delete_flow(flow_id)
+            except Exception as cleanup_error:
+                logger.error(f"Failed to clean up Langflow flow {flow_id}: {cleanup_error}")
+            raise AgentServiceError(
+                "Charlie was duplicated but couldn't be saved. Please try again."
+            )
 
     async def chat(
         self,

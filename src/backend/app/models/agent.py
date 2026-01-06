@@ -12,6 +12,7 @@ from app.database import BaseModel
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.conversation import Conversation
+    from app.models.project import Project
 
 
 class Agent(BaseModel):
@@ -31,6 +32,15 @@ class Agent(BaseModel):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
+    )
+
+    # Project relationship (nullable for migration)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        String(36),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Project this agent belongs to",
     )
 
     # Agent display info
@@ -101,6 +111,12 @@ class Agent(BaseModel):
     # Relationships
     user: Mapped["User"] = relationship(
         "User",
+        back_populates="agents",
+        lazy="joined",
+    )
+
+    project: Mapped[Optional["Project"]] = relationship(
+        "Project",
         back_populates="agents",
         lazy="joined",
     )

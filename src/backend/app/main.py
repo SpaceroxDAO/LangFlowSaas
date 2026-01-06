@@ -10,7 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.api import health_router, agents_router, chat_router, analytics_router
+from app.api import (
+    health_router,
+    agents_router,
+    chat_router,
+    analytics_router,
+    projects_router,
+    settings_router,
+)
 
 
 @asynccontextmanager
@@ -61,6 +68,8 @@ app.include_router(health_router)
 app.include_router(agents_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
+app.include_router(projects_router, prefix="/api/v1")
+app.include_router(settings_router, prefix="/api/v1")
 
 
 @app.get("/")

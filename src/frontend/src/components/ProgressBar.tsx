@@ -11,7 +11,7 @@ interface ProgressBarProps {
 const stepColors = [
   'bg-violet-500', // Step 1 - Identity
   'bg-pink-500',   // Step 2 - Coaching
-  'bg-orange-500', // Step 3 - Tricks
+  'bg-violet-500', // Step 3 - Tricks
   'bg-green-500',  // Step 4 - Complete (if needed)
 ]
 

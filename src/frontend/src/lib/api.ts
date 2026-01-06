@@ -1,4 +1,23 @@
-import type { Agent, AgentCreateFromQA, AgentUpdate, ChatRequest, ChatResponse, Conversation, AgentStats, MessagesResponse } from '@/types'
+import type {
+  Agent,
+  AgentCreateFromQA,
+  AgentUpdate,
+  ChatRequest,
+  ChatResponse,
+  Conversation,
+  AgentStats,
+  MessagesResponse,
+  Project,
+  ProjectCreate,
+  ProjectUpdate,
+  ProjectListResponse,
+  ProjectWithAgents,
+  UserSettings,
+  UserSettingsUpdate,
+  ApiKeyInfo,
+  ApiKeyCreate,
+  TourStatus,
+} from '@/types'
 
 // Check dev mode from environment
 const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
@@ -62,8 +81,9 @@ class ApiClient {
     })
   }
 
-  async listAgents(): Promise<{ agents: Agent[]; total: number }> {
-    return this.request('/api/v1/agents')
+  async listAgents(projectId?: string): Promise<{ agents: Agent[]; total: number }> {
+    const params = projectId ? `?project_id=${projectId}` : ''
+    return this.request(`/api/v1/agents${params}`)
   }
 
   async getAgent(id: string): Promise<Agent> {
@@ -78,6 +98,17 @@ class ApiClient {
     return this.request<Agent>(`/api/v1/agents/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
+    })
+  }
+
+  async exportAgent(id: string): Promise<Record<string, unknown>> {
+    return this.request(`/api/v1/agents/${id}/export`)
+  }
+
+  async duplicateAgent(id: string, newName?: string): Promise<Agent> {
+    const params = newName ? `?new_name=${encodeURIComponent(newName)}` : ''
+    return this.request<Agent>(`/api/v1/agents/${id}/duplicate${params}`, {
+      method: 'POST',
     })
   }
 
@@ -109,6 +140,95 @@ class ApiClient {
     offset: number = 0
   ): Promise<MessagesResponse> {
     return this.request(`/api/v1/analytics/agents/${agentId}/messages?limit=${limit}&offset=${offset}`)
+  }
+
+  // Projects
+  async listProjects(includeArchived: boolean = false): Promise<ProjectListResponse> {
+    const params = includeArchived ? '?include_archived=true' : ''
+    return this.request(`/api/v1/projects${params}`)
+  }
+
+  async getProject(id: string): Promise<Project> {
+    return this.request(`/api/v1/projects/${id}`)
+  }
+
+  async getProjectWithAgents(id: string, activeOnly: boolean = true): Promise<ProjectWithAgents> {
+    const params = activeOnly ? '' : '?active_only=false'
+    return this.request(`/api/v1/projects/${id}/agents${params}`)
+  }
+
+  async createProject(data: ProjectCreate): Promise<Project> {
+    return this.request<Project>('/api/v1/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateProject(id: string, data: ProjectUpdate): Promise<Project> {
+    return this.request<Project>(`/api/v1/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async archiveProject(id: string): Promise<void> {
+    return this.request(`/api/v1/projects/${id}`, { method: 'DELETE' })
+  }
+
+  async moveAgentToProject(projectId: string, agentId: string): Promise<Agent> {
+    return this.request<Agent>(`/api/v1/projects/${projectId}/agents/${agentId}/move`, {
+      method: 'POST',
+    })
+  }
+
+  async duplicateProject(id: string, newName?: string): Promise<Project> {
+    const params = newName ? `?new_name=${encodeURIComponent(newName)}` : ''
+    return this.request<Project>(`/api/v1/projects/${id}/duplicate${params}`, {
+      method: 'POST',
+    })
+  }
+
+  // Settings
+  async getSettings(): Promise<UserSettings> {
+    return this.request('/api/v1/settings')
+  }
+
+  async updateSettings(data: UserSettingsUpdate): Promise<UserSettings> {
+    return this.request<UserSettings>('/api/v1/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listApiKeys(): Promise<ApiKeyInfo[]> {
+    return this.request('/api/v1/settings/api-keys')
+  }
+
+  async setApiKey(data: ApiKeyCreate): Promise<ApiKeyInfo> {
+    return this.request<ApiKeyInfo>('/api/v1/settings/api-keys', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteApiKey(provider: string): Promise<void> {
+    return this.request(`/api/v1/settings/api-keys/${provider}`, { method: 'DELETE' })
+  }
+
+  async completeTour(tourId: string): Promise<UserSettings> {
+    return this.request<UserSettings>(`/api/v1/settings/tours/${tourId}/complete`, {
+      method: 'POST',
+    })
+  }
+
+  async checkTourCompleted(tourId: string): Promise<TourStatus> {
+    return this.request(`/api/v1/settings/tours/${tourId}/completed`)
+  }
+
+  async completeOnboarding(): Promise<UserSettings> {
+    return this.request<UserSettings>('/api/v1/settings/onboarding/complete', {
+      method: 'POST',
+    })
   }
 }
 

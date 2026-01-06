@@ -27,7 +27,7 @@ export function FrameworkPage() {
       <header className="py-6 px-4 border-b border-gray-100 bg-white">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-violet-500 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-xl">C</span>
             </div>
             <span className="font-bold text-xl text-gray-900">Teach Charlie</span>
@@ -46,7 +46,7 @@ export function FrameworkPage() {
       <main className="min-h-[calc(100vh-80px)] flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-6">
           {/* Left Panel - Info Card */}
-          <div className="lg:w-[400px] flex-shrink-0 bg-gradient-to-br from-orange-400 to-orange-500 rounded-3xl p-8 text-white flex flex-col">
+          <div className="lg:w-[400px] flex-shrink-0 bg-gradient-to-br from-violet-400 to-violet-500 rounded-3xl p-8 text-white flex flex-col">
             {/* Mascot */}
             <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-6">
               <CharlieMascot className="w-14 h-14" />
@@ -107,12 +107,12 @@ export function FrameworkPage() {
 
               {/* Step 3 - Tricks */}
               <div className="flex gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <TricksIcon className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <TricksIcon className="w-6 h-6 text-violet-600" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">
-                    <span className="text-orange-500">3.</span> Tricks
+                    <span className="text-violet-500">3.</span> Tricks
                   </h4>
                   <p className="text-gray-600 text-sm">
                     Enable special capabilities like web search, image generation, or
@@ -126,7 +126,7 @@ export function FrameworkPage() {
             <div className="mt-8 pt-6 border-t border-gray-100">
               <Link
                 to="/create"
-                className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors w-full justify-center"
+                className="inline-flex items-center gap-2 bg-violet-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-violet-600 transition-colors w-full justify-center"
               >
                 Start Training
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

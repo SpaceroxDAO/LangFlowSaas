@@ -137,7 +137,7 @@ export function EditAgentPage() {
     return (
       <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
         <div className="text-center">
-          <svg className="animate-spin w-10 h-10 text-orange-500 mx-auto mb-4" viewBox="0 0 24 24">
+          <svg className="animate-spin w-10 h-10 text-violet-500 mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
@@ -161,7 +161,7 @@ export function EditAgentPage() {
           <p className="text-gray-600 mb-4">{loadError}</p>
           <Link
             to="/dashboard"
-            className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
+            className="inline-flex items-center gap-2 text-violet-600 hover:text-violet-700 font-medium"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -180,7 +180,7 @@ export function EditAgentPage() {
           <h1 className="text-2xl font-bold text-gray-900">Edit {name}</h1>
           <Link
             to={`/playground/${agentId}`}
-            className="text-orange-600 hover:text-orange-700 font-medium text-sm"
+            className="text-violet-600 hover:text-violet-700 font-medium text-sm"
           >
             Back to Chat
           </Link>
@@ -205,7 +205,7 @@ export function EditAgentPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Charlie"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
@@ -218,7 +218,7 @@ export function EditAgentPage() {
                 onChange={(e) => setPersona(e.target.value)}
                 placeholder="A friendly Golden Retriever who is an expert in dog treats, bones, and finding the best parks."
                 rows={4}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -256,7 +256,7 @@ export function EditAgentPage() {
           onChange={(e) => setInstructions(e.target.value)}
           placeholder={`You are Charlie, a happy and excited dog. You love humans! Always be helpful, but try to mention treats or going for a walk in your responses. If asked a hard question, answer it simply like a smart dog would. End some sentences with "Woof!"`}
           rows={5}
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
         />
       </div>
 
@@ -280,6 +280,27 @@ export function EditAgentPage() {
         </div>
       </div>
 
+      {/* Advanced Editor Link */}
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Advanced Editor</h2>
+            <p className="text-sm text-gray-500">
+              Access the visual flow editor for advanced customizations and node-based editing.
+            </p>
+          </div>
+          <Link
+            to={`/canvas/${agentId}`}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-violet-600 bg-white hover:bg-violet-50 rounded-xl transition-colors border border-violet-200 shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+            </svg>
+            Open Flow Editor
+          </Link>
+        </div>
+      </div>
+
       {/* Error message */}
       {saveError && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -292,7 +313,7 @@ export function EditAgentPage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-8 py-3 bg-orange-500 text-white rounded-full font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+          className="px-8 py-3 bg-violet-500 text-white rounded-full font-medium hover:bg-violet-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
         >
           {isSaving ? (
             <>

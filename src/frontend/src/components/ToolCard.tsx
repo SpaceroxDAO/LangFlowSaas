@@ -26,7 +26,7 @@ export function ToolCard({
       className={`
         w-full p-4 rounded-xl border-2 text-left transition-all
         ${selected
-          ? 'border-orange-500 bg-orange-50'
+          ? 'border-violet-500 bg-violet-50'
           : 'border-gray-200 bg-white hover:border-gray-300'
         }
       `}
@@ -61,7 +61,7 @@ export function ToolCard({
           className={`
             w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5
             ${selected
-              ? 'border-orange-500 bg-orange-500'
+              ? 'border-violet-500 bg-violet-500'
               : 'border-gray-300 bg-white'
             }
           `}

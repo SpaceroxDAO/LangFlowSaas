@@ -20,6 +20,21 @@ from app.schemas.message import (
     ChatRequest,
     ChatResponse,
 )
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    ProjectListResponse,
+    ProjectWithAgentsResponse,
+    MoveAgentRequest,
+)
+from app.schemas.settings import (
+    ApiKeyCreate,
+    ApiKeyResponse,
+    UserSettingsUpdate,
+    UserSettingsResponse,
+    TourCompletedRequest,
+)
 
 __all__ = [
     "UserCreate",
@@ -37,4 +52,15 @@ __all__ = [
     "MessageResponse",
     "ChatRequest",
     "ChatResponse",
+    "ProjectCreate",
+    "ProjectUpdate",
+    "ProjectResponse",
+    "ProjectListResponse",
+    "ProjectWithAgentsResponse",
+    "MoveAgentRequest",
+    "ApiKeyCreate",
+    "ApiKeyResponse",
+    "UserSettingsUpdate",
+    "UserSettingsResponse",
+    "TourCompletedRequest",
 ]

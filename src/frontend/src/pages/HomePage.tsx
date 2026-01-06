@@ -21,7 +21,7 @@ export function HomePage() {
       <header className="py-6 px-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-violet-500 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-xl">C</span>
             </div>
             <span className="font-bold text-xl text-gray-900">Teach Charlie</span>
@@ -73,7 +73,7 @@ export function HomePage() {
 
           {/* Heading */}
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Welcome to <span className="text-orange-500">Teach Charlie AI</span>
+            Welcome to <span className="text-violet-500">Teach Charlie AI</span>
           </h1>
 
           {/* Subtitle */}
@@ -87,7 +87,7 @@ export function HomePage() {
               "Think of building an AI agent like training a dog. First, you give it an{' '}
               <span className="font-semibold text-violet-600">identity</span> — its name and job.
               Then you teach it the <span className="font-semibold text-pink-500">rules</span> of the house.
-              Finally, you teach it <span className="font-semibold text-orange-500">tricks</span> —
+              Finally, you teach it <span className="font-semibold text-violet-500">tricks</span> —
               the special skills that make it useful."
             </blockquote>
           </div>

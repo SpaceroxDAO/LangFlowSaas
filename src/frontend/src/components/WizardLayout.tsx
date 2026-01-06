@@ -27,7 +27,7 @@ const themeStyles: Record<StepTheme, { gradient: string; iconBg: string }> = {
     iconBg: 'bg-white/20',
   },
   orange: {
-    gradient: 'from-orange-400 to-orange-500',
+    gradient: 'from-violet-400 to-violet-500',
     iconBg: 'bg-white/20',
   },
 }

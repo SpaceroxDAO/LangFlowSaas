@@ -73,21 +73,23 @@ async def create_agent_from_qa(
     "",
     response_model=AgentListResponse,
     summary="List agents",
-    description="List all agents for the current user.",
+    description="List all agents for the current user, optionally filtered by project.",
 )
 async def list_agents(
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
+    project_id: Optional[uuid.UUID] = None,
     page: int = 1,
     page_size: int = 20,
     active_only: bool = True,
 ):
-    """List all agents for the authenticated user."""
+    """List all agents for the authenticated user, optionally filtered by project."""
     user = await get_user_from_clerk(clerk_user, session)
     agent_service = AgentService(session)
 
     agents, total = await agent_service.list_by_user(
         user_id=user.id,
+        project_id=project_id,
         page=page,
         page_size=page_size,
         active_only=active_only,
@@ -186,3 +188,81 @@ async def delete_agent(
 
     await agent_service.delete(agent)
     return None
+
+
+@router.get(
+    "/{agent_id}/export",
+    summary="Export agent",
+    description="Export an agent's configuration as JSON for backup or sharing.",
+)
+async def export_agent(
+    agent_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Export an agent's full configuration as JSON."""
+    user = await get_user_from_clerk(clerk_user, session)
+    agent_service = AgentService(session)
+
+    agent = await agent_service.get_by_id(agent_id, user_id=user.id)
+
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Charlie not found.",
+        )
+
+    # Return exportable agent data (excluding internal IDs)
+    export_data = {
+        "name": agent.name,
+        "description": agent.description,
+        "qa_who": agent.qa_who,
+        "qa_rules": agent.qa_rules,
+        "qa_tricks": agent.qa_tricks,
+        "system_prompt": agent.system_prompt,
+        "template_name": agent.template_name,
+        "flow_data": agent.flow_data,
+        "is_active": agent.is_active,
+        "exported_at": str(agent.updated_at),
+        "version": "1.0",
+    }
+
+    return export_data
+
+
+@router.post(
+    "/{agent_id}/duplicate",
+    response_model=AgentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Duplicate agent",
+    description="Create a copy of an existing agent.",
+)
+async def duplicate_agent(
+    agent_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+    new_name: Optional[str] = None,
+):
+    """Create a duplicate of an agent with a new name."""
+    user = await get_user_from_clerk(clerk_user, session)
+    agent_service = AgentService(session)
+
+    agent = await agent_service.get_by_id(agent_id, user_id=user.id)
+
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Charlie not found.",
+        )
+
+    try:
+        duplicated = await agent_service.duplicate(
+            agent=agent,
+            new_name=new_name or f"{agent.name} (Copy)",
+        )
+        return duplicated
+    except AgentServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )

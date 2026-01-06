@@ -67,7 +67,7 @@ export function DashboardPage() {
         </div>
         <Link
           to="/create"
-          className="bg-orange-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors flex items-center gap-2"
+          className="bg-violet-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-violet-600 transition-colors flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -79,7 +79,7 @@ export function DashboardPage() {
       {/* Loading */}
       {isLoading && (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500" />
         </div>
       )}
 
@@ -93,8 +93,8 @@ export function DashboardPage() {
       {/* Empty state */}
       {!isLoading && !error && agents.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
             </svg>
           </div>
@@ -102,7 +102,7 @@ export function DashboardPage() {
           <p className="text-gray-600 mb-6">Create your first AI agent to get started</p>
           <Link
             to="/create"
-            className="inline-block bg-orange-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            className="inline-block bg-violet-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-violet-600 transition-colors"
           >
             Create Your First Agent
           </Link>
@@ -182,8 +182,8 @@ function AgentCard({ agent, onDelete, onShare }: { agent: Agent; onDelete: (agen
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-          <span className="text-orange-600 font-bold text-lg">
+        <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
+          <span className="text-violet-600 font-bold text-lg">
             {agent.name.charAt(0).toUpperCase()}
           </span>
         </div>
@@ -224,7 +224,7 @@ function AgentCard({ agent, onDelete, onShare }: { agent: Agent; onDelete: (agen
       <div className="flex gap-2">
         <Link
           to={`/playground/${agent.id}`}
-          className="flex-1 bg-orange-500 text-white text-center py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors text-sm"
+          className="flex-1 bg-violet-500 text-white text-center py-2 rounded-lg font-medium hover:bg-violet-600 transition-colors text-sm"
         >
           Chat
         </Link>

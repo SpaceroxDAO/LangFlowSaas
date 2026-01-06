@@ -9,7 +9,7 @@ interface CharlieMascotProps {
 export function CharlieMascot({ size = 80, className = '' }: CharlieMascotProps) {
   return (
     <div
-      className={`bg-gradient-to-br from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center ${className}`}
+      className={`bg-gradient-to-br from-violet-400 to-violet-500 rounded-2xl flex items-center justify-center ${className}`}
       style={{ width: size, height: size }}
     >
       <svg

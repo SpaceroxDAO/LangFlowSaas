@@ -6,8 +6,10 @@
  *
  * The backend also needs DEV_MODE=true to accept requests without JWT tokens.
  */
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth as useClerkAuth } from '@clerk/clerk-react'
+import { Settings, LogOut } from 'lucide-react'
 
 // Dev mode check - available throughout the app
 export const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
@@ -88,13 +90,45 @@ export function DevSignedOut(_props: { children: ReactNode }) {
   return null
 }
 
-// Mock UserButton component - shows a placeholder avatar in dev mode
+// Mock UserButton component - shows a placeholder avatar with dropdown in dev mode
 export function DevUserButton() {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-medium text-sm">
+    <div className="relative">
+      <button
+        onClick={() => setMenuOpen(!menuOpen)}
+        onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
+        className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-medium text-sm hover:bg-amber-600 transition-colors"
+      >
         D
-      </div>
+      </button>
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+          <div className="px-4 py-2 border-b border-gray-100">
+            <p className="text-sm font-medium text-gray-900">Dev User</p>
+            <p className="text-xs text-gray-500">{DEV_USER.email}</p>
+          </div>
+          <Link
+            to="/dashboard/settings"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            onClick={() => setMenuOpen(false)}
+          >
+            <Settings className="w-4 h-4" />
+            Settings
+          </Link>
+          <button
+            onClick={() => {
+              setMenuOpen(false)
+              console.log('[Dev Mode] Sign out requested')
+            }}
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   )
 }
