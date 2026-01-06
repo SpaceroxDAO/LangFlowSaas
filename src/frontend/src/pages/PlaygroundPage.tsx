@@ -4,7 +4,7 @@ import { useAuth } from '@/providers/DevModeProvider'
 import { useQuery } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import { api } from '@/lib/api'
-import { EmbedModal } from '@/components/EmbedModal'
+import { ShareDeployModal } from '@/components/ShareDeployModal'
 import type { ChatMessage } from '@/types'
 
 export function PlaygroundPage() {
@@ -14,7 +14,7 @@ export function PlaygroundPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
-  const [isEmbedModalOpen, setIsEmbedModalOpen] = useState(false)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -127,7 +127,7 @@ export function PlaygroundPage() {
               Unlock Flow
             </Link>
             <button
-              onClick={() => setIsEmbedModalOpen(true)}
+              onClick={() => setIsShareModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,12 +240,12 @@ export function PlaygroundPage() {
         </p>
       </div>
 
-      {/* Embed Modal */}
+      {/* Share & Deploy Modal */}
       {agent && (
-        <EmbedModal
+        <ShareDeployModal
           agent={agent}
-          isOpen={isEmbedModalOpen}
-          onClose={() => setIsEmbedModalOpen(false)}
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
         />
       )}
     </div>

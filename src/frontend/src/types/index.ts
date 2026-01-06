@@ -56,3 +56,28 @@ export interface Conversation {
   created_at: string
   updated_at: string
 }
+
+export interface AgentStats {
+  total_messages: number
+  total_sessions: number
+  messages_today: number
+  messages_this_week: number
+  average_messages_per_session: number
+  error?: string
+}
+
+export interface MessageRecord {
+  id?: string
+  session_id?: string
+  sender?: string
+  sender_name?: string
+  text?: string
+  timestamp?: string
+}
+
+export interface MessagesResponse {
+  messages: MessageRecord[]
+  total: number
+  limit: number
+  offset: number
+}

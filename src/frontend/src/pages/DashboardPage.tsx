@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/providers/DevModeProvider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { EmbedModal } from '@/components/EmbedModal'
+import { ShareDeployModal } from '@/components/ShareDeployModal'
 import type { Agent } from '@/types'
 
 export function DashboardPage() {
@@ -157,9 +157,9 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Share/Embed Modal */}
+      {/* Share & Deploy Modal */}
       {shareModal.agent && (
-        <EmbedModal
+        <ShareDeployModal
           agent={shareModal.agent}
           isOpen={shareModal.isOpen}
           onClose={() => setShareModal({ isOpen: false, agent: null })}
@@ -171,6 +171,13 @@ export function DashboardPage() {
 
 function AgentCard({ agent, onDelete, onShare }: { agent: Agent; onDelete: (agent: Agent) => void; onShare: (agent: Agent) => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Fetch mini analytics
+  const { data: stats } = useQuery({
+    queryKey: ['agent-stats', agent.id],
+    queryFn: () => api.getAgentStats(agent.id),
+    staleTime: 60000, // Cache for 1 minute
+  })
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -192,9 +199,27 @@ function AgentCard({ agent, onDelete, onShare }: { agent: Agent; onDelete: (agen
       </div>
 
       <h3 className="font-semibold text-gray-900 mb-2">{agent.name}</h3>
-      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
         {agent.description || `${agent.qa_who?.substring(0, 100) ?? 'No description'}...`}
       </p>
+
+      {/* Mini Analytics */}
+      {stats && !stats.error && (
+        <div className="flex gap-4 mb-4 text-xs text-gray-500">
+          <div className="flex items-center gap-1">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <span>{stats.total_messages} messages</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+            </svg>
+            <span>{stats.total_sessions} sessions</span>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <Link

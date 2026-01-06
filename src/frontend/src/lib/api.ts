@@ -1,4 +1,4 @@
-import type { Agent, AgentCreateFromQA, AgentUpdate, ChatRequest, ChatResponse, Conversation } from '@/types'
+import type { Agent, AgentCreateFromQA, AgentUpdate, ChatRequest, ChatResponse, Conversation, AgentStats, MessagesResponse } from '@/types'
 
 // Check dev mode from environment
 const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
@@ -96,6 +96,19 @@ class ApiClient {
   // Health
   async healthCheck(): Promise<{ status: string; service: string }> {
     return this.request('/health')
+  }
+
+  // Analytics
+  async getAgentStats(agentId: string): Promise<AgentStats> {
+    return this.request(`/api/v1/analytics/agents/${agentId}/stats`)
+  }
+
+  async getAgentMessages(
+    agentId: string,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<MessagesResponse> {
+    return this.request(`/api/v1/analytics/agents/${agentId}/messages?limit=${limit}&offset=${offset}`)
   }
 }
 
