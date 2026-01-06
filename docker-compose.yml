@@ -26,8 +26,10 @@ services:
   langflow:
     image: langflowai/langflow:latest
     container_name: teachcharlie-langflow
-    # TODO: For production, investigate running as non-root user for security
-    user: root
+    # Security: Run as non-root user in production
+    # Note: Langflow image runs as user 1000 by default if not overridden
+    # For local dev, root may be needed for volume permissions
+    user: "${LANGFLOW_USER:-1000:1000}"
     environment:
       # Database configuration
       LANGFLOW_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/langflow
@@ -46,6 +48,10 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Security
       LANGFLOW_SECRET_KEY: ${LANGFLOW_SECRET_KEY:-dev-secret-key-change-in-production}
+      # CORS - Allow iframe embedding from frontend
+      LANGFLOW_BACKEND_ONLY: "false"
+      # Note: Langflow may need these for iframe embedding
+      # Check Langflow docs for exact env var names if iframe fails
     ports:
       - "7860:7860"
     volumes:

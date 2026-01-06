@@ -9,6 +9,7 @@ import { CreateAgentPage } from '@/pages/CreateAgentPage'
 import { EditAgentPage } from '@/pages/EditAgentPage'
 import { PlaygroundPage } from '@/pages/PlaygroundPage'
 import { FrameworkPage } from '@/pages/FrameworkPage'
+import { CanvasViewerPage } from '@/pages/CanvasViewerPage'
 import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
 
 // Use dev mode or Clerk components based on environment
@@ -73,6 +74,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <PlaygroundPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/canvas/:agentId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <CanvasViewerPage />
               </Layout>
             </ProtectedRoute>
           }

@@ -2,11 +2,14 @@
 Application configuration using Pydantic Settings.
 Loads environment variables with validation and type coercion.
 """
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 # Find the project root .env file (two levels up from this file)
 _env_file = Path(__file__).parent.parent.parent.parent / ".env"
@@ -66,6 +69,46 @@ class Settings(BaseSettings):
     # LLM API Keys (passed to Langflow)
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+
+    def validate_startup(self) -> bool:
+        """
+        Validate required environment variables on startup.
+        Returns True if all critical vars are present, logs warnings otherwise.
+        """
+        is_valid = True
+        warnings = []
+        errors = []
+
+        # Check Langflow connection
+        if not self.langflow_api_url:
+            errors.append("LANGFLOW_API_URL is required")
+            is_valid = False
+
+        # Check auth configuration
+        if not self.dev_mode:
+            if not self.clerk_jwks_url:
+                errors.append("CLERK_JWKS_URL is required when DEV_MODE=false")
+                is_valid = False
+            if not self.clerk_issuer:
+                errors.append("CLERK_ISSUER is required when DEV_MODE=false")
+                is_valid = False
+        else:
+            warnings.append("DEV_MODE=true: Clerk authentication is bypassed (not for production)")
+
+        # Check LLM API keys
+        if not self.openai_api_key and not self.anthropic_api_key:
+            warnings.append("No LLM API keys configured (OPENAI_API_KEY or ANTHROPIC_API_KEY)")
+
+        # Log results
+        for warning in warnings:
+            logger.warning(f"⚠️  {warning}")
+        for error in errors:
+            logger.error(f"❌ {error}")
+
+        if is_valid:
+            logger.info("✅ Environment configuration validated successfully")
+
+        return is_valid
 
 
 @lru_cache

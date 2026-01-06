@@ -19,10 +19,12 @@ async def lifespan(app: FastAPI):
     Application lifespan handler.
     Runs on startup and shutdown.
     """
-    # Startup
+    # Startup: Validate environment configuration
+    settings.validate_startup()
+
+    # In development, create tables automatically
+    # In production, use Alembic migrations
     if settings.debug:
-        # In development, create tables automatically
-        # In production, use Alembic migrations
         await create_tables()
 
     yield

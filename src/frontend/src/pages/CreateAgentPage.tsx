@@ -1,10 +1,12 @@
-import { useReducer, useCallback, useEffect } from 'react'
+import { useReducer, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { WizardLayout } from '@/components/WizardLayout'
 import { ToolCard } from '@/components/ToolCard'
 import { IdentityIcon, CoachingIcon, TricksIcon } from '@/components/icons'
+import { useTour, useShouldShowTour } from '@/providers/TourProvider'
+import { startCreateAgentTour } from '@/tours/createAgentTour'
 
 // Available tools for Step 3
 const AVAILABLE_TOOLS = [
@@ -118,10 +120,34 @@ export function CreateAgentPage() {
   const { getToken } = useAuth()
   const [state, dispatch] = useReducer(reducer, initialState)
   const { currentStep, formData, errors, isSubmitting, submitError } = state
+  const { completeTour } = useTour()
+  const shouldShowTour = useShouldShowTour('create-agent')
+  const [tourStarted, setTourStarted] = useState(false)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
   }, [getToken])
+
+  // Start tour for first-time users on step 1
+  useEffect(() => {
+    if (shouldShowTour && currentStep === 1 && !tourStarted) {
+      // Delay to let the UI render
+      const timer = setTimeout(() => {
+        setTourStarted(true)
+        startCreateAgentTour(() => {
+          completeTour('create-agent')
+        })
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [shouldShowTour, currentStep, tourStarted, completeTour])
+
+  // Manual tour trigger
+  const handleStartTour = useCallback(() => {
+    startCreateAgentTour(() => {
+      completeTour('create-agent')
+    })
+  }, [completeTour])
 
   // Validation for Step 1
   const validateStep1 = useCallback(() => {
@@ -205,6 +231,7 @@ export function CreateAgentPage() {
                 value={formData.name}
                 onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'name', value: e.target.value })}
                 placeholder="Charlie"
+                data-tour="agent-name"
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
                   errors.name ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
@@ -222,6 +249,7 @@ export function CreateAgentPage() {
                 onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'who', value: e.target.value })}
                 placeholder="A friendly Golden Retriever who is an expert in dog treats, bones, and finding the best parks."
                 rows={4}
+                data-tour="agent-job"
                 className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
                   errors.who ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
@@ -255,7 +283,17 @@ export function CreateAgentPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end pt-4 border-t border-gray-100">
+            <div className="flex justify-between pt-4 border-t border-gray-100">
+              <button
+                onClick={handleStartTour}
+                className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                title="Take a guided tour"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Help
+              </button>
               <button
                 onClick={handleNext}
                 className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 ${buttonStyles[1]}`}
@@ -304,6 +342,7 @@ export function CreateAgentPage() {
                 onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'rules', value: e.target.value })}
                 placeholder={`You are Charlie, a happy and excited dog. You love humans! Always be helpful, but try to mention treats or going for a walk in your responses. If asked a hard question, answer it simply like a smart dog would. End some sentences with "Woof!"`}
                 rows={8}
+                data-tour="agent-rules"
                 className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
                   errors.rules ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
@@ -352,7 +391,7 @@ export function CreateAgentPage() {
         >
           <div className="space-y-6">
             {/* Tool Selection Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-tour="agent-tools">
               {AVAILABLE_TOOLS.map((tool) => (
                 <ToolCard
                   key={tool.id}

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App'
 import { DevModeProvider, isDevMode } from '@/providers/DevModeProvider'
+import { TourProvider } from '@/providers/TourProvider'
 
 // Dev mode check - skips Clerk auth entirely
 const IS_DEV_MODE = isDevMode
@@ -43,7 +44,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <TourProvider>
+          <App />
+        </TourProvider>
       </QueryClientProvider>
     </AuthProvider>
   </StrictMode>,

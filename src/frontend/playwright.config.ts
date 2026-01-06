@@ -26,7 +26,7 @@ export default defineConfig({
   /* Shared settings for all projects */
   use: {
     /* Base URL for navigation */
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
 
     /* Collect trace on first retry */
     trace: 'on-first-retry',
@@ -46,24 +46,23 @@ export default defineConfig({
 
   /* Configure projects */
   projects: [
-    /* Main test project - uses pre-authenticated state */
+    /* Main test project - no auth needed in dev mode */
     {
       name: 'chromium',
       testMatch: /tests\/.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: './e2e/.auth/user.json',
+        // Dev mode has auth disabled, no storage state needed
+        // storageState: './e2e/.auth/user.json',
       },
     },
   ],
 
-  /* Run local dev server before starting tests */
-  webServer: [
-    {
-      command: 'npm run dev',
-      url: 'http://localhost:3000',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-  ],
+  /* Web server config - auto-starts frontend for CI, reuses existing server locally */
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3001',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
 })

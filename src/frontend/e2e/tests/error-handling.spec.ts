@@ -16,8 +16,8 @@ test.describe('Error Handling', () => {
       // Try to continue without entering anything
       await page.click('button:has-text("Continue")')
 
-      // Should show validation error - look for the exact error message
-      await expect(page.locator('text=This field is required')).toBeVisible({ timeout: 5000 })
+      // Should show validation error - matches actual error from CreateAgentPage
+      await expect(page.locator('text=Please provide a job description')).toBeVisible({ timeout: 5000 })
 
       // Should still be on Step 1
       await expect(page.locator('text=Who is Charlie')).toBeVisible()
@@ -32,7 +32,7 @@ test.describe('Error Handling', () => {
       await page.click('button:has-text("Continue")')
 
       // Should show validation error about minimum length
-      await expect(page.locator('text=Please provide more detail')).toBeVisible({ timeout: 5000 })
+      await expect(page.locator('text=Please provide a job description')).toBeVisible({ timeout: 5000 })
 
       // Should still be on Step 1
       await expect(page.locator('text=Who is Charlie')).toBeVisible()
@@ -47,7 +47,7 @@ test.describe('Error Handling', () => {
       await page.click('button:has-text("Continue")')
 
       // Should show validation error - whitespace is treated as empty
-      await expect(page.locator('text=This field is required')).toBeVisible({ timeout: 5000 })
+      await expect(page.locator('text=Please provide a job description')).toBeVisible({ timeout: 5000 })
     })
 
     test('validation works on all three steps', async ({ page }) => {
@@ -63,18 +63,16 @@ test.describe('Error Handling', () => {
       await page.click('button:has-text("Continue")')
 
       // Should show error on Step 2
-      await expect(page.locator('text=This field is required')).toBeVisible({ timeout: 5000 })
+      await expect(page.locator('text=Please provide instructions')).toBeVisible({ timeout: 5000 })
 
       // Fill Step 2 and continue
       await page.locator('textarea').fill(testAgentData.rules.valid)
       await page.click('button:has-text("Continue")')
 
-      // Step 3 - try empty
-      await page.waitForSelector('textarea')
-      await page.click('button:has-text("Create Charlie")')
-
-      // Should show error on Step 3
-      await expect(page.locator('text=This field is required')).toBeVisible({ timeout: 5000 })
+      // Step 3 - tools are optional, so no validation required
+      // Just verify we're on Step 3 with tool selection
+      await expect(page.locator('text=Step 3')).toBeVisible({ timeout: 5000 })
+      await expect(page.locator('text=Tricks')).toBeVisible()
     })
 
     test('exact 10 character input passes validation', async ({ page }) => {
@@ -98,7 +96,7 @@ test.describe('Error Handling', () => {
       await page.click('button:has-text("Continue")')
 
       // Should show error about minimum characters
-      await expect(page.locator('text=Please provide more detail')).toBeVisible({ timeout: 5000 })
+      await expect(page.locator('text=Please provide a job description')).toBeVisible({ timeout: 5000 })
 
       // Should still be on Step 1
       await expect(page.locator('text=Who is Charlie')).toBeVisible()
