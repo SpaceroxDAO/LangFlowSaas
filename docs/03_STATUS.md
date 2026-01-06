@@ -1,29 +1,30 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-05
-**Current Phase**: Phase 7 - Langflow Integration Optimization
+**Last Updated**: 2026-01-06
+**Current Phase**: Phase 8 - UI Polish & Langflow-Style Dashboard
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 7 - Langflow Integration Optimization
+**Phase**: Phase 8 - UI Polish & Langflow-Style Dashboard
 **Status**: ✅ Implementation Complete
-**Next Milestone**: Phase 8 RAG Research, Production Deployment
+**Next Milestone**: Production Deployment, Phase 9 RAG Research
 
 ## Health Indicators
 
 | Metric | Status | Notes |
 |--------|--------|-------|
 | Documentation | ✅ Complete | All docs updated including strategic documents |
-| Backend API | ✅ Complete | FastAPI with analytics endpoints |
+| Backend API | ✅ Complete | FastAPI with analytics, export, import, duplicate |
 | Database | ✅ Complete | PostgreSQL with SQLite fallback |
 | Authentication | ✅ Complete | Clerk JWT + Dev Mode |
 | Langflow Integration | ✅ Enhanced | Share, Embed, Webhook, API, Analytics |
-| Frontend | ✅ Complete | React + Vite + TypeScript + Tailwind |
+| Frontend | ✅ Enhanced | Langflow-style UI with violet theme |
 | Tour System | ✅ Tested | Driver.js integrated and working |
 | Canvas Viewer | ✅ Tested | iframe with progressive disclosure (4 levels) |
 | Streaming | ✅ Added | Backend streaming support enabled |
-| Testing | ✅ Complete | Tool, memory, and canvas tests passed |
+| Testing | ✅ Complete | Playwright E2E tests passing |
+| Import/Export | ✅ Added | Agent JSON import/export working |
 
 Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
@@ -69,10 +70,27 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 - [x] Embed widget code using langflow-embedded-chat
 - [x] Strategic documentation (User Journeys, Integration Strategy)
 
-### Phase 8-10: Planned
-- [ ] Phase 8: RAG/Documents (high effort, deferred)
-- [ ] Phase 9: Agent reasoning visibility
-- [ ] Phase 10: Full canvas mastery
+### Phase 8: UI Polish & Langflow-Style Dashboard ✅ Complete
+- [x] **Color Theme Migration**: Orange → Violet/Purple (#7C3AED) matching Langflow
+- [x] **Header Restructure**: Full-width header with Dog icon logo, profile dropdown
+- [x] **Sidebar Updates**: White background, project list with menus, import button
+- [x] **Dashboard Features**:
+  - [x] Search agents functionality
+  - [x] List/Grid view toggle with persistence
+  - [x] Bulk selection with multi-delete
+  - [x] Pagination (12 agents per page)
+- [x] **Agent Menu Actions**: Edit, Export, Duplicate, Delete with icons
+- [x] **Import/Export System**:
+  - [x] Export agent as JSON (full flow data included)
+  - [x] Import agent from JSON (supports multiple formats)
+  - [x] Duplicate agent functionality
+- [x] **Profile Dropdown**: Settings and Sign out accessible from avatar
+- [x] **lucide-react Icons**: Dog icon as logo, consistent iconography
+
+### Phase 9-11: Planned
+- [ ] Phase 9: RAG/Documents (high effort, research needed)
+- [ ] Phase 10: Agent reasoning visibility
+- [ ] Phase 11: Full canvas mastery
 
 ## Frontend Pages
 
@@ -88,7 +106,7 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 | `/canvas/:agentId` | CanvasViewerPage | Progressive canvas | ✅ |
 | `/framework` | FrameworkPage | Educational content | ✅ |
 
-## New Components (Phase 5-7)
+## New Components (Phase 5-8)
 
 | Component | Path | Purpose |
 |-----------|------|---------|
@@ -97,13 +115,19 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 | CanvasViewerPage | `/src/pages/CanvasViewerPage.tsx` | Full page canvas |
 | createAgentTour | `/src/tours/createAgentTour.ts` | Driver.js tour steps |
 | ShareDeployModal | `/src/components/ShareDeployModal.tsx` | Share, Embed, Webhook, API tabs |
+| ProjectMenu | `/src/components/ProjectMenu.tsx` | Project dropdown (rename, delete) |
+| Pagination | Built into ProjectDetailPage | Page navigation component |
+| DevUserButton | `/src/providers/DevModeProvider.tsx` | Dev mode profile dropdown |
 
-## New Backend Endpoints (Phase 7b)
+## Backend Endpoints (Phase 7-8)
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/v1/analytics/agents/{id}/stats` | GET | Agent message statistics |
 | `/api/v1/analytics/agents/{id}/messages` | GET | Agent message history |
+| `/api/v1/agents/{id}/export` | GET | Export agent as JSON |
+| `/api/v1/agents/{id}/duplicate` | POST | Duplicate an agent |
+| `/api/v1/agents/import` | POST | Import agent from JSON |
 
 ## New Documentation
 
@@ -121,8 +145,9 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 | Package | Version | Purpose |
 |---------|---------|---------|
 | driver.js | ^1.3.1 | Educational tours |
+| lucide-react | ^0.469.0 | Icon library (Dog logo, UI icons) |
 
-## Test Results (2026-01-05)
+## Test Results (2026-01-06)
 
 ### ✅ Phase 6: Tool Execution - PASSED
 - Created "Calculator Test Agent" with calculator tool
@@ -143,6 +168,18 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
   - Level 4: "Expert Mode" (full Langflow access)
 - Educational tour triggered on first visit
 - ⚠️ CSS injection into iframe blocked by CORS (expected for cross-origin)
+
+### ✅ Phase 8: UI Polish & Dashboard - PASSED
+- **Color Theme**: All orange accents migrated to violet/purple ✓
+- **Header**: Full-width with Dog icon logo and profile dropdown ✓
+- **Search**: Agent search filters list in real-time ✓
+- **View Toggle**: List/Grid views switch correctly, preference persisted ✓
+- **Bulk Selection**: Multi-select and bulk delete working ✓
+- **Pagination**: Shows correct page counts, navigation works ✓
+- **Export**: Downloads valid JSON with full flow data ✓
+- **Import**: File chooser opens, accepts JSON, creates agent ✓
+- **Duplicate**: Creates copy with "(Copy)" suffix ✓
+- **Agent Menu**: All icons display correctly (Edit, Export, Duplicate, Delete) ✓
 
 ## Blockers and Risks
 
@@ -178,10 +215,24 @@ cd src/backend && pytest
 
 ## Git Status
 
-Latest commit: `e2a352d` - feat: Add Phase 5-7 features, fix E2E tests, improve production readiness
+Latest commits:
+- `3c58da5` - fix: Support direct export format in agent import
+- `482d064` - feat: Add agent import functionality
+- `65e830b` - feat: Match Langflow UI styling with violet theme
 
-## Recent Improvements (2026-01-05)
+## Recent Improvements (2026-01-06)
 
+### Phase 8: UI Polish
+- ✅ Migrated color theme from orange to Langflow's violet/purple
+- ✅ Restructured header with Dog icon logo and profile dropdown
+- ✅ Added search, pagination, view toggle to dashboard
+- ✅ Implemented bulk selection and multi-delete
+- ✅ Added agent export/import/duplicate functionality
+- ✅ Added icons to all agent menu items (lucide-react)
+- ✅ Settings now accessible from profile dropdown
+- ✅ Import button working with file chooser
+
+### Previous Improvements (2026-01-05)
 - ✅ Fixed E2E test assertions to match actual error messages
 - ✅ Fixed docker-compose security (Langflow non-root user)
 - ✅ Enabled Playwright webServer for CI/CD
@@ -208,7 +259,7 @@ Latest commit: `e2a352d` - feat: Add Phase 5-7 features, fix E2E tests, improve 
 
 ---
 
-**Status Summary**: 🟢 Green - Phases 5-7 verified. Strategic research complete. Ready for Langflow integration optimization.
+**Status Summary**: 🟢 Green - Phases 5-8 complete. UI matches Langflow styling. Import/Export working. Ready for production deployment.
 
 ---
 

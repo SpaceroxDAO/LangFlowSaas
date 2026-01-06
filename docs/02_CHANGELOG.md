@@ -4,6 +4,74 @@
 
 ---
 
+## 2026-01-06 - Phase 8: UI Polish & Langflow-Style Dashboard
+
+### Summary
+Comprehensive UI overhaul to match Langflow's visual styling while preserving our educational UX. Added missing dashboard features including search, pagination, bulk operations, and import/export.
+
+### Design Decision: Match Langflow UI
+**Decision**: Update our dashboard to visually match Langflow's UI styling.
+
+**Rationale**:
+- Consistent visual language between our app and Langflow canvas
+- Users familiar with Langflow will feel at home
+- Professional, polished appearance for workshops
+- Violet/purple theme differentiates from generic orange SaaS
+
+### Implementation Completed
+
+#### Visual Updates
+- **Color Theme Migration**: Orange → Violet/Purple (#7C3AED)
+  - All buttons, accents, and highlights updated
+  - Matches Langflow's signature purple
+- **Header Restructure**: Full-width header like Langflow
+  - Dog icon (lucide-react) as logo on left
+  - Profile dropdown on right with Settings and Sign out
+  - AI Canvas link for quick access to Langflow (dev mode)
+- **Sidebar Updates**: Clean white background
+  - Project list with hover menus
+  - Import button for uploading agent JSON
+  - My Files link at bottom
+
+#### Dashboard Features (Matching Langflow)
+- **Search**: Real-time agent filtering by name
+- **View Toggle**: List/Grid views with localStorage persistence
+- **Bulk Selection**: Checkbox per agent, select all, bulk delete
+- **Pagination**: 12 agents per page, page navigation, total count
+- **Agent Menu**: Three-dot menu with Edit, Export, Duplicate, Delete (all with icons)
+
+#### Import/Export System
+- **Export Agent**: Downloads JSON with full agent config and flow data
+- **Import Agent**: Upload JSON to create new agent
+  - Supports direct format `{ name: "...", ... }`
+  - Supports wrapped format `{ agent: {...} }`
+  - Supports batch format `{ agents: [...] }`
+- **Duplicate Agent**: Creates copy with "(Copy)" suffix
+
+### New Dependencies
+| Package | Version | Purpose |
+|---------|---------|---------|
+| lucide-react | ^0.469.0 | Icon library (Dog logo, menu icons) |
+
+### Files Modified (Key Changes)
+- `src/frontend/src/components/AppShell.tsx` - Full-width header with logo
+- `src/frontend/src/components/Sidebar.tsx` - Import button, white theme
+- `src/frontend/src/pages/ProjectDetailPage.tsx` - Search, pagination, bulk ops
+- `src/frontend/src/providers/DevModeProvider.tsx` - Profile dropdown
+- `src/frontend/src/lib/api.ts` - Export, import, duplicate methods
+- `src/backend/app/api/agents.py` - Export, import, duplicate endpoints
+- `src/backend/app/services/agent_service.py` - Import/duplicate logic
+
+### Testing Verified
+- ✅ File chooser opens on import button click
+- ✅ Exported JSON contains full flow data
+- ✅ Import creates new agent in default project
+- ✅ Search filters agents correctly
+- ✅ View toggle persists preference
+- ✅ Bulk delete removes multiple agents
+
+---
+
 ## 2026-01-03 - MVP Implementation Complete
 
 ### Summary
