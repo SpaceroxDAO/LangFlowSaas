@@ -17,16 +17,50 @@ This strategy positions component library management as a **core differentiator*
 
 ---
 
+## IMPORTANT: Technical Reality Clarification
+
+Before diving into implementation, let's be precise about what Langflow supports natively vs. what requires custom development.
+
+### How Langflow's Component Sidebar Works
+
+Looking at Langflow's sidebar (Models & Agents → Agent, Language Model, etc.), these items come from:
+
+1. **Built-in Python classes** - Compiled into Langflow's codebase
+2. **Custom Python components** - `.py` files in `LANGFLOW_COMPONENTS_PATH` directory, loaded at Langflow startup
+3. **MCP Tools** - Dynamically discovered from configured MCP servers
+
+### What `is_component: true` Actually Does
+
+The `is_component` flag on a flow does **NOT** make it appear in the sidebar component list. Instead:
+- It marks a flow as a "saved component" (a reusable flow template)
+- It can be loaded from the flow list and used as a starting point
+- It does NOT create a new draggable item in the sidebar
+
+### The Honest Answer
+
+**Q: Can we automatically make user-created agents appear in the sidebar?**
+
+**A: Not with native Langflow features alone.** Here's what IS possible:
+
+| Approach | Appears in Sidebar? | Complexity | Notes |
+|----------|---------------------|------------|-------|
+| `is_component: true` flow | ❌ No | Low | Saved as reusable flow, not sidebar item |
+| Dynamic Python file generation | ✅ Yes | High | Requires Langflow restart |
+| MCP Tools integration | ✅ Yes (under MCP Tools) | Medium | Langflow 1.4+, agents appear as tools |
+| Custom sidebar modification | ✅ Yes | Very High | Requires forking Langflow frontend |
+| "Run Flow" component | ❌ No (but functional) | Low | User selects flow from dropdown |
+
+---
+
 ## Part 1: Reusable Agent Components
 
 ### The Vision
 
 When a user creates an AI agent through our 3-step Q&A wizard:
 1. We create the normal Langflow flow (current behavior)
-2. **NEW**: We also create a "component version" of that agent
-3. Users can then drag their agent into OTHER flows as a single node
+2. **Goal**: Make that agent reusable in other flows
 
-### Implementation Options
+### Realistic Implementation Options
 
 #### Option A: Run Flow Component (Recommended)
 
@@ -139,10 +173,231 @@ class UserAgentComponent(Component):
 - Uses native Langflow features
 - No file system access needed
 
-**Phase 2 (Enhancement)**: Add Python component generation
-- True single-node experience
-- Custom icons and branding
-- Better performance
+**Phase 2 (Enhancement)**: MCP Tools integration
+- Agents appear in "MCP Tools" sidebar section
+- True sidebar presence
+- Dynamic discovery
+
+**Phase 3 (Advanced)**: Dynamic Python component generation
+- Full sidebar integration under custom category
+- Requires hot-reload solution
+
+---
+
+## Detailed Example: "Charlie the Car Salesman"
+
+Here's exactly what happens when a user creates an agent, showing each approach:
+
+### Current State (What We Do Now)
+
+```
+User fills out form:
+  - Name: "Charlie the car salesman"
+  - Persona: "Charlie likes to sell cars"
+  - Instructions: "He knows the prices of cars"
+  - Tools: [Web Search]
+
+↓ Frontend calls POST /api/v1/agents/create-from-qa
+
+↓ Backend creates Langflow flow with:
+  - ChatInput component
+  - Agent component (with system prompt)
+  - DuckDuckGoSearch component (tool)
+  - ChatOutput component
+
+↓ Flow saved to Langflow, flow_id returned
+
+↓ Agent record saved to our database
+
+Result: User can chat with "Charlie" in Playground
+        User can see flow in Langflow canvas
+        User CANNOT drag "Charlie" into other flows
+```
+
+### Option A: Run Flow Approach (Easiest)
+
+```
+Same creation process as above, PLUS:
+
+↓ User opens another flow in Langflow canvas
+
+↓ User drags "Run Flow" component from Logic category
+
+↓ User clicks dropdown, sees list of their flows:
+  - "Charlie the car salesman"
+  - "Support Bot"
+  - etc.
+
+↓ User selects "Charlie the car salesman"
+
+↓ Run Flow component now calls Charlie's flow
+
+↓ User enables "Tool Mode" checkbox
+
+↓ User connects Run Flow's "Tool" output to another Agent's "Tools" input
+
+Result: New agent can call "Charlie" as a tool
+        Works TODAY with no changes needed
+        Not as elegant (requires manual selection)
+```
+
+**Visual Example:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    New Complex Flow                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌──────────┐      ┌────────────────┐      ┌─────────┐ │
+│  │ Chat     │──────│ Manager Agent  │──────│ Chat    │ │
+│  │ Input    │      │                │      │ Output  │ │
+│  └──────────┘      │   Tools ●──────│      └─────────┘ │
+│                    └────────────────┘                   │
+│                           │                             │
+│                    ┌──────┴──────┐                      │
+│                    │             │                      │
+│               ┌────▼────┐  ┌────▼────────────┐         │
+│               │Run Flow │  │ Calculator     │          │
+│               │"Charlie"│  │ Component      │          │
+│               │(Tool)   │  │                │          │
+│               └─────────┘  └────────────────┘          │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Option B: MCP Tools Integration (Recommended for Phase 2)
+
+```
+Configuration (one-time setup):
+1. Configure Langflow project as MCP server
+2. Each flow automatically becomes an MCP tool
+
+When user creates "Charlie":
+
+↓ Flow created in MCP-enabled project
+
+↓ Langflow automatically exposes it via MCP
+
+↓ "Charlie the car salesman" appears under:
+   Sidebar → MCP Tools → [Charlie the car salesman]
+
+↓ User can DRAG "Charlie" directly from sidebar!
+
+↓ Drops into flow as a single-node tool
+
+Result: True sidebar presence!
+        Automatic discovery
+        Works like built-in components
+```
+
+**What the sidebar would look like:**
+```
+Components
+├─ Input & Output
+├─ Data Sources
+├─ Models & Agents
+│   ├─ Language Model
+│   ├─ Agent
+│   └─ ...
+├─ MCP Tools              ← User agents appear HERE
+│   ├─ Charlie the car salesman  ← Draggable!
+│   ├─ Support Bot
+│   └─ Knowledge Assistant
+├─ LLM Operations
+└─ ...
+```
+
+### Option C: Dynamic Python Components (Most Complex)
+
+```
+When user creates "Charlie":
+
+↓ Backend generates Python file:
+
+# /custom_components/user_agents/charlie_car_salesman.py
+from lfx.custom.custom_component.component import Component
+from lfx.io import Output, MessageTextInput
+
+class CharlieCarSalesmanAgent(Component):
+    display_name = "Charlie the car salesman"
+    description = "Charlie likes to sell cars. He knows car prices."
+    icon = "dog"
+    category = "my_agents"  # Custom category
+
+    inputs = [
+        MessageTextInput(
+            name="query",
+            display_name="Ask Charlie",
+            tool_mode=True,
+        ),
+    ]
+
+    outputs = [
+        Output(
+            name="response",
+            display_name="Charlie's Response",
+            method="ask_charlie",
+        ),
+        Output(
+            name="component_as_tool",
+            display_name="Use as Tool",
+            method="to_toolkit",
+        ),
+    ]
+
+    async def ask_charlie(self):
+        # Call the stored Langflow flow via API
+        from app.services.langflow_client import LangflowClient
+        client = LangflowClient()
+        result = await client.run_flow(
+            flow_id="abc-123-flow-id",
+            input_value=self.query
+        )
+        return Message(text=result)
+
+↓ File saved to /custom_components/user_agents/
+
+↓ Langflow RESTART required (or hot-reload if implemented)
+
+↓ "Charlie the car salesman" appears under:
+   Sidebar → My Agents → [Charlie the car salesman]
+
+Result: Full sidebar integration!
+        Custom category "My Agents"
+        Requires Langflow restart (major downside)
+```
+
+**What the sidebar would look like:**
+```
+Components
+├─ Input & Output
+├─ Data Sources
+├─ Models & Agents
+├─ My Agents              ← Custom category we create
+│   ├─ Charlie the car salesman
+│   ├─ Support Bot
+│   └─ Knowledge Assistant
+├─ MCP Tools
+├─ LLM Operations
+└─ ...
+```
+
+---
+
+## Recommendation: Phased Implementation
+
+| Phase | Approach | User Experience | Effort |
+|-------|----------|-----------------|--------|
+| **Now** | Run Flow component | Manual selection from dropdown | Zero changes |
+| **Phase 2** | MCP Tools | Drag from MCP Tools section | Medium |
+| **Phase 3** | Python generation | Drag from custom "My Agents" | High |
+
+### Why MCP Tools is the Sweet Spot
+
+1. **Native Langflow feature** - No forking required
+2. **Dynamic discovery** - No restarts needed
+3. **Sidebar presence** - True drag-and-drop from sidebar
+4. **Tool integration** - Works naturally with Agent's "Tools" input
+5. **Future-proof** - MCP is becoming a standard (Claude, Cursor support it)
 
 ---
 
