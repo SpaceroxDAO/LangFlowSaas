@@ -383,21 +383,607 @@ Components
 
 ---
 
-## Recommendation: Phased Implementation
+## Recommendation: Phase 3 - Dynamic Python Component Generation
 
-| Phase | Approach | User Experience | Effort |
-|-------|----------|-----------------|--------|
-| **Now** | Run Flow component | Manual selection from dropdown | Zero changes |
-| **Phase 2** | MCP Tools | Drag from MCP Tools section | Medium |
-| **Phase 3** | Python generation | Drag from custom "My Agents" | High |
+Based on our architecture (separate frontend/backend + Langflow in Docker), we can implement **automatic component generation with silent Langflow restart**.
 
-### Why MCP Tools is the Sweet Spot
+### Why This Works
 
-1. **Native Langflow feature** - No forking required
-2. **Dynamic discovery** - No restarts needed
-3. **Sidebar presence** - True drag-and-drop from sidebar
-4. **Tool integration** - Works naturally with Agent's "Tools" input
-5. **Future-proof** - MCP is becoming a standard (Claude, Cursor support it)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Our Architecture                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
+│   │   Frontend   │────▶│   Backend    │────▶│   Langflow   │   │
+│   │   (React)    │     │   (FastAPI)  │     │   (Docker)   │   │
+│   │   Port 3001  │     │   Port 8000  │     │   Port 7860  │   │
+│   └──────────────┘     └──────────────┘     └──────────────┘   │
+│         │                     │                    │            │
+│         │                     │                    │            │
+│     Always Up            Always Up          Can Restart!        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Insight**: When user creates an agent:
+1. Frontend stays responsive (React app unaffected)
+2. Backend saves agent to database (unaffected)
+3. Backend generates Python component file
+4. Backend triggers Langflow container restart (5-10 seconds)
+5. New component appears in sidebar
+
+**User Experience**: "Your agent is being prepared... ✓ Ready!"
+
+---
+
+## Phase 3 Implementation: Complete Guide
+
+### Step 1: Python Component Template
+
+Create a template file that we fill in with user's Q&A answers:
+
+**File: `/src/backend/templates/component_templates/user_agent_template.py.jinja2`**
+
+```python
+"""
+Auto-generated component for: {{ agent_name }}
+Created: {{ created_at }}
+User ID: {{ user_id }}
+"""
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output, DropdownInput, SecretStrInput
+from langflow.schema.message import Message
+from langflow.field_typing import Tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+
+
+class {{ class_name }}(Component):
+    """{{ description }}"""
+
+    display_name = "{{ display_name }}"
+    description = "{{ description }}"
+    icon = "dog"  # Our Teach Charlie icon
+    name = "{{ component_name }}"
+
+    # Appears under "My Agents" category
+    # Note: Category is determined by directory structure
+
+    inputs = [
+        MessageTextInput(
+            name="input_value",
+            display_name="Message",
+            info="What would you like to ask {{ display_name }}?",
+            tool_mode=True,
+        ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model",
+            options=["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
+            value="gpt-4o-mini",
+            advanced=True,
+        ),
+        SecretStrInput(
+            name="openai_api_key",
+            display_name="OpenAI API Key",
+            info="Leave blank to use system default",
+            advanced=True,
+        ),
+    ]
+
+    outputs = [
+        Output(
+            display_name="Response",
+            name="response",
+            method="run_agent",
+        ),
+        Output(
+            display_name="As Tool",
+            name="component_as_tool",
+            method="to_toolkit",
+        ),
+    ]
+
+    # Pre-configured system prompt from user's Q&A
+    SYSTEM_PROMPT = """{{ system_prompt }}"""
+
+    # Pre-configured tools from user's selection
+    TOOL_IDS = {{ tool_ids }}  # e.g., ["calculator", "web_search"]
+
+    def run_agent(self) -> Message:
+        """Execute the agent with the user's input."""
+        from langflow.components.tools import CalculatorComponent, DuckDuckGoSearchComponent
+
+        # Get API key (user's or system default)
+        api_key = self.openai_api_key or self._get_system_api_key()
+
+        # Initialize LLM
+        llm = ChatOpenAI(
+            model=self.model_name,
+            api_key=api_key,
+            temperature=0.7,
+        )
+
+        # Build tools based on configuration
+        tools = self._build_tools()
+
+        # Create prompt
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", self.SYSTEM_PROMPT),
+            ("placeholder", "{chat_history}"),
+            ("human", "{input}"),
+            ("placeholder", "{agent_scratchpad}"),
+        ])
+
+        # Create and run agent
+        agent = create_tool_calling_agent(llm, tools, prompt)
+        executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+        result = executor.invoke({"input": self.input_value})
+
+        self.status = result["output"]
+        return Message(text=result["output"])
+
+    def _build_tools(self):
+        """Build tool instances based on configured tool IDs."""
+        tools = []
+
+        {% for tool in tools %}
+        {% if tool.id == "calculator" %}
+        # Calculator tool
+        from langchain_community.tools import Tool
+        from langchain_community.utilities import calculator
+        tools.append(Tool(
+            name="calculator",
+            description="Useful for math calculations",
+            func=lambda x: str(eval(x))
+        ))
+        {% endif %}
+        {% if tool.id == "web_search" %}
+        # Web search tool
+        from langchain_community.tools import DuckDuckGoSearchRun
+        tools.append(DuckDuckGoSearchRun())
+        {% endif %}
+        {% endfor %}
+
+        return tools
+
+    def _get_system_api_key(self):
+        """Get API key from environment or Langflow variables."""
+        import os
+        return os.environ.get("OPENAI_API_KEY", "")
+```
+
+### Step 2: Component Generator Service
+
+**File: `/src/backend/app/services/component_generator.py`**
+
+```python
+"""
+Service for generating custom Python components from user agents.
+"""
+import os
+import re
+from datetime import datetime
+from pathlib import Path
+from jinja2 import Environment, FileSystemLoader
+from typing import Optional
+
+from app.models.agent import Agent
+from app.core.config import settings
+
+
+class ComponentGenerator:
+    """Generates Python component files for user-created agents."""
+
+    TEMPLATE_DIR = Path(__file__).parent.parent.parent / "templates" / "component_templates"
+    COMPONENTS_DIR = Path(settings.CUSTOM_COMPONENTS_PATH) / "my_agents"
+
+    def __init__(self):
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(str(self.TEMPLATE_DIR)),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        # Ensure my_agents directory exists
+        self.COMPONENTS_DIR.mkdir(parents=True, exist_ok=True)
+        self._ensure_init_file()
+
+    def _ensure_init_file(self):
+        """Ensure __init__.py exists in my_agents directory."""
+        init_file = self.COMPONENTS_DIR / "__init__.py"
+        if not init_file.exists():
+            init_file.write_text('''"""
+My Agents - User-created AI agent components.
+Auto-generated by Teach Charlie AI.
+"""
+# Components are auto-discovered by Langflow
+''')
+
+    def _sanitize_class_name(self, name: str) -> str:
+        """Convert agent name to valid Python class name."""
+        # Remove special characters, convert to PascalCase
+        name = re.sub(r'[^a-zA-Z0-9\s]', '', name)
+        words = name.split()
+        class_name = ''.join(word.capitalize() for word in words)
+        return f"{class_name}Agent"
+
+    def _sanitize_component_name(self, name: str) -> str:
+        """Convert agent name to valid component name (snake_case)."""
+        name = re.sub(r'[^a-zA-Z0-9\s]', '', name)
+        return '_'.join(name.lower().split()) + "_agent"
+
+    def generate_component(self, agent: Agent) -> str:
+        """
+        Generate a Python component file for the given agent.
+
+        Returns the path to the generated file.
+        """
+        template = self.jinja_env.get_template("user_agent_template.py.jinja2")
+
+        # Prepare template variables
+        class_name = self._sanitize_class_name(agent.name)
+        component_name = self._sanitize_component_name(agent.name)
+
+        # Build system prompt from Q&A answers
+        system_prompt = self._build_system_prompt(agent)
+
+        # Get tool configuration
+        tools = self._get_tool_config(agent)
+
+        content = template.render(
+            agent_name=agent.name,
+            class_name=class_name,
+            component_name=component_name,
+            display_name=agent.name,
+            description=agent.description or f"AI Agent: {agent.name}",
+            system_prompt=system_prompt,
+            tool_ids=[t["id"] for t in tools],
+            tools=tools,
+            user_id=str(agent.user_id),
+            created_at=datetime.utcnow().isoformat(),
+        )
+
+        # Write component file
+        file_path = self.COMPONENTS_DIR / f"{component_name}.py"
+        file_path.write_text(content)
+
+        # Update __init__.py to export new component
+        self._update_init_file(class_name, component_name)
+
+        return str(file_path)
+
+    def _build_system_prompt(self, agent: Agent) -> str:
+        """Build system prompt from agent's Q&A answers."""
+        parts = []
+
+        if agent.qa_who:
+            parts.append(f"You are {agent.qa_who}.")
+
+        if agent.qa_rules:
+            parts.append(f"\n## Your Rules and Knowledge\n{agent.qa_rules}")
+
+        if agent.qa_tricks:
+            parts.append(f"\n## Your Capabilities\n{agent.qa_tricks}")
+
+        parts.append("""
+## Guidelines
+- Stay in character as described above
+- Be helpful, friendly, and professional
+- If you don't know something, admit it honestly
+- Use your tools when they can help answer questions
+""")
+
+        return "\n".join(parts)
+
+    def _get_tool_config(self, agent: Agent) -> list:
+        """Get tool configuration from agent's flow_data."""
+        tools = []
+
+        # Parse tools from flow_data if available
+        if agent.flow_data and "nodes" in agent.flow_data.get("data", {}):
+            for node in agent.flow_data["data"]["nodes"]:
+                node_type = node.get("data", {}).get("type", "")
+                if "Calculator" in node_type:
+                    tools.append({"id": "calculator", "name": "Calculator"})
+                elif "DuckDuckGo" in node_type or "Search" in node_type:
+                    tools.append({"id": "web_search", "name": "Web Search"})
+                elif "URL" in node_type:
+                    tools.append({"id": "url_reader", "name": "URL Reader"})
+
+        return tools
+
+    def _update_init_file(self, class_name: str, component_name: str):
+        """Update __init__.py to export the new component."""
+        init_file = self.COMPONENTS_DIR / "__init__.py"
+        content = init_file.read_text()
+
+        import_line = f"from .{component_name} import {class_name}"
+
+        if import_line not in content:
+            # Add import after the docstring
+            lines = content.split('\n')
+            insert_idx = next(
+                (i for i, line in enumerate(lines) if line.strip() and not line.startswith('#') and not line.startswith('"""')),
+                len(lines)
+            )
+            lines.insert(insert_idx, import_line)
+            init_file.write_text('\n'.join(lines))
+
+    def delete_component(self, agent: Agent):
+        """Delete the component file for an agent."""
+        component_name = self._sanitize_component_name(agent.name)
+        file_path = self.COMPONENTS_DIR / f"{component_name}.py"
+
+        if file_path.exists():
+            file_path.unlink()
+            # TODO: Also remove from __init__.py
+```
+
+### Step 3: Langflow Restart Service
+
+**File: `/src/backend/app/services/langflow_restart.py`**
+
+```python
+"""
+Service for restarting Langflow container after component changes.
+"""
+import asyncio
+import docker
+from typing import Optional
+import logging
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class LangflowRestartService:
+    """Handles graceful restart of Langflow container."""
+
+    CONTAINER_NAME = "langflow"  # From docker-compose.yml
+    RESTART_TIMEOUT = 30  # seconds
+    HEALTH_CHECK_INTERVAL = 1  # seconds
+
+    def __init__(self):
+        self.docker_client = docker.from_env()
+
+    async def restart_langflow(self) -> bool:
+        """
+        Restart Langflow container and wait for it to be healthy.
+
+        Returns True if restart was successful.
+        """
+        try:
+            container = self.docker_client.containers.get(self.CONTAINER_NAME)
+
+            logger.info("Restarting Langflow container...")
+
+            # Graceful restart
+            container.restart(timeout=10)
+
+            # Wait for health check to pass
+            healthy = await self._wait_for_healthy()
+
+            if healthy:
+                logger.info("Langflow restarted successfully")
+            else:
+                logger.warning("Langflow restart timed out")
+
+            return healthy
+
+        except docker.errors.NotFound:
+            logger.error(f"Container '{self.CONTAINER_NAME}' not found")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to restart Langflow: {e}")
+            return False
+
+    async def _wait_for_healthy(self) -> bool:
+        """Wait for Langflow to respond to health checks."""
+        import httpx
+
+        health_url = f"{settings.LANGFLOW_URL}/health"
+        elapsed = 0
+
+        while elapsed < self.RESTART_TIMEOUT:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(health_url, timeout=2)
+                    if response.status_code == 200:
+                        return True
+            except:
+                pass
+
+            await asyncio.sleep(self.HEALTH_CHECK_INTERVAL)
+            elapsed += self.HEALTH_CHECK_INTERVAL
+
+        return False
+
+    def get_container_status(self) -> Optional[str]:
+        """Get current status of Langflow container."""
+        try:
+            container = self.docker_client.containers.get(self.CONTAINER_NAME)
+            return container.status
+        except docker.errors.NotFound:
+            return None
+```
+
+### Step 4: Update Agent Service
+
+**File: `/src/backend/app/services/agent_service.py` (additions)**
+
+```python
+# Add to imports
+from app.services.component_generator import ComponentGenerator
+from app.services.langflow_restart import LangflowRestartService
+
+# Add to AgentService class
+class AgentService:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+        self.component_generator = ComponentGenerator()
+        self.restart_service = LangflowRestartService()
+
+    async def create_from_qa(
+        self,
+        user: User,
+        qa_data: AgentCreateFromQA,
+    ) -> Agent:
+        """Create agent from Q&A answers."""
+        # ... existing flow creation code ...
+
+        # After agent is saved to database:
+
+        # Generate Python component
+        component_path = self.component_generator.generate_component(agent)
+        logger.info(f"Generated component at: {component_path}")
+
+        # Store component path
+        agent.component_path = component_path
+        await self.session.commit()
+
+        # Restart Langflow in background (don't block response)
+        asyncio.create_task(self._restart_langflow_background())
+
+        return agent
+
+    async def _restart_langflow_background(self):
+        """Restart Langflow in background after short delay."""
+        # Small delay to ensure file is written
+        await asyncio.sleep(1)
+
+        success = await self.restart_service.restart_langflow()
+        if success:
+            logger.info("Langflow restarted - new components available")
+        else:
+            logger.warning("Langflow restart failed - components may not be available yet")
+```
+
+### Step 5: Docker Compose Updates
+
+**File: `docker-compose.yml` (additions)**
+
+```yaml
+services:
+  langflow:
+    # ... existing config ...
+    environment:
+      # Add custom components path
+      - LANGFLOW_COMPONENTS_PATH=/app/custom_components
+    volumes:
+      # Mount custom components directory
+      - ./custom_components:/app/custom_components
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  backend:
+    # ... existing config ...
+    volumes:
+      # Backend needs access to same directory to write components
+      - ./custom_components:/app/custom_components
+      # Backend needs Docker socket to restart Langflow
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CUSTOM_COMPONENTS_PATH=/app/custom_components
+```
+
+### Step 6: Directory Structure
+
+```
+LangflowSaaS/
+├── custom_components/                    # Mounted to both containers
+│   └── my_agents/                        # User-created agents appear here
+│       ├── __init__.py
+│       ├── charlie_car_salesman_agent.py
+│       ├── support_bot_agent.py
+│       └── knowledge_assistant_agent.py
+├── src/
+│   └── backend/
+│       ├── templates/
+│       │   └── component_templates/
+│       │       └── user_agent_template.py.jinja2
+│       └── app/
+│           └── services/
+│               ├── component_generator.py
+│               └── langflow_restart.py
+└── docker-compose.yml
+```
+
+---
+
+## User Experience Flow
+
+```
+1. User creates "Charlie the car salesman" in frontend
+   ↓
+2. Frontend shows: "Creating your agent..."
+   ↓
+3. Backend:
+   - Creates Langflow flow (existing)
+   - Generates Python component file
+   - Triggers Langflow restart (background)
+   ↓
+4. Frontend shows: "Almost ready... Setting up Charlie..."
+   ↓
+5. Langflow restarts (5-10 seconds)
+   ↓
+6. Frontend shows: "✓ Charlie is ready!"
+   ↓
+7. User opens Langflow canvas
+   ↓
+8. User sees in sidebar:
+
+   Components
+   ├─ Input & Output
+   ├─ Data Sources
+   ├─ Models & Agents
+   ├─ My Agents              ← NEW CATEGORY
+   │   └─ Charlie the car salesman  ← Their agent!
+   ├─ MCP Tools
+   └─ ...
+   ↓
+9. User drags "Charlie" into any flow as a single node!
+```
+
+---
+
+## Restart Timing Optimization
+
+| Scenario | Strategy |
+|----------|----------|
+| First agent created | Restart immediately |
+| Multiple agents in session | Batch restarts (restart after 30s of no new agents) |
+| Agent deleted | Queue restart, don't block UI |
+| User opens canvas | Check if restart pending, show loading if so |
+
+### Batched Restart Implementation
+
+```python
+class LangflowRestartService:
+    _restart_scheduled = False
+    _restart_lock = asyncio.Lock()
+
+    async def schedule_restart(self, delay_seconds: int = 5):
+        """Schedule a restart after delay (batches multiple requests)."""
+        async with self._restart_lock:
+            if self._restart_scheduled:
+                return  # Already scheduled
+
+            self._restart_scheduled = True
+
+        await asyncio.sleep(delay_seconds)
+        await self.restart_langflow()
+
+        async with self._restart_lock:
+            self._restart_scheduled = False
+```
 
 ---
 
