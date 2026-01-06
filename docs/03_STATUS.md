@@ -263,13 +263,14 @@ Latest commits:
 
 ---
 
-## Strategic Documents (2026-01-05)
+## Strategic Documents (2026-01-06)
 
 | Document | Purpose |
 |----------|---------|
 | `11_PRODUCTION_DEPLOYMENT.md` | Nginx proxy, same-origin deployment |
 | `12_USER_JOURNEYS_AND_ENTERPRISE_ROADMAP.md` | User journeys, enterprise requirements |
-| `13_LANGFLOW_INTEGRATION_STRATEGY.md` | **KEY** - Leverage Langflow features, competitive analysis |
+| `13_LANGFLOW_INTEGRATION_STRATEGY.md` | Leverage Langflow features, competitive analysis |
+| `14_CUSTOM_COMPONENTS_STRATEGY.md` | **NEW** - Reusable agents, educational components, library management |
 
 ### Key Strategic Insight
 
