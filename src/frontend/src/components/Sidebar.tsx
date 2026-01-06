@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -16,6 +16,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const queryClient = useQueryClient()
   const [showNewProjectInput, setShowNewProjectInput] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch projects
   const { data: projectsData, isLoading } = useQuery({
@@ -47,6 +49,49 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     e.preventDefault()
     if (newProjectName.trim()) {
       createProjectMutation.mutate(newProjectName.trim())
+    }
+  }
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsImporting(true)
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+
+      // Import the agent(s) from the file
+      if (data.agent) {
+        // Single agent export format
+        await api.importAgent(data)
+        queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+        alert('Agent imported successfully!')
+      } else if (data.agents && Array.isArray(data.agents)) {
+        // Multiple agents (project export)
+        for (const agent of data.agents) {
+          await api.importAgent({ agent })
+        }
+        queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+        alert(`${data.agents.length} agent(s) imported successfully!`)
+      } else {
+        alert('Invalid import file format. Please use an exported agent JSON file.')
+      }
+    } catch (error) {
+      console.error('Import failed:', error)
+      alert('Failed to import. Please check the file format and try again.')
+    } finally {
+      setIsImporting(false)
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -103,18 +148,33 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <div className="w-44 h-full bg-white border-r border-gray-200 flex flex-col">
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileImport}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="px-3 py-3 flex items-center justify-between">
         <span className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Projects</span>
         <div className="flex items-center gap-1">
           {/* Upload/Import button */}
           <button
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-            title="Import project"
+            onClick={handleImportClick}
+            disabled={isImporting}
+            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+            title="Import agent"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
+            {isImporting ? (
+              <div className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+            )}
           </button>
           {/* Add project button */}
           <button

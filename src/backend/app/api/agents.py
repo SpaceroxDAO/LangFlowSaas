@@ -266,3 +266,40 @@ async def duplicate_agent(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.post(
+    "/import",
+    response_model=AgentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import agent",
+    description="Import an agent from exported JSON data.",
+)
+async def import_agent(
+    import_data: dict,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Import an agent from exported JSON data."""
+    user = await get_user_from_clerk(clerk_user, session)
+    agent_service = AgentService(session)
+
+    try:
+        # Handle both single agent format and wrapped format
+        agent_data = import_data.get("agent", import_data)
+
+        imported = await agent_service.import_agent(
+            user=user,
+            import_data=agent_data,
+        )
+        return imported
+    except AgentServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to import agent: {str(e)}",
+        )

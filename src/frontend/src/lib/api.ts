@@ -112,6 +112,13 @@ class ApiClient {
     })
   }
 
+  async importAgent(data: Record<string, unknown>): Promise<Agent> {
+    return this.request<Agent>('/api/v1/agents/import', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   // Chat
   async sendMessage(agentId: string, data: ChatRequest): Promise<ChatResponse> {
     return this.request<ChatResponse>(`/api/v1/agents/${agentId}/chat`, {

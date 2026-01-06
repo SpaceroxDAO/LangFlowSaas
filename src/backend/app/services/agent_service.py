@@ -370,6 +370,100 @@ class AgentService:
                 "Charlie was duplicated but couldn't be saved. Please try again."
             )
 
+    async def import_agent(
+        self,
+        user: User,
+        import_data: dict,
+    ) -> Agent:
+        """
+        Import an agent from exported JSON data.
+
+        Args:
+            user: The user importing the agent
+            import_data: The exported agent data
+
+        Returns:
+            The newly created agent
+        """
+        # Validate required fields
+        name = import_data.get("name")
+        if not name:
+            raise AgentServiceError("Import data must include an agent name.")
+
+        # Get user's default project
+        stmt = select(Project).where(
+            Project.user_id == str(user.id),
+            Project.is_default == True,
+        )
+        result = await self.session.execute(stmt)
+        default_project = result.scalar_one_or_none()
+
+        if not default_project:
+            # Create default project
+            default_project = Project(
+                user_id=str(user.id),
+                name="My Projects",
+                description="Your default project for organizing agents",
+                icon="star",
+                color="#f97316",
+                is_default=True,
+                sort_order=0,
+            )
+            self.session.add(default_project)
+            await self.session.flush()
+
+        project_id = str(default_project.id)
+
+        # Create a new flow in Langflow with the imported data
+        flow_id = None
+        flow_data = import_data.get("flow_data", {})
+
+        try:
+            flow_id = await self.langflow.create_flow(
+                name=f"{name} (Imported) - {user.id}",
+                data=flow_data.get("data", {}) if flow_data else {},
+                description=f"Imported agent",
+            )
+        except Exception as e:
+            logger.error(f"Failed to create Langflow flow for import: {e}")
+            raise AgentServiceError(
+                "Failed to import agent to Langflow. Please try again."
+            )
+
+        # Create the agent in our database
+        try:
+            new_agent = Agent(
+                user_id=user.id,
+                project_id=project_id,
+                name=f"{name} (Imported)",
+                description=import_data.get("description", "Imported agent"),
+                qa_who=import_data.get("qa_who"),
+                qa_rules=import_data.get("qa_rules"),
+                qa_tricks=import_data.get("qa_tricks"),
+                system_prompt=import_data.get("system_prompt"),
+                langflow_flow_id=flow_id,
+                template_name=import_data.get("template_name"),
+                flow_data=flow_data,
+            )
+
+            self.session.add(new_agent)
+            await self.session.flush()
+            await self.session.refresh(new_agent)
+
+            logger.info(f"Imported agent as {new_agent.id} for user {user.id}")
+            return new_agent
+
+        except Exception as e:
+            # DB creation failed - clean up the Langflow flow we created
+            logger.error(f"Failed to save imported agent to DB: {e}")
+            try:
+                await self.langflow.delete_flow(flow_id)
+            except Exception as cleanup_error:
+                logger.error(f"Failed to clean up Langflow flow {flow_id}: {cleanup_error}")
+            raise AgentServiceError(
+                "Agent was imported but couldn't be saved. Please try again."
+            )
+
     async def chat(
         self,
         agent: Agent,
