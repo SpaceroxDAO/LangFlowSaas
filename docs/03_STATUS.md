@@ -191,4 +191,27 @@ Latest commit: `e2a352d` - feat: Add Phase 5-7 features, fix E2E tests, improve 
 
 ---
 
-**Status Summary**: 🟢 Green - Phases 5-7 verified. Production deployment guide complete. Ready to deploy.
+**Status Summary**: 🟢 Green - Phases 5-7 verified. Strategic research complete. Ready for Langflow integration optimization.
+
+---
+
+## Strategic Documents (2026-01-05)
+
+| Document | Purpose |
+|----------|---------|
+| `11_PRODUCTION_DEPLOYMENT.md` | Nginx proxy, same-origin deployment |
+| `12_USER_JOURNEYS_AND_ENTERPRISE_ROADMAP.md` | User journeys, enterprise requirements |
+| `13_LANGFLOW_INTEGRATION_STRATEGY.md` | **KEY** - Leverage Langflow features, competitive analysis |
+
+### Key Strategic Insight
+
+**We're building too much custom infrastructure when Langflow already provides:**
+- `langflow-chat` embed widget (replaces custom chat UI)
+- `/monitor/messages` API (free analytics)
+- Public playground URLs (instant sharing)
+- Webhook triggers (integrations)
+- Streaming, memory, RAG (advanced features)
+
+**New Direction:** "Thin wrapper, thick education" - Surface Langflow's features through educational UX rather than rebuilding.
+
+**Competitive Position:** Education niche is UNTAPPED. No major competitor (Dify, Flowise, Botpress, Stack AI) has claimed it.
