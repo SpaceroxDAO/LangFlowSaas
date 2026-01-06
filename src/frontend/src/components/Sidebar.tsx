@@ -67,19 +67,25 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       // Import the agent(s) from the file
       if (data.agent) {
-        // Single agent export format
+        // Wrapped format: { agent: {...} }
         await api.importAgent(data)
         queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
         queryClient.invalidateQueries({ queryKey: ['projects'] })
         alert('Agent imported successfully!')
       } else if (data.agents && Array.isArray(data.agents)) {
-        // Multiple agents (project export)
+        // Multiple agents (project export): { agents: [...] }
         for (const agent of data.agents) {
           await api.importAgent({ agent })
         }
         queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
         queryClient.invalidateQueries({ queryKey: ['projects'] })
         alert(`${data.agents.length} agent(s) imported successfully!`)
+      } else if (data.name && (data.system_prompt || data.qa_who)) {
+        // Direct export format: { name: "...", system_prompt: "...", ... }
+        await api.importAgent(data)
+        queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
+        queryClient.invalidateQueries({ queryKey: ['projects'] })
+        alert('Agent imported successfully!')
       } else {
         alert('Invalid import file format. Please use an exported agent JSON file.')
       }
