@@ -17,6 +17,31 @@ import type {
   ApiKeyInfo,
   ApiKeyCreate,
   TourStatus,
+  // New three-tab types
+  AgentComponent,
+  AgentComponentCreateFromQA,
+  AgentComponentUpdate,
+  AgentComponentListResponse,
+  AgentComponentPublishResponse,
+  Workflow,
+  WorkflowCreate,
+  WorkflowCreateFromAgent,
+  WorkflowCreateFromTemplate,
+  WorkflowUpdate,
+  WorkflowListResponse,
+  WorkflowConversationsResponse,
+  MCPServer,
+  MCPServerCreate,
+  MCPServerCreateFromTemplate,
+  MCPServerUpdate,
+  MCPServerListResponse,
+  MCPServerHealthResponse,
+  MCPServerSyncResponse,
+  MCPServerTemplatesResponse,
+  RestartStatusResponse,
+  // Dog avatar types
+  DogAvatarResponse,
+  AvailableJobsResponse,
 } from '@/types'
 
 // Check dev mode from environment
@@ -236,6 +261,274 @@ class ApiClient {
     return this.request<UserSettings>('/api/v1/settings/onboarding/complete', {
       method: 'POST',
     })
+  }
+
+  // ===========================================================================
+  // Agent Components (Reusable AI Personalities)
+  // ===========================================================================
+
+  async createAgentComponentFromQA(data: AgentComponentCreateFromQA): Promise<AgentComponent> {
+    return this.request<AgentComponent>('/api/v1/agent-components/create-from-qa', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listAgentComponents(
+    projectId?: string,
+    page: number = 1,
+    pageSize: number = 20,
+    activeOnly: boolean = true,
+    publishedOnly: boolean = false
+  ): Promise<AgentComponentListResponse> {
+    const params = new URLSearchParams()
+    if (projectId) params.append('project_id', projectId)
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    params.append('active_only', activeOnly.toString())
+    params.append('published_only', publishedOnly.toString())
+    return this.request(`/api/v1/agent-components?${params}`)
+  }
+
+  async getAgentComponent(id: string): Promise<AgentComponent> {
+    return this.request(`/api/v1/agent-components/${id}`)
+  }
+
+  async updateAgentComponent(id: string, data: AgentComponentUpdate): Promise<AgentComponent> {
+    return this.request<AgentComponent>(`/api/v1/agent-components/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteAgentComponent(id: string): Promise<void> {
+    return this.request(`/api/v1/agent-components/${id}`, { method: 'DELETE' })
+  }
+
+  async publishAgentComponent(id: string): Promise<AgentComponentPublishResponse> {
+    return this.request<AgentComponentPublishResponse>(`/api/v1/agent-components/${id}/publish`, {
+      method: 'POST',
+    })
+  }
+
+  async unpublishAgentComponent(id: string): Promise<AgentComponentPublishResponse> {
+    return this.request<AgentComponentPublishResponse>(`/api/v1/agent-components/${id}/unpublish`, {
+      method: 'POST',
+    })
+  }
+
+  async duplicateAgentComponent(id: string, newName?: string): Promise<AgentComponent> {
+    const params = newName ? `?new_name=${encodeURIComponent(newName)}` : ''
+    return this.request<AgentComponent>(`/api/v1/agent-components/${id}/duplicate${params}`, {
+      method: 'POST',
+    })
+  }
+
+  async exportAgentComponent(id: string): Promise<Record<string, unknown>> {
+    return this.request(`/api/v1/agent-components/${id}/export`)
+  }
+
+  async importAgentComponent(data: Record<string, unknown>, projectId?: string): Promise<AgentComponent> {
+    const params = projectId ? `?project_id=${projectId}` : ''
+    return this.request<AgentComponent>(`/api/v1/agent-components/import${params}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async generateAvatar(description: string): Promise<{ avatar_url: string; message: string }> {
+    return this.request<{ avatar_url: string; message: string }>('/api/v1/agent-components/generate-avatar', {
+      method: 'POST',
+      body: JSON.stringify({ description }),
+    })
+  }
+
+  async generateAndSaveAvatar(componentId: string): Promise<AgentComponent> {
+    return this.request<AgentComponent>(`/api/v1/agent-components/${componentId}/generate-avatar`, {
+      method: 'POST',
+    })
+  }
+
+  // ===========================================================================
+  // Dog Avatars (GPT Image Edit)
+  // ===========================================================================
+
+  async generateDogAvatar(
+    job: string,
+    options?: {
+      size?: string
+      background?: string
+      regenerate?: boolean
+      description?: string
+    }
+  ): Promise<DogAvatarResponse> {
+    return this.request<DogAvatarResponse>('/api/v1/avatars/dog', {
+      method: 'POST',
+      body: JSON.stringify({
+        job,
+        size: options?.size || '1024x1024',
+        background: options?.background || 'transparent',
+        regenerate: options?.regenerate || false,
+        description: options?.description || null,
+      }),
+    })
+  }
+
+  async getAvailableAvatarJobs(): Promise<AvailableJobsResponse> {
+    return this.request<AvailableJobsResponse>('/api/v1/avatars/dog/jobs')
+  }
+
+  // ===========================================================================
+  // Workflows (Langflow Flows)
+  // ===========================================================================
+
+  async createWorkflow(data: WorkflowCreate): Promise<Workflow> {
+    return this.request<Workflow>('/api/v1/workflows', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createWorkflowFromAgent(data: WorkflowCreateFromAgent): Promise<Workflow> {
+    return this.request<Workflow>('/api/v1/workflows/from-agent', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createWorkflowFromTemplate(data: WorkflowCreateFromTemplate): Promise<Workflow> {
+    return this.request<Workflow>('/api/v1/workflows/from-template', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listWorkflows(
+    projectId?: string,
+    page: number = 1,
+    pageSize: number = 20,
+    activeOnly: boolean = true
+  ): Promise<WorkflowListResponse> {
+    const params = new URLSearchParams()
+    if (projectId) params.append('project_id', projectId)
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    params.append('active_only', activeOnly.toString())
+    return this.request(`/api/v1/workflows?${params}`)
+  }
+
+  async getWorkflow(id: string): Promise<Workflow> {
+    return this.request(`/api/v1/workflows/${id}`)
+  }
+
+  async updateWorkflow(id: string, data: WorkflowUpdate): Promise<Workflow> {
+    return this.request<Workflow>(`/api/v1/workflows/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteWorkflow(id: string): Promise<void> {
+    return this.request(`/api/v1/workflows/${id}`, { method: 'DELETE' })
+  }
+
+  async duplicateWorkflow(id: string, newName?: string): Promise<Workflow> {
+    const params = newName ? `?new_name=${encodeURIComponent(newName)}` : ''
+    return this.request<Workflow>(`/api/v1/workflows/${id}/duplicate${params}`, {
+      method: 'POST',
+    })
+  }
+
+  async exportWorkflow(id: string): Promise<Record<string, unknown>> {
+    return this.request(`/api/v1/workflows/${id}/export`)
+  }
+
+  async chatWithWorkflow(workflowId: string, data: ChatRequest): Promise<ChatResponse> {
+    return this.request<ChatResponse>(`/api/v1/workflows/${workflowId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listWorkflowConversations(workflowId: string): Promise<WorkflowConversationsResponse> {
+    return this.request(`/api/v1/workflows/${workflowId}/conversations`)
+  }
+
+  // ===========================================================================
+  // MCP Servers (External Tool Integrations)
+  // ===========================================================================
+
+  async getMCPServerTemplates(): Promise<MCPServerTemplatesResponse> {
+    return this.request('/api/v1/mcp-servers/templates')
+  }
+
+  async createMCPServer(data: MCPServerCreate): Promise<MCPServer> {
+    return this.request<MCPServer>('/api/v1/mcp-servers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createMCPServerFromTemplate(data: MCPServerCreateFromTemplate): Promise<MCPServer> {
+    return this.request<MCPServer>('/api/v1/mcp-servers/from-template', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listMCPServers(
+    projectId?: string,
+    page: number = 1,
+    pageSize: number = 20,
+    enabledOnly: boolean = false
+  ): Promise<MCPServerListResponse> {
+    const params = new URLSearchParams()
+    if (projectId) params.append('project_id', projectId)
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    params.append('enabled_only', enabledOnly.toString())
+    return this.request(`/api/v1/mcp-servers?${params}`)
+  }
+
+  async getMCPServer(id: string): Promise<MCPServer> {
+    return this.request(`/api/v1/mcp-servers/${id}`)
+  }
+
+  async updateMCPServer(id: string, data: MCPServerUpdate): Promise<MCPServer> {
+    return this.request<MCPServer>(`/api/v1/mcp-servers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteMCPServer(id: string): Promise<void> {
+    return this.request(`/api/v1/mcp-servers/${id}`, { method: 'DELETE' })
+  }
+
+  async enableMCPServer(id: string): Promise<MCPServer> {
+    return this.request<MCPServer>(`/api/v1/mcp-servers/${id}/enable`, {
+      method: 'POST',
+    })
+  }
+
+  async disableMCPServer(id: string): Promise<MCPServer> {
+    return this.request<MCPServer>(`/api/v1/mcp-servers/${id}/disable`, {
+      method: 'POST',
+    })
+  }
+
+  async checkMCPServerHealth(id: string): Promise<MCPServerHealthResponse> {
+    return this.request(`/api/v1/mcp-servers/${id}/health`)
+  }
+
+  async syncMCPServers(): Promise<MCPServerSyncResponse> {
+    return this.request<MCPServerSyncResponse>('/api/v1/mcp-servers/sync', {
+      method: 'POST',
+    })
+  }
+
+  async getRestartStatus(): Promise<RestartStatusResponse> {
+    return this.request('/api/v1/mcp-servers/restart-status')
   }
 }
 

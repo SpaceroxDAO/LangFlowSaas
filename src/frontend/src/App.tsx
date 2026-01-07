@@ -122,6 +122,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* New workflow playground route */}
+        <Route
+          path="/playground/workflow/:workflowId"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PlaygroundPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/canvas/:agentId"
           element={

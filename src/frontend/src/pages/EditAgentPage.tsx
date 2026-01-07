@@ -7,7 +7,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { ToolCard } from '@/components/ToolCard'
-import type { Agent } from '@/types'
+import { inferJobFromDescription } from '@/lib/avatarJobInference'
+import type { AgentComponent } from '@/types'
 
 // Available tools
 const AVAILABLE_TOOLS = [
@@ -50,6 +51,7 @@ export function EditAgentPage() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -58,21 +60,23 @@ export function EditAgentPage() {
   const [persona, setPersona] = useState('')
   const [instructions, setInstructions] = useState('')
   const [selectedTools, setSelectedTools] = useState<string[]>([])
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
   }, [getToken])
 
-  // Load agent data
+  // Load agent data (from agent_components table)
   useEffect(() => {
     async function loadAgent() {
       if (!agentId) return
       try {
-        const agent: Agent = await api.getAgent(agentId)
+        const agent: AgentComponent = await api.getAgentComponent(agentId)
         setName(agent.name)
         setPersona(agent.qa_who)
         setInstructions(agent.qa_rules)
         setSelectedTools(parseToolsFromTricks(agent.qa_tricks))
+        setAvatarUrl(agent.avatar_url || null)
         setIsLoading(false)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load agent'
@@ -89,6 +93,37 @@ export function EditAgentPage() {
         ? prev.filter((t) => t !== toolId)
         : [...prev, toolId]
     )
+  }
+
+  const handleGenerateAvatar = async () => {
+    // Require at least name or persona to generate
+    if (!name.trim() && !persona.trim()) {
+      setSaveError('Please enter a name or persona description first')
+      return
+    }
+
+    setIsGeneratingAvatar(true)
+    setSaveError(null)
+
+    try {
+      // Infer job type from name and persona
+      const inferredJob = inferJobFromDescription(name, persona)
+      // Combine name + persona for fallback context
+      const fullDescription = `${name} - ${persona}`.trim()
+
+      const result = await api.generateDogAvatar(inferredJob, {
+        regenerate: !!avatarUrl,
+        description: fullDescription,  // Pass for fallback when job is "default"
+      })
+      // Convert relative URL to full URL for the backend
+      const fullUrl = `${window.location.protocol}//${window.location.hostname}:8000${result.image_url}`
+      setAvatarUrl(fullUrl)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate avatar. Please try again.'
+      setSaveError(errorMessage)
+    } finally {
+      setIsGeneratingAvatar(false)
+    }
   }
 
   const handleSave = async () => {
@@ -117,11 +152,12 @@ export function EditAgentPage() {
         ? `Tools: ${selectedTools.map(t => AVAILABLE_TOOLS.find(at => at.id === t)?.title).join(', ')}`
         : 'No specific tools selected'
 
-      await api.updateAgent(agentId, {
+      await api.updateAgentComponent(agentId, {
         name: name.trim(),
         qa_who: persona.trim(),
         qa_rules: instructions.trim(),
         qa_tricks: tricksText,
+        avatar_url: avatarUrl || undefined,
       })
 
       navigate(`/playground/${agentId}`)
@@ -135,7 +171,14 @@ export function EditAgentPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+      <div
+        className="min-h-[calc(100vh-64px)] flex items-center justify-center"
+        style={{
+          backgroundColor: '#fafafa',
+          backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }}
+      >
         <div className="text-center">
           <svg className="animate-spin w-10 h-10 text-violet-500 mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -150,7 +193,14 @@ export function EditAgentPage() {
   // Error state
   if (loadError) {
     return (
-      <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+      <div
+        className="min-h-[calc(100vh-64px)] flex items-center justify-center"
+        style={{
+          backgroundColor: '#fafafa',
+          backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }}
+      >
         <div className="text-center max-w-md mx-auto p-6">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -174,7 +224,15 @@ export function EditAgentPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div
+      className="min-h-[calc(100vh-64px)]"
+      style={{
+        backgroundColor: '#fafafa',
+        backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}
+    >
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Edit {name}</h1>
@@ -223,22 +281,47 @@ export function EditAgentPage() {
             </div>
           </div>
 
-          {/* Right side - Image placeholder */}
+          {/* Right side - Avatar image */}
           <div className="w-48 flex-shrink-0">
-            <div className="w-full aspect-square bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center mb-3">
-              <svg className="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+            <div className="w-full aspect-square bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center mb-3 overflow-hidden">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Agent avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg className="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              )}
             </div>
             <button
               type="button"
-              disabled
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleGenerateAvatar}
+              disabled={isGeneratingAvatar}
+              className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl transition-colors ${
+                isGeneratingAvatar
+                  ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                  : 'text-violet-600 bg-violet-50 hover:bg-violet-100 cursor-pointer border border-violet-200'
+              }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              Generate
+              {isGeneratingAvatar ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  {avatarUrl ? 'Regenerate' : 'Generate'}
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -327,6 +410,7 @@ export function EditAgentPage() {
             'Save & Preview'
           )}
         </button>
+      </div>
       </div>
     </div>
   )

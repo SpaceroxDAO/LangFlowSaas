@@ -12,6 +12,9 @@ from app.database import BaseModel
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.agent import Agent
+    from app.models.agent_component import AgentComponent
+    from app.models.workflow import Workflow
+    from app.models.mcp_server import MCPServer
 
 
 class Project(BaseModel):
@@ -81,17 +84,36 @@ class Project(BaseModel):
         comment="Manual ordering within user's projects",
     )
 
-    # Relationships
+    # Relationships - use lazy="select" to avoid N+1 query cascade
     user: Mapped["User"] = relationship(
         "User",
         back_populates="projects",
-        lazy="joined",
+        lazy="select",
     )
 
     agents: Mapped[List["Agent"]] = relationship(
         "Agent",
         back_populates="project",
-        lazy="selectin",
+        lazy="select",
+    )
+
+    # Relationships for three-tab architecture
+    agent_components: Mapped[List["AgentComponent"]] = relationship(
+        "AgentComponent",
+        back_populates="project",
+        lazy="select",
+    )
+
+    workflows: Mapped[List["Workflow"]] = relationship(
+        "Workflow",
+        back_populates="project",
+        lazy="select",
+    )
+
+    mcp_servers: Mapped[List["MCPServer"]] = relationship(
+        "MCPServer",
+        back_populates="project",
+        lazy="select",
     )
 
     def __repr__(self) -> str:

@@ -4,12 +4,13 @@ import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { LangflowCanvasViewer } from '@/components/LangflowCanvasViewer'
 import { useTour, useShouldShowTour } from '@/providers/TourProvider'
-import type { Agent } from '@/types'
+import type { AgentComponent, Workflow } from '@/types'
 
 export function CanvasViewerPage() {
   const { agentId } = useParams<{ agentId: string }>()
   const { getToken } = useAuth()
-  const [agent, setAgent] = useState<Agent | null>(null)
+  const [agentComponent, setAgentComponent] = useState<AgentComponent | null>(null)
+  const [workflow, setWorkflow] = useState<Workflow | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { completeTour, currentDisclosureLevel, setDisclosureLevel } = useTour()
@@ -20,13 +21,21 @@ export function CanvasViewerPage() {
   }, [getToken])
 
   useEffect(() => {
-    async function fetchAgent() {
+    async function fetchData() {
       if (!agentId) return
 
       try {
         setLoading(true)
-        const agentData = await api.getAgent(agentId)
-        setAgent(agentData)
+        // Fetch agent component
+        const componentData = await api.getAgentComponent(agentId)
+        setAgentComponent(componentData)
+
+        // Find associated workflow
+        const workflowsResult = await api.listWorkflows(undefined, 1, 100)
+        const associatedWorkflow = workflowsResult.workflows.find(w =>
+          w.agent_component_ids?.includes(agentId)
+        )
+        setWorkflow(associatedWorkflow || null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load agent')
       } finally {
@@ -34,7 +43,7 @@ export function CanvasViewerPage() {
       }
     }
 
-    fetchAgent()
+    fetchData()
   }, [agentId])
 
   if (loading) {
@@ -48,7 +57,7 @@ export function CanvasViewerPage() {
     )
   }
 
-  if (error || !agent) {
+  if (error || !agentComponent) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-64px)]">
         <div className="text-center max-w-md">
@@ -70,8 +79,8 @@ export function CanvasViewerPage() {
     )
   }
 
-  // Check if agent has a Langflow flow ID
-  if (!agent.langflow_flow_id) {
+  // Check if agent has an associated workflow with a Langflow flow ID
+  if (!workflow?.langflow_flow_id) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-64px)]">
         <div className="text-center max-w-md">
@@ -110,7 +119,7 @@ export function CanvasViewerPage() {
               </svg>
             </Link>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">{agent.name}'s Brain</h1>
+              <h1 className="text-lg font-semibold text-gray-900">{agentComponent.name}'s Brain</h1>
               <p className="text-sm text-gray-500">Explore how your agent thinks and processes messages</p>
             </div>
           </div>
@@ -135,8 +144,8 @@ export function CanvasViewerPage() {
       {/* Canvas Viewer */}
       <div className="flex-1 p-4 bg-gray-50">
         <LangflowCanvasViewer
-          flowId={agent.langflow_flow_id}
-          agentName={agent.name}
+          flowId={workflow.langflow_flow_id}
+          agentName={agentComponent.name}
           level={currentDisclosureLevel}
           showTour={shouldShowTour}
           onTourComplete={() => completeTour('canvas')}

@@ -61,7 +61,7 @@ class Message(BaseModel):
     conversation: Mapped["Conversation"] = relationship(
         "Conversation",
         back_populates="messages",
-        lazy="joined",
+        lazy="select",
     )
 
     def __repr__(self) -> str:

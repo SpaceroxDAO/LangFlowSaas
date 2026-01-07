@@ -69,3 +69,6 @@ coverage/
 # Playwright test results
 test-results/
 playwright-report/
+# Generated avatars
+src/backend/static/avatars/*.png
+!src/backend/static/avatars/.gitkeep

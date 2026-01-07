@@ -7,6 +7,9 @@ from app.services.user_service import UserService
 from app.services.agent_service import AgentService
 from app.services.project_service import ProjectService
 from app.services.settings_service import SettingsService
+from app.services.agent_component_service import AgentComponentService
+from app.services.workflow_service import WorkflowService
+from app.services.mcp_server_service import MCPServerService
 
 __all__ = [
     "LangflowClient",
@@ -17,4 +20,7 @@ __all__ = [
     "AgentService",
     "ProjectService",
     "SettingsService",
+    "AgentComponentService",
+    "WorkflowService",
+    "MCPServerService",
 ]

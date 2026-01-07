@@ -16,6 +16,12 @@ from app.database import Base
 
 # Import all models to ensure they're registered with Base.metadata
 from app.models import User, Agent, Conversation, Message
+# Phase 9 models - three-tab architecture
+from app.models.project import Project
+from app.models.agent_component import AgentComponent
+from app.models.workflow import Workflow
+from app.models.mcp_server import MCPServer
+from app.models.user_settings import UserSettings
 
 # Alembic Config object
 config = context.config

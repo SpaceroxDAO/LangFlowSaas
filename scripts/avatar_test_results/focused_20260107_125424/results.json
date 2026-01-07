@@ -1,0 +1,122 @@
+[
+  {
+    "template_name": "v1_current",
+    "template": "Create a dog {description} icon thats black and white",
+    "description": "Charlie",
+    "final_prompt": "Create a dog Charlie icon thats black and white",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Generate an image of a dog named Charlie in black and white colors. The canine should sport characteristics typical of a cherished pet such as bright eyes and a playful demeanor. The overall design should be compact, sleek, and usable as an icon.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-mhoqiwz5pxECJM9tEvCmPGrP.png?st=2026-01-07T16%3A54%3A39Z&se=2026-01-07T18%3A54%3A39Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=8b33a531-2df9-46a3-bc02-d4b1430a422c&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T16%3A07%3A04Z&ske=2026-01-08T16%3A07%3A04Z&sks=b&skv=2024-08-04&sig=q%2Bd9eOPMXp9y2Hg/Yfc2A/K7seH42DuTtQl%2BhymxO98%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v1_current_Charlie_hd_vivid.png"
+  },
+  {
+    "template_name": "v1_current",
+    "template": "Create a dog {description} icon thats black and white",
+    "description": "A friendly customer support dog",
+    "final_prompt": "Create a dog A friendly customer support dog icon thats black and white",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Design an icon featuring a friendly, customer support dog. The dog should appear engaging and approachable, embodying the qualities necessary for customer support. The color scheme for the icon should lean towards black and white, showcasing the dog's happy demeanor. The dog's ears should be perky, indicating attentiveness, and its eyes should be bright and welcoming. Its tail could be wagging slightly to showcase its friendly nature. The design should ensure that the icon universally represents friendliness and customer assistance.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-NWLC3drtcPhHz9Upzs9WeIno.png?st=2026-01-07T16%3A54%3A57Z&se=2026-01-07T18%3A54%3A57Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=ed3ea2f9-5e38-44be-9a1b-7c1e65e4d54f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T17%3A54%3A57Z&ske=2026-01-08T17%3A54%3A57Z&sks=b&skv=2024-08-04&sig=Xd%2BRHOfw91lLFV%2Baba50nnOJUPVpiXNB5vmxqvGHMqY%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v1_current_A_friendly_customer_support_do_hd_vivid.png"
+  },
+  {
+    "template_name": "v5_badge",
+    "template": "Black and white circular badge icon featuring a simple dog face, clean lines, minimalist style, centered composition, white background",
+    "description": "Charlie",
+    "final_prompt": "Black and white circular badge icon featuring a simple dog face, clean lines, minimalist style, centered composition, white background",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Design a black and white circular badge icon. The main feature of the icon should be a simple, minimalist styled dog face. Construct it using clean lines and ensure the composition retains a centered alignment. The background of the icon should be pure white to give a stark contrast to the black accents of the design.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-cdLloRhd4SoYfwhUrWmiAyHw.png?st=2026-01-07T16%3A55%3A16Z&se=2026-01-07T18%3A55%3A16Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=ed3ea2f9-5e38-44be-9a1b-7c1e65e4d54f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T11%3A47%3A44Z&ske=2026-01-08T11%3A47%3A44Z&sks=b&skv=2024-08-04&sig=tnGRrywzFoC1TPsIG8FKNDdcReph4CAozw9LwLPyV7c%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v5_badge_Charlie_hd_vivid.png"
+  },
+  {
+    "template_name": "v5_badge",
+    "template": "Black and white circular badge icon featuring a simple dog face, clean lines, minimalist style, centered composition, white background",
+    "description": "A friendly customer support dog",
+    "final_prompt": "Black and white circular badge icon featuring a simple dog face, clean lines, minimalist style, centered composition, white background",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Create a black and white circular badge icon that highlights a simple face of a dog. The style of the image should incorporate clean lines and follow a minimalist aesthetic. The silhouette of the dog should be symmetrically centered with respect to the circular boundary of the badge. Keep the background of the image pure white.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-c3a0AF8oVeT9sSt5j7MM8unj.png?st=2026-01-07T16%3A55%3A32Z&se=2026-01-07T18%3A55%3A32Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=77e5a8ec-6bd1-4477-8afc-16703a64f029&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T16%3A19%3A40Z&ske=2026-01-08T16%3A19%3A40Z&sks=b&skv=2024-08-04&sig=As9VgEABxwpeRCDHKTMDzgL3Qo0kDNsn7XQZLSsKdT4%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v5_badge_A_friendly_customer_support_do_hd_vivid.png"
+  },
+  {
+    "template_name": "v7_standard_happy",
+    "template": "Simple black and white icon of a happy cartoon dog face, round head, floppy ears, tongue out, minimal lines, white background, flat vector style",
+    "description": "Charlie",
+    "final_prompt": "Simple black and white icon of a happy cartoon dog face, round head, floppy ears, tongue out, minimal lines, white background, flat vector style",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "A simplistic black and white icon portraying the face of a cheery cartoon canine. The facial features of the dog include a round-shaped head, floppy ears, and a playful tongue sticking out. The canine's mug is outlined with minimal lines, accompanied by a plain white backdrop. Crafted in a flat vector style that leans towards a minimalist aesthetic.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-d6T5RIsQpXWobKhDmqLhUzcO.png?st=2026-01-07T16%3A55%3A48Z&se=2026-01-07T18%3A55%3A48Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=9346e9b9-5d29-4d37-a0a9-c6f95f09f79d&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T16%3A15%3A22Z&ske=2026-01-08T16%3A15%3A22Z&sks=b&skv=2024-08-04&sig=1EpgU1Afg6GwY7wMkCgriu75jmubz2RjtOcuWOH6nTg%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v7_standard_happy_Charlie_hd_vivid.png"
+  },
+  {
+    "template_name": "v7_standard_happy",
+    "template": "Simple black and white icon of a happy cartoon dog face, round head, floppy ears, tongue out, minimal lines, white background, flat vector style",
+    "description": "A friendly customer support dog",
+    "final_prompt": "Simple black and white icon of a happy cartoon dog face, round head, floppy ears, tongue out, minimal lines, white background, flat vector style",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Produce a simple, black and white icon depicting a joyous cartoon dog. The canine should have a round head and floppy ears, with its tongue hanging out. Focus on simple lines for the design. The overall style should be flat and resemble vector art, set against a pristine white background.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-gKyqChIgy6P3g3lFd89c2yGn.png?st=2026-01-07T16%3A56%3A05Z&se=2026-01-07T18%3A56%3A05Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=b1a0ae1f-618f-4548-84fd-8b16cacd5485&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T17%3A04%3A24Z&ske=2026-01-08T17%3A04%3A24Z&sks=b&skv=2024-08-04&sig=4Bm3CmJpKnnlVEHYZveRyVmSqMAxXSM%2BkzbAhHHAubA%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v7_standard_happy_A_friendly_customer_support_do_hd_vivid.png"
+  },
+  {
+    "template_name": "v9_emoji_style",
+    "template": "Dog emoji style icon, simple black outlines, white fill, cute round face, minimal detail, centered, white background",
+    "description": "Charlie",
+    "final_prompt": "Dog emoji style icon, simple black outlines, white fill, cute round face, minimal detail, centered, white background",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Create a simple emoji-style icon featuring a canine with endearing and rounded facial features. The graphic should emphasize minimalism, utilizing only elemental black outlines and a tidy white fill. The pooch's face should take the center stage in the design. Lastly, introduce a neat and crisp white background to neatly harmonize the art.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-hxmecss2rjrRFgwPA2UYWBso.png?st=2026-01-07T16%3A56%3A23Z&se=2026-01-07T18%3A56%3A23Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=ed3ea2f9-5e38-44be-9a1b-7c1e65e4d54f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T17%3A56%3A23Z&ske=2026-01-08T17%3A56%3A23Z&sks=b&skv=2024-08-04&sig=mhPnoIIgK6t4Un6N94HtV42/OgFRDSBuiCKn8iN%2Bcfo%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v9_emoji_style_Charlie_hd_vivid.png"
+  },
+  {
+    "template_name": "v9_emoji_style",
+    "template": "Dog emoji style icon, simple black outlines, white fill, cute round face, minimal detail, centered, white background",
+    "description": "A friendly customer support dog",
+    "final_prompt": "Dog emoji style icon, simple black outlines, white fill, cute round face, minimal detail, centered, white background",
+    "settings": {
+      "quality": "hd",
+      "style": "vivid"
+    },
+    "success": true,
+    "error": null,
+    "revised_prompt": "Generate a dog icon with a simplistic emoji style. The icon should be designed with black outlines on a white interior fill. Further emphasizing the simplicity of the design, the dog should have a cute, round face with minimal detail. The icon should be centered, against a contrasting white background.",
+    "image_url": "https://oaidalleapiprodscus.blob.core.windows.net/private/org-rqVVD9X2jLaGo4leAn5oGKeq/user-b2BMjTNkrmRBRQyq4cekU267/img-H98IFAM4lRxEVKUCExJNh7Q0.png?st=2026-01-07T16%3A56%3A41Z&se=2026-01-07T18%3A56%3A41Z&sp=r&sv=2024-08-04&sr=b&rscd=inline&rsct=image/png&skoid=ed3ea2f9-5e38-44be-9a1b-7c1e65e4d54f&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-01-07T08%3A33%3A11Z&ske=2026-01-08T08%3A33%3A11Z&sks=b&skv=2024-08-04&sig=RLG7Juc1IYjZEVFnOHwmR/aL5YY%2B46GogAuEy/VNbbA%3D",
+    "local_file": "scripts/avatar_test_results/focused_20260107_125424/v9_emoji_style_A_friendly_customer_support_do_hd_vivid.png"
+  }
+]

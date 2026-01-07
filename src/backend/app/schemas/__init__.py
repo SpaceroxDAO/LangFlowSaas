@@ -35,6 +35,40 @@ from app.schemas.settings import (
     UserSettingsResponse,
     TourCompletedRequest,
 )
+# New schemas for three-tab architecture
+from app.schemas.agent_component import (
+    AgentComponentCreate,
+    AgentComponentCreateFromQA,
+    AgentComponentUpdate,
+    AgentComponentResponse,
+    AgentComponentListResponse,
+    AgentComponentPublishResponse,
+)
+from app.schemas.workflow import (
+    WorkflowCreate,
+    WorkflowCreateFromAgent,
+    WorkflowCreateFromTemplate,
+    WorkflowUpdate,
+    WorkflowResponse,
+    WorkflowListResponse,
+    WorkflowWithAgentsResponse,
+    WorkflowExportResponse,
+    WorkflowImportRequest,
+)
+from app.schemas.mcp_server import (
+    MCPServerCreate,
+    MCPServerCreateFromTemplate,
+    MCPServerUpdate,
+    MCPServerResponse,
+    MCPServerListResponse,
+    MCPServerHealthResponse,
+    MCPServerTemplateResponse,
+    MCPServerTemplatesResponse,
+    MCPServerSyncResponse,
+    PendingChange,
+    RestartStatusResponse,
+    MCP_SERVER_TEMPLATES,
+)
 
 __all__ = [
     "UserCreate",
@@ -63,4 +97,32 @@ __all__ = [
     "UserSettingsUpdate",
     "UserSettingsResponse",
     "TourCompletedRequest",
+    # New schemas
+    "AgentComponentCreate",
+    "AgentComponentCreateFromQA",
+    "AgentComponentUpdate",
+    "AgentComponentResponse",
+    "AgentComponentListResponse",
+    "AgentComponentPublishResponse",
+    "WorkflowCreate",
+    "WorkflowCreateFromAgent",
+    "WorkflowCreateFromTemplate",
+    "WorkflowUpdate",
+    "WorkflowResponse",
+    "WorkflowListResponse",
+    "WorkflowWithAgentsResponse",
+    "WorkflowExportResponse",
+    "WorkflowImportRequest",
+    "MCPServerCreate",
+    "MCPServerCreateFromTemplate",
+    "MCPServerUpdate",
+    "MCPServerResponse",
+    "MCPServerListResponse",
+    "MCPServerHealthResponse",
+    "MCPServerTemplateResponse",
+    "MCPServerTemplatesResponse",
+    "MCPServerSyncResponse",
+    "PendingChange",
+    "RestartStatusResponse",
+    "MCP_SERVER_TEMPLATES",
 ]

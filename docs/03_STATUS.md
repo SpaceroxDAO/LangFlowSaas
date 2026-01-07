@@ -1,96 +1,133 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-06
-**Current Phase**: Phase 8 - UI Polish & Langflow-Style Dashboard
+**Last Updated**: 2026-01-07 (Night)
+**Current Phase**: Phase 10 - Avatar V2 & Architecture Fixes
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 8 - UI Polish & Langflow-Style Dashboard
-**Status**: ✅ Implementation Complete
-**Next Milestone**: Production Deployment, Phase 9 RAG Research
+**Phase**: Phase 10 - Avatar V2 & Architecture Fixes
+**Status**: ✅ Complete
+**Next Milestone**: Production Deploy, Data Migration (Optional)
 
 ## Health Indicators
 
 | Metric | Status | Notes |
 |--------|--------|-------|
-| Documentation | ✅ Complete | All docs updated including strategic documents |
-| Backend API | ✅ Complete | FastAPI with analytics, export, import, duplicate |
-| Database | ✅ Complete | PostgreSQL with SQLite fallback |
+| Documentation | ✅ Updated | This document updated 2026-01-07 |
+| Backend API | ✅ Complete | 36+ new endpoints + avatar generation |
+| Database | ✅ Complete | New tables + workflow_id migration done |
 | Authentication | ✅ Complete | Clerk JWT + Dev Mode |
 | Langflow Integration | ✅ Enhanced | Share, Embed, Webhook, API, Analytics |
-| Frontend | ✅ Enhanced | Langflow-style UI with violet theme |
+| Frontend | ✅ Enhanced | Three-tab UI + avatar display |
+| Performance | ✅ Fixed | SQLAlchemy lazy loading optimized |
 | Tour System | ✅ Tested | Driver.js integrated and working |
-| Canvas Viewer | ✅ Tested | iframe with progressive disclosure (4 levels) |
+| Canvas Viewer | ✅ Fixed | Updated for AgentComponent/Workflow architecture |
 | Streaming | ✅ Added | Backend streaming support enabled |
-| Testing | ✅ Complete | Playwright E2E tests passing |
+| Testing | ✅ Complete | 5 E2E tests passing for three-tab + create flow |
 | Import/Export | ✅ Added | Agent JSON import/export working |
+| New Data Flow | ✅ Working | CreateAgent → AgentComponent + Workflow |
+| Avatar System | ✅ Complete | Auto-inference, three-tier generation |
 
 Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
 ## Phase Progress
 
-### Phases 0-4: MVP Foundation ✅ Complete
-- [x] Phase 0: Philosophy (external content)
-- [x] Phase 1: Meet Charlie (PlaygroundPage)
-- [x] Phase 2: Give Charlie a Job (CreateAgentPage + Tour)
-- [x] Phase 3: Test Charlie (Playground chat)
-- [x] Phase 4: Refine Training (EditAgentPage)
+### Phases 0-9: Complete ✅
 
-### Phase 5: Progressive Canvas ✅ Verified
-- [x] LangflowCanvasViewer component with iframe
-- [x] 4 progressive disclosure levels (CSS injection)
-- [x] CanvasViewerPage for full-page canvas
-- [x] "Unlock Flow" button on PlaygroundPage
-- [x] CSS selectors documented
-- [x] Level selector UI
-- [x] Level switching tested (Peek → Explore → Builder → Expert)
-- [x] Canvas loads correct agent flow
-- [x] Educational overlay updates per level
-- ⚠️ Note: CSS injection requires same-origin deployment (expected)
+All previous phases completed:
+- Phase 0-4: MVP Foundation (Q&A wizard, Playground, EditAgent)
+- Phase 5: Progressive Canvas (iframe with 4 disclosure levels)
+- Phase 6: Tools (calculator, web_search, url_reader verified working)
+- Phase 7: Memory (multi-turn context retention)
+- Phase 7b: Langflow Integration (Share, Embed, Webhook, API tabs)
+- Phase 8: UI Polish (Langflow-style violet theme, search, pagination, bulk ops)
+- Phase 9: Three-Tab Architecture (Agents, Workflows, MCP Servers)
 
-### Phase 6: Tools ✅ Verified Working
-- [x] Tool templates created (calculator, web_search, url_reader, google_maps)
-- [x] ToolCard selection UI
-- [x] Template mapping for tools
-- [x] **VERIFIED: Tools actually execute** (Calculator: 847 × 23 = 19,481 ✓)
-- [x] Agent component (not LanguageModelComponent) in template
-- [x] Tool-to-Agent edge connections working
+### Phase 10: Avatar V2 & Architecture Fixes ✅ Complete
 
-### Phase 7: Memory ✅ Verified Working
-- [x] Multi-turn conversation context retention tested
-- [x] Agent remembered previous calculation result
-- [ ] Memory toggle UI (future enhancement)
+**Goal**: Enhanced avatar system with auto-inference and critical architecture fixes
 
-### Phase 7b: Langflow Integration Optimization ✅ Complete
-- [x] ShareDeployModal with 4 tabs (Share, Embed, Webhook, API)
-- [x] Analytics API endpoint wrapping Langflow /monitor
-- [x] Mini analytics display on dashboard agent cards
-- [x] Streaming support in LangflowClient
-- [x] Embed widget code using langflow-embedded-chat
-- [x] Strategic documentation (User Journeys, Integration Strategy)
+#### Completed (2026-01-07 Night)
 
-### Phase 8: UI Polish & Langflow-Style Dashboard ✅ Complete
-- [x] **Color Theme Migration**: Orange → Violet/Purple (#7C3AED) matching Langflow
-- [x] **Header Restructure**: Full-width header with Dog icon logo, profile dropdown
-- [x] **Sidebar Updates**: White background, project list with menus, import button
-- [x] **Dashboard Features**:
-  - [x] Search agents functionality
-  - [x] List/Grid view toggle with persistence
-  - [x] Bulk selection with multi-delete
-  - [x] Pagination (12 agents per page)
-- [x] **Agent Menu Actions**: Edit, Export, Duplicate, Delete with icons
-- [x] **Import/Export System**:
-  - [x] Export agent as JSON (full flow data included)
-  - [x] Import agent from JSON (supports multiple formats)
-  - [x] Duplicate agent functionality
-- [x] **Profile Dropdown**: Settings and Sign out accessible from avatar
-- [x] **lucide-react Icons**: Dog icon as logo, consistent iconography
+**Avatar System V2:**
+- [x] Auto-inference of job type from agent name/description
+- [x] 40+ job types with keyword matching
+- [x] Three-tier generation strategy (known job → description-based → base image)
+- [x] Avatar display in PlaygroundPage (header + empty state)
+- [x] Avatar display in ProjectDetailPage (list + grid views)
+- [x] Larger avatar sizes (40px list, 48px grid)
+- [x] Light violet background for avatar circles
 
-### Phase 9-11: Planned
-- [ ] Phase 9: RAG/Documents (high effort, research needed)
-- [ ] Phase 10: Agent reasoning visibility
-- [ ] Phase 11: Full canvas mastery
+**Architecture Fixes:**
+- [x] CanvasViewerPage updated for AgentComponent/Workflow architecture
+- [x] PlaygroundPage "Edit Flow" link fixed
+- [x] Removed broken `/canvas/${workflowId}` references
+
+### Phase 9: Three-Tab Architecture ✅ Complete
+
+**Goal**: Transform single-tab project view into three tabs: Agents, Workflows, MCP Servers
+
+#### Completed (2026-01-07)
+
+**Backend:**
+- [x] AgentComponent model and schema
+- [x] Workflow model and schema
+- [x] MCPServer model and schema
+- [x] Database tables created (agent_components, workflows, mcp_servers)
+- [x] workflow_id column added to conversations table
+- [x] AgentComponentService, WorkflowService, MCPServerService
+- [x] API routes: `/api/v1/agent-components/*`, `/api/v1/workflows/*`, `/api/v1/mcp-servers/*`
+- [x] 36 new API endpoints registered
+- [x] **conversations.agent_id made nullable** (for workflow conversations)
+
+**Frontend:**
+- [x] WorkflowsTab component with list/grid views
+- [x] MCPServersTab component with enable/disable toggles
+- [x] CreateWorkflowModal (blank/from-agent options)
+- [x] CreateMCPServerModal (template-based)
+- [x] ProjectDetailPage updated with three tabs
+- [x] Tab counts in badges
+- [x] URL-based tab state (`?tab=agents|workflows|mcp-servers`)
+- [x] Frontend types for all new entities
+- [x] API client methods (~30 new methods)
+- [x] **Workflow cards now clickable** (navigate to playground)
+
+**Data Flow Integration (2026-01-07 Evening):**
+- [x] **CreateAgentPage creates AgentComponent + Workflow** (not legacy agents)
+- [x] **New route `/playground/workflow/:workflowId`** for workflow chat
+- [x] **PlaygroundPage supports both legacy agents and workflows**
+- [x] **Alembic env.py imports all Phase 9 models**
+- [x] Workflow chat tested and working end-to-end
+
+**Performance Fix:**
+- [x] SQLAlchemy lazy loading optimized (7+ queries → 2 per request)
+- [x] Changed all `lazy="selectin"` and `lazy="joined"` to `lazy="select"`
+- [x] Fixed in User, Project, Conversation, Agent, Workflow, MCPServer models
+
+**Bug Fixes:**
+- [x] Project rename functionality (was missing onRename callback)
+- [x] Dotted grid canvas background on Create/Edit pages
+- [x] **Workflow card links missing** (fixed - now navigate to playground)
+
+**E2E Tests (2026-01-07 Evening):**
+- [x] `project-tabs.spec.ts` - 5 tests all passing:
+  1. ✅ Display all three tabs
+  2. ✅ Switch between tabs
+  3. ✅ Preserve tab state in URL
+  4. ✅ Show empty state for empty tabs
+  5. ✅ Create agent → navigate to workflow playground
+
+#### Pending (Post-MVP)
+
+- [ ] Data migration (split existing legacy agents into AgentComponent + Workflow)
+- [ ] Agent publish/unpublish to Langflow sidebar
+- [ ] MCP server sync to .mcp.json
+- [ ] Restart notification banner
+
+### Phase 10-11: Planned
+- [ ] Phase 10: RAG/Documents (high effort, research needed)
+- [ ] Phase 11: Agent reasoning visibility
 
 ## Frontend Pages
 
@@ -99,100 +136,104 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 | `/` | HomePage | Landing page | ✅ |
 | `/sign-in` | SignInPage | Auth | ✅ |
 | `/sign-up` | SignUpPage | Auth | ✅ |
-| `/dashboard` | DashboardPage | List agents | ✅ |
-| `/create` | CreateAgentPage | 3-step wizard + Tour | ✅ |
-| `/edit/:agentId` | EditAgentPage | Edit agent | ✅ |
-| `/playground/:agentId` | PlaygroundPage | Chat + Unlock Flow | ✅ |
+| `/dashboard` | DashboardPage | Redirect to default project | ✅ |
+| `/dashboard/project/:id` | ProjectDetailPage | **Three tabs: Agents, Workflows, MCP Servers** | ✅ |
+| `/dashboard/files` | FilesPage | File storage (placeholder) | ✅ |
+| `/create` | CreateAgentPage | 3-step wizard → AgentComponent + Workflow | ✅ |
+| `/edit/:agentId` | EditAgentPage | Edit legacy agent + dotted grid bg | ✅ |
+| `/playground/:agentId` | PlaygroundPage | Legacy agent chat + Unlock Flow | ✅ |
+| `/playground/workflow/:workflowId` | PlaygroundPage | **NEW: Workflow chat** | ✅ |
 | `/canvas/:agentId` | CanvasViewerPage | Progressive canvas | ✅ |
 | `/framework` | FrameworkPage | Educational content | ✅ |
+| `/settings` | SettingsPage | User settings | ✅ |
 
-## New Components (Phase 5-8)
+## New Components (Phase 9)
 
 | Component | Path | Purpose |
 |-----------|------|---------|
-| TourProvider | `/src/providers/TourProvider.tsx` | Tour state management |
-| LangflowCanvasViewer | `/src/components/LangflowCanvasViewer.tsx` | iframe with disclosure levels |
-| CanvasViewerPage | `/src/pages/CanvasViewerPage.tsx` | Full page canvas |
-| createAgentTour | `/src/tours/createAgentTour.ts` | Driver.js tour steps |
-| ShareDeployModal | `/src/components/ShareDeployModal.tsx` | Share, Embed, Webhook, API tabs |
-| ProjectMenu | `/src/components/ProjectMenu.tsx` | Project dropdown (rename, delete) |
-| Pagination | Built into ProjectDetailPage | Page navigation component |
-| DevUserButton | `/src/providers/DevModeProvider.tsx` | Dev mode profile dropdown |
+| WorkflowsTab | `/src/components/WorkflowsTab.tsx` | Workflows list with CRUD |
+| MCPServersTab | `/src/components/MCPServersTab.tsx` | MCP servers with toggle |
+| CreateWorkflowModal | (in WorkflowsTab) | Create workflow options |
+| CreateMCPServerModal | (in MCPServersTab) | Template-based MCP creation |
 
-## Backend Endpoints (Phase 7-8)
+## Backend Endpoints (Phase 9)
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v1/analytics/agents/{id}/stats` | GET | Agent message statistics |
-| `/api/v1/analytics/agents/{id}/messages` | GET | Agent message history |
-| `/api/v1/agents/{id}/export` | GET | Export agent as JSON |
-| `/api/v1/agents/{id}/duplicate` | POST | Duplicate an agent |
-| `/api/v1/agents/import` | POST | Import agent from JSON |
+### Agent Components (`/api/v1/agent-components`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/create-from-qa` | Create from Q&A wizard |
+| GET | `/` | List components |
+| GET | `/{id}` | Get single component |
+| PATCH | `/{id}` | Update component |
+| DELETE | `/{id}` | Delete component |
+| POST | `/{id}/publish` | Publish to sidebar |
+| POST | `/{id}/unpublish` | Remove from sidebar |
+| POST | `/{id}/duplicate` | Duplicate component |
+| GET | `/{id}/export` | Export as JSON |
+| POST | `/import` | Import from JSON |
 
-## New Documentation
+### Workflows (`/api/v1/workflows`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/` | Create workflow |
+| POST | `/from-agent` | Create from agent |
+| POST | `/from-template` | Create from template |
+| GET | `/` | List workflows |
+| GET | `/{id}` | Get single workflow |
+| PATCH | `/{id}` | Update workflow |
+| DELETE | `/{id}` | Delete workflow |
+| POST | `/{id}/duplicate` | Duplicate workflow |
+| GET | `/{id}/export` | Export as JSON |
+| POST | `/{id}/chat` | Chat with workflow |
+| GET | `/{id}/conversations` | List conversations |
 
-| Document | Purpose |
-|----------|---------|
-| `05_EDUCATIONAL_OVERLAY_RESEARCH.md` | UX patterns research |
-| `06_PROGRESSIVE_LEARNING_CURRICULUM.md` | 10-phase curriculum |
-| `07_PHASE_0_4_IMPLEMENTATION_PLAN.md` | Tool implementation details |
-| `08_LANGFLOW_UI_CSS_SELECTORS.md` | CSS selectors for hiding UI |
-| `09_PROGRESSIVE_CANVAS_IMPLEMENTATION.md` | Canvas POC documentation |
-| `10_PHASE_IMPLEMENTATION_MAPPING.md` | Findings mapped to phases |
+### MCP Servers (`/api/v1/mcp-servers`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/templates` | List server templates |
+| POST | `/` | Create MCP server |
+| POST | `/from-template` | Create from template |
+| GET | `/` | List MCP servers |
+| GET | `/{id}` | Get single server |
+| PATCH | `/{id}` | Update server |
+| DELETE | `/{id}` | Delete server |
+| POST | `/{id}/enable` | Enable server |
+| POST | `/{id}/disable` | Disable server |
+| GET | `/{id}/health` | Check health |
+| POST | `/sync` | Sync to .mcp.json |
+| GET | `/restart-status` | Get restart status |
 
-## Dependencies Added
+## Database Schema (Phase 9)
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| driver.js | ^1.3.1 | Educational tours |
-| lucide-react | ^0.469.0 | Icon library (Dog logo, UI icons) |
+### New Tables
+```sql
+-- Agent Components (reusable AI personalities)
+agent_components (
+    id, user_id, project_id, name, description, icon, color,
+    qa_who, qa_rules, qa_tricks, system_prompt,
+    component_file_path, component_class_name,
+    is_published, is_active, created_at, updated_at
+)
 
-## Test Results (2026-01-06)
+-- Workflows (Langflow flows)
+workflows (
+    id, user_id, project_id, name, description,
+    langflow_flow_id, flow_data, agent_component_ids,
+    is_active, is_public, created_at, updated_at
+)
 
-### ✅ Phase 6: Tool Execution - PASSED
-- Created "Calculator Test Agent" with calculator tool
-- Test: "What is 847 * 23?" → **Result: 19,481** ✓
-- Tools actually execute (not just system prompt text)
+-- MCP Servers (external tool integrations)
+mcp_servers (
+    id, user_id, project_id, name, description, server_type,
+    command, args, env, credentials_encrypted,
+    is_enabled, last_health_check, health_status,
+    created_at, updated_at
+)
+```
 
-### ✅ Phase 7: Memory Retention - PASSED
-- Follow-up: "Now divide that result by 7"
-- **Result: 2,783** ✓ (Agent remembered 19,481 from previous turn)
-
-### ✅ Phase 5: Canvas Viewer - PASSED
-- "Unlock Flow" button navigated to `/canvas/:agentId`
-- Canvas loaded showing: Chat Input → Agent → Chat Output + Calculator
-- Level selector switches between 4 modes:
-  - Level 1: "Peek Mode" (read-only)
-  - Level 2: "Explore Mode" (try adding tricks)
-  - Level 3: "Builder Mode" (full editing with guidance)
-  - Level 4: "Expert Mode" (full Langflow access)
-- Educational tour triggered on first visit
-- ⚠️ CSS injection into iframe blocked by CORS (expected for cross-origin)
-
-### ✅ Phase 8: UI Polish & Dashboard - PASSED
-- **Color Theme**: All orange accents migrated to violet/purple ✓
-- **Header**: Full-width with Dog icon logo and profile dropdown ✓
-- **Search**: Agent search filters list in real-time ✓
-- **View Toggle**: List/Grid views switch correctly, preference persisted ✓
-- **Bulk Selection**: Multi-select and bulk delete working ✓
-- **Pagination**: Shows correct page counts, navigation works ✓
-- **Export**: Downloads valid JSON with full flow data ✓
-- **Import**: File chooser opens, accepts JSON, creates agent ✓
-- **Duplicate**: Creates copy with "(Copy)" suffix ✓
-- **Agent Menu**: All icons display correctly (Edit, Export, Duplicate, Delete) ✓
-
-## Blockers and Risks
-
-### Current Blockers
-**None** - All critical path items verified ✅
-
-### Remaining Risks
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| CSS injection fails cross-origin | Confirmed | Medium | Deploy on same origin or use proxy |
-| iframe performance | Low | Medium | Lazy load canvas (already implemented) |
-| RAG complexity | High | Medium | Defer to Phase 8, research first |
+### Migration Applied
+- `conversations.workflow_id` column added (nullable FK to workflows)
+- Index created: `ix_conversations_workflow_id`
 
 ## Development Commands
 
@@ -209,78 +250,73 @@ cd src/backend && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --r
 # Build frontend
 cd src/frontend && npm run build
 
-# Run backend tests
-cd src/backend && pytest
+# Test backend imports
+cd src/backend && python3 -c "from app.main import app; print('OK')"
 ```
 
-## Git Status
+## Git Status (2026-01-07)
 
-Latest commits:
-- `3c58da5` - fix: Support direct export format in agent import
-- `482d064` - feat: Add agent import functionality
-- `65e830b` - feat: Match Langflow UI styling with violet theme
+Recent commits:
+- `7898e8a` - docs: Add Phase 3 dynamic component generation implementation guide
+- `36b0dd5` - docs: Add detailed technical clarification and example walkthrough
+- `c2d0eee` - docs: Add Custom Components Strategy research document
 
-## Recent Improvements (2026-01-06)
+Uncommitted changes (ready to commit):
+- Phase 9: Three-tab architecture (backend + frontend)
+- Phase 10: Avatar V2 with auto-inference
+- Architecture fixes (CanvasViewerPage, PlaygroundPage)
+- Performance optimization (lazy loading)
+- Bug fixes (rename, dotted grid background, Edit Flow link)
 
-### Phase 8: UI Polish
-- ✅ Migrated color theme from orange to Langflow's violet/purple
-- ✅ Restructured header with Dog icon logo and profile dropdown
-- ✅ Added search, pagination, view toggle to dashboard
-- ✅ Implemented bulk selection and multi-delete
-- ✅ Added agent export/import/duplicate functionality
-- ✅ Added icons to all agent menu items (lucide-react)
-- ✅ Settings now accessible from profile dropdown
-- ✅ Import button working with file chooser
+## Known Issues
 
-### Previous Improvements (2026-01-05)
-- ✅ Fixed E2E test assertions to match actual error messages
-- ✅ Fixed docker-compose security (Langflow non-root user)
-- ✅ Enabled Playwright webServer for CI/CD
-- ✅ Added environment variable validation on backend startup
-- ✅ Created production deployment guide (`docs/11_PRODUCTION_DEPLOYMENT.md`)
+1. **Legacy agents tab**: The Agents tab shows old agents from legacy `agents` table
+   - New agents created via wizard go to Workflows tab (as AgentComponent + Workflow)
+   - Legacy agents still work via `/playground/:agentId`
+   - Optional: Data migration script to convert legacy agents
 
-## Next Steps
+2. **MCP servers not synced**: Creating MCP server in UI doesn't sync to `.mcp.json`
 
-1. **Production Deployment** (see `docs/11_PRODUCTION_DEPLOYMENT.md`)
-   - ✅ Nginx proxy configuration documented
-   - ✅ Same-origin deployment for CSS injection documented
-   - [ ] Choose deployment platform (DataStax recommended)
-   - [ ] Purchase domain and configure SSL
-   - [ ] Deploy and test CSS injection
+3. **Publish not implemented**: Agent publish/unpublish buttons exist but don't generate Python components
 
-2. **Phase 8: RAG Research**
-   - Manual RAG flow testing in Langflow
-   - Document upload UI design
-   - Vector store integration research
+## Next Steps (Priority Order)
 
-3. **Phase 9: Agent Reasoning**
-   - Expose "thinking" process in Playground
-   - Show tool selection reasoning
+1. **Production Deploy** (Next)
+   - Test in production environment
+   - Verify Langflow integration
+
+2. **Data Migration** (Optional)
+   - Script to split existing legacy agents into AgentComponent + Workflow
+   - Or: Continue with dual support (legacy + new)
+
+3. **MCP Integration** (Post-MVP)
+   - Implement `.mcp.json` sync
+   - Implement Langflow restart mechanism
 
 ---
 
-**Status Summary**: 🟢 Green - Phases 5-8 complete. UI matches Langflow styling. Import/Export working. Ready for production deployment.
+**Status Summary**: ✅ Green - Phase 10 complete. Avatar system V2 with auto-inference working. All architecture issues fixed (CanvasViewerPage, PlaygroundPage). Phase 9 three-tab architecture stable. Ready for production deploy.
 
 ---
 
-## Strategic Documents (2026-01-06)
+## Documentation Index
 
-| Document | Purpose |
-|----------|---------|
-| `11_PRODUCTION_DEPLOYMENT.md` | Nginx proxy, same-origin deployment |
-| `12_USER_JOURNEYS_AND_ENTERPRISE_ROADMAP.md` | User journeys, enterprise requirements |
-| `13_LANGFLOW_INTEGRATION_STRATEGY.md` | Leverage Langflow features, competitive analysis |
-| `14_CUSTOM_COMPONENTS_STRATEGY.md` | **NEW** - Reusable agents, educational components, library management |
-
-### Key Strategic Insight
-
-**We're building too much custom infrastructure when Langflow already provides:**
-- `langflow-chat` embed widget (replaces custom chat UI)
-- `/monitor/messages` API (free analytics)
-- Public playground URLs (instant sharing)
-- Webhook triggers (integrations)
-- Streaming, memory, RAG (advanced features)
-
-**New Direction:** "Thin wrapper, thick education" - Surface Langflow's features through educational UX rather than rebuilding.
-
-**Competitive Position:** Education niche is UNTAPPED. No major competitor (Dify, Flowise, Botpress, Stack AI) has claimed it.
+| Document | Purpose | Last Updated |
+|----------|---------|--------------|
+| `00_PROJECT_SPEC.md` | Product requirements, personas | 2026-01-03 |
+| `01_ARCHITECTURE.md` | Technical architecture, DB schema | 2026-01-03 |
+| `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-06 |
+| `03_STATUS.md` | **This file** - Current status | 2026-01-07 |
+| `04_DEVELOPMENT_PLAN.md` | Original development plan | 2026-01-03 |
+| `05_EDUCATIONAL_OVERLAY_RESEARCH.md` | UX patterns research | 2026-01-05 |
+| `06_PROGRESSIVE_LEARNING_CURRICULUM.md` | 10-phase curriculum | 2026-01-05 |
+| `07_PHASE_0_4_IMPLEMENTATION_PLAN.md` | Tool implementation | 2026-01-05 |
+| `08_LANGFLOW_UI_CSS_SELECTORS.md` | CSS selectors for canvas | 2026-01-05 |
+| `09_PROGRESSIVE_CANVAS_IMPLEMENTATION.md` | Canvas POC docs | 2026-01-05 |
+| `10_PHASE_IMPLEMENTATION_MAPPING.md` | Findings → phases | 2026-01-05 |
+| `11_PRODUCTION_DEPLOYMENT.md` | Deployment guide | 2026-01-05 |
+| `11_LANGFLOW_DESIGN_MATCH.md` | UI matching guide | 2026-01-06 |
+| `12_USER_JOURNEYS_AND_ENTERPRISE_ROADMAP.md` | User journeys | 2026-01-05 |
+| `13_LANGFLOW_INTEGRATION_STRATEGY.md` | Integration strategy | 2026-01-05 |
+| `14_CUSTOM_COMPONENTS_STRATEGY.md` | Component strategy | 2026-01-06 |
+| `15_PROJECT_TABS_REORGANIZATION.md` | **Three-tab plan** | 2026-01-07 |

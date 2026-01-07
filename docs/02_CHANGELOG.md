@@ -4,6 +4,196 @@
 
 ---
 
+## 2026-01-07 - Phase 10: Avatar V2 & Architecture Fixes
+
+### Summary
+Enhanced avatar generation system with automatic job inference, improved avatar display across all pages, and critical architecture fixes for the three-tab system.
+
+### Avatar Generation V2
+
+#### Automatic Job Inference
+**Decision**: Remove manual job dropdown - auto-detect job type from agent name and description using keyword matching.
+
+**Implementation**:
+- Created `avatarJobInference.ts` with 40+ job types and extensive keyword lists
+- Jobs include: support, developer, data, manager, sales, security, designer, product, marketing, finance, legal, hr, ops, qa, research, doctor, nurse, teacher, tutor, coach, trainer, therapist, pilot, chef, artist, writer, musician, scientist, gardener, athlete, photographer, engineer, accountant, consultant, assistant, receptionist, guide, bot, agent
+
+#### Three-Tier Avatar Generation Strategy
+**Decision**: Implement fallback strategy when no job keyword matches.
+
+**Rationale**: Always preserve the canonical dog base image identity regardless of job match.
+
+**Implementation**:
+1. **Known Job** → Use predefined accessory prompt
+2. **Unknown Job + Description** → Use description-based prompt with constrained accessory list (6 options: glasses, headset, stethoscope, chef hat, graduation cap, hardhat)
+3. **Unknown Job + No Description** → Return base image directly (no API call, saves cost)
+
+### Architecture Fixes
+
+#### CanvasViewerPage Updated for New Architecture
+**Problem**: "Open Flow Editor" button was broken - called `api.getAgent()` but new system uses AgentComponents and Workflows.
+
+**Solution**: Updated CanvasViewerPage to:
+1. Fetch AgentComponent via `api.getAgentComponent()`
+2. Find associated Workflow via `api.listWorkflows()`
+3. Use `workflow.langflow_flow_id` for canvas display
+
+#### PlaygroundPage Avatar & Edit Link Fix
+**Problem**: Avatar not showing in chat page, "Edit Flow" link broken.
+
+**Solution**:
+- Added avatar display in header (10x10) and empty state (20x20)
+- Added query to fetch agent component for workflow mode
+- Fixed Edit Flow link to use `/edit/${agentComponentId}` instead of broken `/canvas/${workflowId}`
+
+### UI Improvements
+
+#### Avatar Styling in Agent Views
+- **List View (AgentRow)**: 40px circle, 36px avatar image
+- **Grid View (AgentCard)**: 48px circle, 44px avatar image
+- Background: Light violet (`bg-violet-100`) when avatar present, gradient when using default icon
+- Avatar images display in original black color (no inversion)
+
+### Files Modified
+
+**Frontend**:
+- `src/frontend/src/lib/avatarJobInference.ts` - NEW: Job inference from description
+- `src/frontend/src/pages/CreateAgentPage.tsx` - Auto-infer job, pass description
+- `src/frontend/src/pages/EditAgentPage.tsx` - Auto-infer job, pass description
+- `src/frontend/src/pages/PlaygroundPage.tsx` - Avatar display, fixed Edit Flow link
+- `src/frontend/src/pages/ProjectDetailPage.tsx` - Larger avatars with violet background
+- `src/frontend/src/pages/CanvasViewerPage.tsx` - Updated for AgentComponent/Workflow architecture
+- `src/frontend/src/lib/api.ts` - Added description parameter to generateDogAvatar
+- `src/frontend/src/types/index.ts` - Added avatar_url to AgentComponentUpdate
+
+**Backend**:
+- `src/backend/app/services/dog_avatar_service.py` - Three-tier generation, description support
+- `src/backend/app/api/avatars.py` - Added description field to request
+
+### Testing Verified
+- ✅ Avatar auto-generates based on agent name/description
+- ✅ Avatar displays in PlaygroundPage header
+- ✅ Avatar displays in agent list/grid views
+- ✅ Open Flow Editor button works
+- ✅ Edit Flow link navigates correctly
+
+---
+
+## 2026-01-07 - Phase 9: Three-Tab Project Architecture
+
+### Summary
+Major architectural upgrade to transform the single-tab project view into a three-tab structure: Agents, Workflows, and MCP Servers. This separates reusable AI personalities (Agent Components) from executable flows (Workflows) and adds MCP server management.
+
+### Design Decision: Three-Tab Architecture
+**Decision**: Split the monolithic "Agents" concept into three distinct entities.
+
+**Rationale**:
+- **Agent Components** = Reusable AI personalities with Q&A config (can be used in multiple workflows)
+- **Workflows** = Complete Langflow flows that orchestrate components + tools
+- **MCP Servers** = External tool integrations (databases, browsers, file systems)
+
+This separation enables:
+- Better code reuse (same agent personality in different flows)
+- Clearer mental model for users
+- Foundation for advanced workflow editing
+
+### Implementation Completed
+
+#### Backend Foundation
+- **New Database Models**:
+  - `AgentComponent` - Reusable AI personalities (Q&A config, system prompt)
+  - `Workflow` - Langflow flows with component references
+  - `MCPServer` - External tool configurations with encrypted credentials
+  - `UserSettings` - User preferences and API keys
+
+- **New Services**:
+  - `AgentComponentService` - CRUD + publish/unpublish
+  - `WorkflowService` - CRUD + chat + duplicate
+  - `MCPServerService` - CRUD + sync + health checks
+
+- **New API Routes** (36 new endpoints):
+  - `/api/v1/agent-components/*` - Create from Q&A, list, get, update, delete, publish, unpublish, duplicate, export, import
+  - `/api/v1/workflows/*` - Create, from-agent, from-template, list, get, update, delete, duplicate, export, chat, conversations
+  - `/api/v1/mcp-servers/*` - Templates, create, from-template, list, get, update, delete, enable, disable, health, sync, restart-status
+
+- **Database Migration**:
+  - Added `workflow_id` column to conversations table
+  - Created index `ix_conversations_workflow_id`
+  - New tables: `agent_components`, `workflows`, `mcp_servers`, `user_settings`
+
+#### Frontend Updates
+- **WorkflowsTab Component**: List/grid views with CRUD operations
+- **MCPServersTab Component**: Server cards with enable/disable toggles
+- **CreateWorkflowModal**: Options for blank workflow or from-agent
+- **CreateMCPServerModal**: Template-based server creation
+- **ProjectDetailPage**: Three-tab UI with URL-based state (`?tab=agents|workflows|mcp-servers`)
+- **Tab Badges**: Show counts for each tab
+- **~30 new API client methods**: Full frontend integration
+
+### Performance Fix: SQLAlchemy Lazy Loading
+**Problem**: API requests taking several seconds after database migration.
+
+**Root Cause**: User model had `lazy="selectin"` on 6 relationships, causing 7+ database queries per API request.
+
+**Solution**: Changed all `lazy="selectin"` and `lazy="joined"` to `lazy="select"` across all models:
+- User, Project, Agent, Conversation, Message
+- AgentComponent, Workflow, MCPServer, UserSettings
+
+**Result**: API response time reduced from ~5 seconds to ~31ms.
+
+### Bug Fixes
+1. **Project Rename Not Working**
+   - Problem: `ProjectMenu` component called `onRename?.()` but `Sidebar` wasn't passing the callback
+   - Solution: Added rename state, mutation, handlers, and inline input UI to Sidebar
+   - Also fixed blur/submit race condition with 150ms timeout
+
+2. **Dotted Grid Background**
+   - Added canvas-style dotted grid background to:
+     - CreateAgentPage (3-step wizard via WizardLayout)
+     - EditAgentPage (main view, loading state, error state)
+   - CSS: `radial-gradient(circle, #e5e7eb 1px, transparent 1px)` at 24px spacing
+
+### Files Modified (Key Changes)
+
+**Backend**:
+- `src/backend/app/models/agent_component.py` - NEW
+- `src/backend/app/models/workflow.py` - NEW
+- `src/backend/app/models/mcp_server.py` - NEW
+- `src/backend/app/models/user_settings.py` - NEW
+- `src/backend/app/models/user.py` - Lazy loading fix + new relationships
+- `src/backend/app/models/project.py` - Lazy loading fix + new relationships
+- `src/backend/app/models/conversation.py` - Lazy loading fix + workflow relationship
+- `src/backend/app/api/agent_components.py` - NEW
+- `src/backend/app/api/workflows.py` - NEW
+- `src/backend/app/api/mcp_servers.py` - NEW
+- `src/backend/app/services/agent_component_service.py` - NEW
+- `src/backend/app/services/workflow_service.py` - NEW
+- `src/backend/app/services/mcp_server_service.py` - NEW
+
+**Frontend**:
+- `src/frontend/src/components/WorkflowsTab.tsx` - NEW
+- `src/frontend/src/components/MCPServersTab.tsx` - NEW
+- `src/frontend/src/pages/ProjectDetailPage.tsx` - Three-tab UI
+- `src/frontend/src/components/Sidebar.tsx` - Project rename functionality
+- `src/frontend/src/components/WizardLayout.tsx` - Dotted grid background
+- `src/frontend/src/pages/EditAgentPage.tsx` - Dotted grid background
+- `src/frontend/src/lib/api.ts` - ~30 new methods
+- `src/frontend/src/types/index.ts` - New entity types
+
+### Known Issues (Pending)
+1. **Empty Tabs**: Workflows and MCP Servers tabs show empty because no data migration from old `agents` table
+2. **MCP Sync Not Implemented**: Creating MCP server doesn't sync to `.mcp.json`
+3. **Publish Not Implemented**: Agent publish/unpublish buttons exist but don't generate Python components
+4. **E2E Tests Needed**: No tests for three-tab functionality yet
+
+### Next Steps
+1. Commit current Phase 9 work to git
+2. Optional: Data migration to split existing agents
+3. E2E tests for three-tab navigation
+4. MCP server sync implementation (post-MVP)
+
+---
+
 ## 2026-01-06 - Phase 8: UI Polish & Langflow-Style Dashboard
 
 ### Summary

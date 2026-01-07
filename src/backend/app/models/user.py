@@ -13,6 +13,9 @@ if TYPE_CHECKING:
     from app.models.conversation import Conversation
     from app.models.project import Project
     from app.models.user_settings import UserSettings
+    from app.models.agent_component import AgentComponent
+    from app.models.workflow import Workflow
+    from app.models.mcp_server import MCPServer
 
 
 class User(BaseModel):
@@ -58,33 +61,56 @@ class User(BaseModel):
         nullable=False,
     )
 
-    # Relationships
+    # Relationships - use lazy="select" (default) to avoid N+1 query cascade
+    # Load these explicitly when needed using selectinload() in queries
     agents: Mapped[List["Agent"]] = relationship(
         "Agent",
         back_populates="user",
-        lazy="selectin",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 
     conversations: Mapped[List["Conversation"]] = relationship(
         "Conversation",
         back_populates="user",
-        lazy="selectin",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 
     projects: Mapped[List["Project"]] = relationship(
         "Project",
         back_populates="user",
-        lazy="selectin",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 
     settings: Mapped[Optional["UserSettings"]] = relationship(
         "UserSettings",
         back_populates="user",
-        lazy="joined",
+        lazy="select",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    # Relationships for three-tab architecture
+    agent_components: Mapped[List["AgentComponent"]] = relationship(
+        "AgentComponent",
+        back_populates="user",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    workflows: Mapped[List["Workflow"]] = relationship(
+        "Workflow",
+        back_populates="user",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    mcp_servers: Mapped[List["MCPServer"]] = relationship(
+        "MCPServer",
+        back_populates="user",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 

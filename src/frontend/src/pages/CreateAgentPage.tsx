@@ -7,6 +7,7 @@ import { ToolCard } from '@/components/ToolCard'
 import { IdentityIcon, CoachingIcon, TricksIcon } from '@/components/icons'
 import { useTour, useShouldShowTour } from '@/providers/TourProvider'
 import { startCreateAgentTour } from '@/tours/createAgentTour'
+import { inferJobFromDescription } from '@/lib/avatarJobInference'
 
 // Available tools for Step 3
 const AVAILABLE_TOOLS = [
@@ -44,6 +45,7 @@ interface FormData {
   who: string
   rules: string
   tools: string[]
+  avatarUrl: string | null
 }
 
 interface WizardState {
@@ -51,19 +53,23 @@ interface WizardState {
   formData: FormData
   errors: Partial<Record<string, string>>
   isSubmitting: boolean
+  isGeneratingAvatar: boolean
   submitError: string | null
 }
 
 type WizardAction =
   | { type: 'NEXT_STEP' }
   | { type: 'PREV_STEP' }
-  | { type: 'UPDATE_FIELD'; field: keyof FormData; value: string | string[] }
+  | { type: 'UPDATE_FIELD'; field: keyof FormData; value: string | string[] | null }
   | { type: 'TOGGLE_TOOL'; toolId: string }
   | { type: 'SET_ERROR'; field: string; message: string }
   | { type: 'CLEAR_ERROR'; field: string }
   | { type: 'SUBMIT_START' }
   | { type: 'SUBMIT_SUCCESS' }
   | { type: 'SUBMIT_ERROR'; message: string }
+  | { type: 'AVATAR_GENERATE_START' }
+  | { type: 'AVATAR_GENERATE_SUCCESS'; avatarUrl: string }
+  | { type: 'AVATAR_GENERATE_ERROR'; message: string }
 
 // Reducer
 const initialState: WizardState = {
@@ -73,9 +79,11 @@ const initialState: WizardState = {
     who: '',
     rules: '',
     tools: [],
+    avatarUrl: null,
   },
   errors: {},
   isSubmitting: false,
+  isGeneratingAvatar: false,
   submitError: null,
 }
 
@@ -110,6 +118,16 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, isSubmitting: false, submitError: null }
     case 'SUBMIT_ERROR':
       return { ...state, isSubmitting: false, submitError: action.message }
+    case 'AVATAR_GENERATE_START':
+      return { ...state, isGeneratingAvatar: true }
+    case 'AVATAR_GENERATE_SUCCESS':
+      return {
+        ...state,
+        isGeneratingAvatar: false,
+        formData: { ...state.formData, avatarUrl: action.avatarUrl },
+      }
+    case 'AVATAR_GENERATE_ERROR':
+      return { ...state, isGeneratingAvatar: false, submitError: action.message }
     default:
       return state
   }
@@ -121,7 +139,7 @@ export function CreateAgentPage() {
   const projectId = searchParams.get('project')
   const { getToken } = useAuth()
   const [state, dispatch] = useReducer(reducer, initialState)
-  const { currentStep, formData, errors, isSubmitting, submitError } = state
+  const { currentStep, formData, errors, isSubmitting, isGeneratingAvatar, submitError } = state
   const { completeTour } = useTour()
   const shouldShowTour = useShouldShowTour('create-agent')
   const [tourStarted, setTourStarted] = useState(false)
@@ -150,6 +168,35 @@ export function CreateAgentPage() {
       completeTour('create-agent')
     })
   }, [completeTour])
+
+  // Generate avatar using GPT Image Edit (auto-infer job from name + description)
+  const handleGenerateAvatar = useCallback(async () => {
+    // Require at least name or description to generate
+    if (!formData.name.trim() && !formData.who.trim()) {
+      dispatch({ type: 'AVATAR_GENERATE_ERROR', message: 'Please enter a name or description first' })
+      return
+    }
+
+    dispatch({ type: 'AVATAR_GENERATE_START' })
+
+    try {
+      // Infer job type from name and description
+      const inferredJob = inferJobFromDescription(formData.name, formData.who)
+      // Combine name + description for fallback context
+      const fullDescription = `${formData.name} - ${formData.who}`.trim()
+
+      const result = await api.generateDogAvatar(inferredJob, {
+        regenerate: !!formData.avatarUrl,
+        description: fullDescription,  // Pass for fallback when job is "default"
+      })
+      // Convert relative URL to full URL for the backend
+      const fullUrl = `${window.location.protocol}//${window.location.hostname}:8000${result.image_url}`
+      dispatch({ type: 'AVATAR_GENERATE_SUCCESS', avatarUrl: fullUrl })
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate avatar. Please try again.'
+      dispatch({ type: 'AVATAR_GENERATE_ERROR', message: errorMessage })
+    }
+  }, [formData.name, formData.who, formData.avatarUrl])
 
   // Validation for Step 1
   const validateStep1 = useCallback(() => {
@@ -188,16 +235,28 @@ export function CreateAgentPage() {
     dispatch({ type: 'SUBMIT_START' })
 
     try {
-      // Send selected tools as array to backend, include project_id if provided
-      const agent = await api.createAgentFromQA({
+      // Step 1: Create AgentComponent (reusable personality) in new table
+      const component = await api.createAgentComponentFromQA({
         name: formData.name,
         who: formData.who,
         rules: formData.rules,
+        tricks: formData.tools.join(', '), // Convert tools array to string
         selected_tools: formData.tools,
         project_id: projectId || undefined,
+        avatar_url: formData.avatarUrl || undefined,
       })
+
+      // Step 2: Create Workflow that uses this component
+      const workflow = await api.createWorkflowFromAgent({
+        agent_component_id: component.id,
+        name: `${formData.name}`,
+        description: `Workflow for ${formData.name}`,
+        project_id: projectId || undefined,
+      })
+
       dispatch({ type: 'SUBMIT_SUCCESS' })
-      navigate(`/playground/${agent.id}`)
+      // Navigate to the new workflow playground
+      navigate(`/playground/workflow/${workflow.id}`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create agent. Please try again.'
       dispatch({ type: 'SUBMIT_ERROR', message: errorMessage })
@@ -260,26 +319,53 @@ export function CreateAgentPage() {
               {errors.who && <p className="mt-1 text-sm text-red-600">{errors.who}</p>}
             </div>
 
-            {/* Generate Appearance (Placeholder) */}
+            {/* Generate Appearance */}
             <div className="border border-gray-200 rounded-xl p-4">
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 bg-violet-50 rounded-lg flex items-center justify-center">
-                  <svg className="w-8 h-8 text-violet-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                <div className="w-20 h-20 bg-violet-50 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {formData.avatarUrl ? (
+                    <img
+                      src={formData.avatarUrl}
+                      alt="Agent avatar"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <svg className="w-10 h-10 text-violet-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">Generate Appearance</h4>
-                  <p className="text-sm text-gray-500 mb-3">Use AI to create an image based on your description.</p>
+                  <h4 className="font-medium text-gray-900 mb-1">Generate Appearance</h4>
+                  <p className="text-sm text-gray-500 mb-3">
+                    Generate a unique avatar based on your agent's name and role.
+                  </p>
                   <button
                     type="button"
-                    disabled
-                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-violet-600 bg-violet-50 rounded-lg opacity-50 cursor-not-allowed"
+                    onClick={handleGenerateAvatar}
+                    disabled={isGeneratingAvatar}
+                    className={`inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors ${
+                      isGeneratingAvatar
+                        ? 'text-violet-400 bg-violet-50 cursor-not-allowed'
+                        : 'text-violet-600 bg-violet-50 hover:bg-violet-100 cursor-pointer border border-violet-200'
+                    }`}
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                    Generate (Coming Soon)
+                    {isGeneratingAvatar ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        {formData.avatarUrl ? 'Regenerate' : 'Generate'}
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

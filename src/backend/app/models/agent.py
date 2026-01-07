@@ -112,19 +112,19 @@ class Agent(BaseModel):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="agents",
-        lazy="joined",
+        lazy="select",
     )
 
     project: Mapped[Optional["Project"]] = relationship(
         "Project",
         back_populates="agents",
-        lazy="joined",
+        lazy="select",
     )
 
     conversations: Mapped[List["Conversation"]] = relationship(
         "Conversation",
         back_populates="agent",
-        lazy="selectin",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 

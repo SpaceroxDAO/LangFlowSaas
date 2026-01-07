@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ProjectMenu } from '@/components/ProjectMenu'
-import type { Project } from '@/types'
+// Project type is inferred from API response
 
 interface SidebarProps {
   collapsed: boolean
@@ -17,7 +17,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [showNewProjectInput, setShowNewProjectInput] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [isImporting, setIsImporting] = useState(false)
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const renameInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch projects
   const { data: projectsData, isLoading } = useQuery({
@@ -37,6 +40,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       setShowNewProjectInput(false)
       setNewProjectName('')
       navigate(`/dashboard/project/${newProject.id}`)
+    },
+  })
+
+  // Rename project mutation
+  const renameProjectMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.updateProject(id, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      setRenamingProjectId(null)
+      setRenameValue('')
     },
   })
 
@@ -99,6 +113,25 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         fileInputRef.current.value = ''
       }
     }
+  }
+
+  const handleStartRename = (projectId: string, currentName: string) => {
+    setRenamingProjectId(projectId)
+    setRenameValue(currentName)
+    // Focus the input after render
+    setTimeout(() => renameInputRef.current?.focus(), 0)
+  }
+
+  const handleRenameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (renamingProjectId && renameValue.trim()) {
+      renameProjectMutation.mutate({ id: renamingProjectId, name: renameValue.trim() })
+    }
+  }
+
+  const handleRenameCancel = () => {
+    setRenamingProjectId(null)
+    setRenameValue('')
   }
 
   if (collapsed) {
@@ -238,15 +271,37 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     : 'hover:bg-gray-50'
                 }`}
               >
-                <Link
-                  to={`/dashboard/project/${project.id}`}
-                  className="flex-1 min-w-0 text-sm text-gray-900 truncate"
-                >
-                  {project.name}
-                </Link>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ProjectMenu project={project} />
-                </div>
+                {renamingProjectId === project.id ? (
+                  <form onSubmit={handleRenameSubmit} className="flex-1 min-w-0 flex gap-1">
+                    <input
+                      ref={renameInputRef}
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => setTimeout(handleRenameCancel, 150)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') handleRenameCancel()
+                      }}
+                      className="flex-1 px-1 py-0 text-sm bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:border-gray-400"
+                      autoFocus
+                    />
+                  </form>
+                ) : (
+                  <>
+                    <Link
+                      to={`/dashboard/project/${project.id}`}
+                      className="flex-1 min-w-0 text-sm text-gray-900 truncate"
+                    >
+                      {project.name}
+                    </Link>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ProjectMenu
+                        project={project}
+                        onRename={() => handleStartRename(project.id, project.name)}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

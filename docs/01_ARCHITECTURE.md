@@ -1,7 +1,7 @@
 # Technical Architecture: Teach Charlie AI
 
-**Last Updated**: 2026-01-03
-**Status**: Architecture Defined - Ready for Implementation
+**Last Updated**: 2026-01-07
+**Status**: Phase 9 Complete - Three-Tab Architecture Implemented
 **Owner**: Claude Code (Technical) + Adam (Product)
 
 ## Executive Summary
@@ -262,6 +262,88 @@ CREATE TABLE org_memberships (
 
 -- Agents belong to orgs (not users)
 ALTER TABLE agents ADD COLUMN org_id UUID REFERENCES organizations(id);
+```
+
+**Phase 9 - Three-Tab Architecture (implemented 2026-01-07)**:
+
+> **Note**: Phase 9 added significant schema changes. See `docs/15_PROJECT_TABS_REORGANIZATION.md` for full details.
+
+```sql
+-- Agent Components (reusable AI personalities)
+CREATE TABLE agent_components (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  icon VARCHAR(50) DEFAULT 'bot',
+  color VARCHAR(7) DEFAULT '#7C3AED',
+  qa_who TEXT NOT NULL,
+  qa_rules TEXT NOT NULL,
+  qa_tricks TEXT,
+  system_prompt TEXT NOT NULL,
+  component_file_path VARCHAR(500),
+  component_class_name VARCHAR(255),
+  is_published BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Workflows (Langflow flows)
+CREATE TABLE workflows (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  langflow_flow_id VARCHAR(36) NOT NULL,
+  flow_data JSONB,
+  agent_component_ids UUID[],
+  is_active BOOLEAN DEFAULT TRUE,
+  is_public BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- MCP Servers (external tool integrations)
+CREATE TABLE mcp_servers (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  server_type VARCHAR(50) NOT NULL,
+  command VARCHAR(500) NOT NULL,
+  args JSONB NOT NULL DEFAULT '[]',
+  env JSONB DEFAULT '{}',
+  credentials_encrypted TEXT,
+  is_enabled BOOLEAN DEFAULT TRUE,
+  last_health_check TIMESTAMP,
+  health_status VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- User Settings
+CREATE TABLE user_settings (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  default_llm_provider VARCHAR(50) DEFAULT 'openai',
+  api_keys_encrypted JSONB,
+  theme VARCHAR(20) DEFAULT 'light',
+  sidebar_collapsed BOOLEAN DEFAULT FALSE,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  tours_completed JSONB DEFAULT '{}',
+  settings_json JSONB,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Conversations now link to workflows (not agents)
+ALTER TABLE conversations ADD COLUMN workflow_id UUID REFERENCES workflows(id);
+CREATE INDEX idx_conversations_workflow ON conversations(workflow_id);
 ```
 
 #### 5. Hosting & Deployment (DataStax)

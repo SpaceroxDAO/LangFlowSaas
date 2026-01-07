@@ -89,7 +89,7 @@ class UserSettings(BaseModel):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="settings",
-        lazy="joined",
+        lazy="select",
     )
 
     def __repr__(self) -> str:

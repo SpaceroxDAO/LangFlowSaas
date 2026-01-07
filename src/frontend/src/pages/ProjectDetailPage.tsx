@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Dog } from 'lucide-react'
+import { Dog, GitBranch, Server } from 'lucide-react'
 import { api } from '@/lib/api'
 import { ShareDeployModal } from '@/components/ShareDeployModal'
-import type { Agent } from '@/types'
+import { WorkflowsTab, CreateWorkflowModal } from '@/components/WorkflowsTab'
+import { MCPServersTab, CreateMCPServerModal } from '@/components/MCPServersTab'
+import type { AgentComponent, ProjectTab } from '@/types'
 
 // Persist view mode in localStorage
 const getStoredViewMode = () => (localStorage.getItem('agentViewMode') as 'grid' | 'list') || 'list'
@@ -27,43 +29,80 @@ const getGradientColor = (index: number) => {
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [deleteAgentModal, setDeleteAgentModal] = useState<{ isOpen: boolean; agent: Agent | null }>({
+  // Get tab from URL or default to 'agents'
+  const currentTab = (searchParams.get('tab') as ProjectTab) || 'agents'
+
+  const [deleteAgentModal, setDeleteAgentModal] = useState<{ isOpen: boolean; agent: AgentComponent | null }>({
     isOpen: false,
     agent: null,
   })
-  const [shareModal, setShareModal] = useState<{ isOpen: boolean; agent: Agent | null }>({
+  const [shareModal, setShareModal] = useState<{ isOpen: boolean; agent: AgentComponent | null }>({
     isOpen: false,
     agent: null,
   })
+  const [createWorkflowModal, setCreateWorkflowModal] = useState(false)
+  const [createMCPServerModal, setCreateMCPServerModal] = useState(false)
 
-  // Toolbar state
+  // Toolbar state for Agents tab
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(getStoredViewMode)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 12
 
-  // Fetch project with agents
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['project', projectId, 'agents'],
-    queryFn: () => api.getProjectWithAgents(projectId!),
+  // Fetch project details
+  const { data: projectData, isLoading: projectLoading, error: projectError } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => api.getProject(projectId!),
+    enabled: !!projectId,
+  })
+
+  // Fetch agent components (new table)
+  const { data: agentComponentsData, isLoading: agentsLoading } = useQuery({
+    queryKey: ['agent-components', projectId],
+    queryFn: () => api.listAgentComponents(projectId, 1, 100),
+    enabled: !!projectId,
+  })
+
+  // Fetch workflows for count
+  const { data: workflowsData } = useQuery({
+    queryKey: ['workflows', projectId],
+    queryFn: () => api.listWorkflows(projectId),
+    enabled: !!projectId,
+  })
+
+  // Fetch MCP servers for count
+  const { data: mcpServersData } = useQuery({
+    queryKey: ['mcp-servers', projectId],
+    queryFn: () => api.listMCPServers(projectId),
     enabled: !!projectId,
   })
 
   // Delete agent mutation
   const deleteAgentMutation = useMutation({
-    mutationFn: (agentId: string) => api.deleteAgent(agentId),
+    mutationFn: (agentId: string) => api.deleteAgentComponent(agentId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId, 'agents'] })
+      queryClient.invalidateQueries({ queryKey: ['agent-components', projectId] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       setDeleteAgentModal({ isOpen: false, agent: null })
     },
   })
 
-  const project = data?.project
-  const agents = data?.agents || []
+  const isLoading = projectLoading || agentsLoading
+  const error = projectError
+  const project = projectData
+  const agents = agentComponentsData?.agent_components || []
+  const workflowsCount = workflowsData?.total || 0
+  const mcpServersCount = mcpServersData?.total || 0
+
+  // Set tab in URL
+  const setTab = (tab: ProjectTab) => {
+    setSearchParams({ tab })
+    setSearchQuery('') // Reset search when switching tabs
+    setCurrentPage(1) // Reset pagination
+  }
 
   // Filter agents by search query
   const filteredAgents = useMemo(() => {
@@ -94,17 +133,13 @@ export function ProjectDetailPage() {
     setStoredViewMode(mode)
   }
 
-  const handleDeleteAgent = (agent: Agent) => {
+  const handleDeleteAgent = (agent: AgentComponent) => {
     setDeleteAgentModal({ isOpen: true, agent })
   }
 
-  const handleShareAgent = (agent: Agent) => {
-    setShareModal({ isOpen: true, agent })
-  }
-
-  const handleExportAgent = async (agent: Agent) => {
+  const handleExportAgent = async (agent: AgentComponent) => {
     try {
-      const exportData = await api.exportAgent(agent.id)
+      const exportData = await api.exportAgentComponent(agent.id)
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -120,11 +155,11 @@ export function ProjectDetailPage() {
     }
   }
 
-  const handleDuplicateAgent = async (agent: Agent) => {
+  const handleDuplicateAgent = async (agent: AgentComponent) => {
     try {
-      await api.duplicateAgent(agent.id)
-      queryClient.invalidateQueries({ queryKey: ['project', projectId, 'agents'] })
-      queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
+      await api.duplicateAgentComponent(agent.id)
+      queryClient.invalidateQueries({ queryKey: ['agent-components', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     } catch (error) {
       console.error('Failed to duplicate agent:', error)
       alert('Failed to duplicate agent. Please try again.')
@@ -179,188 +214,271 @@ export function ProjectDetailPage() {
           <div>
             <h1 className="text-lg font-medium text-gray-900">{project.name}</h1>
           </div>
-          <Link
-            to={`/create?project=${projectId}`}
-            className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Agent
-          </Link>
+
+          {/* Action Button - changes based on tab */}
+          {currentTab === 'agents' && (
+            <Link
+              to={`/create?project=${projectId}`}
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Agent
+            </Link>
+          )}
+          {currentTab === 'workflows' && (
+            <button
+              onClick={() => setCreateWorkflowModal(true)}
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Workflow
+            </button>
+          )}
+          {currentTab === 'mcp-servers' && (
+            <button
+              onClick={() => setCreateMCPServerModal(true)}
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add MCP Server
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
         <div className="mt-4 border-b border-gray-200">
           <nav className="-mb-px flex gap-6">
-            <button className="border-b-2 border-gray-900 py-2 text-sm font-medium text-gray-900">
+            <button
+              onClick={() => setTab('agents')}
+              className={`py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                currentTab === 'agents'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Dog className="w-4 h-4" />
               Agents
+              {agents.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  {agents.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab('workflows')}
+              className={`py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                currentTab === 'workflows'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <GitBranch className="w-4 h-4" />
+              Workflows
+              {workflowsCount > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  {workflowsCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab('mcp-servers')}
+              className={`py-2 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                currentTab === 'mcp-servers'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Server className="w-4 h-4" />
+              MCP Servers
+              {mcpServersCount > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                  {mcpServersCount}
+                </span>
+              )}
             </button>
           </nav>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="px-6 py-3 flex items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search agents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border-0 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
-          />
-        </div>
-
-        {/* View toggle */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => handleViewModeChange('list')}
-            className={`p-2 rounded transition-colors ${
-              viewMode === 'list' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
-            }`}
-            title="List view"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <button
-            onClick={() => handleViewModeChange('grid')}
-            className={`p-2 rounded transition-colors ${
-              viewMode === 'grid' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
-            }`}
-            title="Grid view"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto px-6">
-        {/* Empty state */}
-        {agents.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-gray-500 mb-4">No agents in this project yet</p>
-            <Link
-              to={`/create?project=${projectId}`}
-              className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Create your first agent
-            </Link>
-          </div>
-        )}
-
-        {/* No search results */}
-        {agents.length > 0 && filteredAgents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No agents found matching "{searchQuery}"</p>
-          </div>
-        )}
-
-        {/* List View */}
-        {filteredAgents.length > 0 && viewMode === 'list' && (
-          <div className="divide-y divide-gray-100">
-            {paginatedAgents.map((agent, index) => (
-              <AgentRow
-                key={agent.id}
-                agent={agent}
-                colorIndex={index}
-                getRelativeTime={getRelativeTime}
-                onDelete={handleDeleteAgent}
-                onShare={handleShareAgent}
-                onExport={handleExportAgent}
-                onDuplicate={handleDuplicateAgent}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Grid View */}
-        {filteredAgents.length > 0 && viewMode === 'grid' && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
-            {paginatedAgents.map((agent, index) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                colorIndex={index}
-                getRelativeTime={getRelativeTime}
-                onDelete={handleDeleteAgent}
-                onShare={handleShareAgent}
-                onExport={handleExportAgent}
-                onDuplicate={handleDuplicateAgent}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {filteredAgents.length > 0 && (
-        <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-          <span>
-            {startItem}-{endItem} of {filteredAgents.length} agents
-          </span>
-          <div className="flex items-center gap-2">
-            <select
-              value={currentPage}
-              onChange={(e) => setCurrentPage(Number(e.target.value))}
-              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
-            >
-              {Array.from({ length: totalPages }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {i + 1}
-                </option>
-              ))}
-            </select>
-            <span>of {totalPages} pages</span>
-            <div className="flex gap-1 ml-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+      {/* Tab Content */}
+      {currentTab === 'agents' && (
+        <>
+          {/* Toolbar */}
+          <div className="px-6 py-3 flex items-center justify-between gap-4">
+            {/* Search */}
+            <div className="relative flex-1 max-w-sm">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search agents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-0 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
+              />
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'list' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                }`}
+                title="List view"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
               <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={() => handleViewModeChange('grid')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'grid' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
+                }`}
+                title="Grid view"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
                 </svg>
               </button>
             </div>
           </div>
-        </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-auto px-6">
+            {/* Empty state */}
+            {agents.length === 0 && (
+              <div className="text-center py-16">
+                <Dog className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 mb-4">No agents in this project yet</p>
+                <Link
+                  to={`/create?project=${projectId}`}
+                  className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create your first agent
+                </Link>
+              </div>
+            )}
+
+            {/* No search results */}
+            {agents.length > 0 && filteredAgents.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No agents found matching "{searchQuery}"</p>
+              </div>
+            )}
+
+            {/* List View */}
+            {filteredAgents.length > 0 && viewMode === 'list' && (
+              <div className="divide-y divide-gray-100">
+                {paginatedAgents.map((agent, index) => (
+                  <AgentRow
+                    key={agent.id}
+                    agent={agent}
+                    colorIndex={index}
+                    getRelativeTime={getRelativeTime}
+                    onDelete={handleDeleteAgent}
+                    onExport={handleExportAgent}
+                    onDuplicate={handleDuplicateAgent}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Grid View */}
+            {filteredAgents.length > 0 && viewMode === 'grid' && (
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
+                {paginatedAgents.map((agent, index) => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    colorIndex={index}
+                    getRelativeTime={getRelativeTime}
+                    onDelete={handleDeleteAgent}
+                    onExport={handleExportAgent}
+                    onDuplicate={handleDuplicateAgent}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {filteredAgents.length > 0 && (
+            <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+              <span>
+                {startItem}-{endItem} of {filteredAgents.length} agents
+              </span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
+                  className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
+                >
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+                <span>of {totalPages} pages</span>
+                <div className="flex gap-1 ml-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {currentTab === 'workflows' && projectId && (
+        <WorkflowsTab projectId={projectId} />
+      )}
+
+      {currentTab === 'mcp-servers' && projectId && (
+        <MCPServersTab projectId={projectId} />
       )}
 
       {/* Delete Agent Modal */}
@@ -406,6 +524,32 @@ export function ProjectDetailPage() {
           onClose={() => setShareModal({ isOpen: false, agent: null })}
         />
       )}
+
+      {/* Create Workflow Modal */}
+      {createWorkflowModal && projectId && (
+        <CreateWorkflowModal
+          projectId={projectId}
+          agentComponents={[]}
+          onClose={() => setCreateWorkflowModal(false)}
+          onSuccess={() => {
+            setCreateWorkflowModal(false)
+            queryClient.invalidateQueries({ queryKey: ['workflows', projectId] })
+          }}
+        />
+      )}
+
+      {/* Create MCP Server Modal */}
+      {createMCPServerModal && projectId && (
+        <CreateMCPServerModal
+          projectId={projectId}
+          onClose={() => setCreateMCPServerModal(false)}
+          onSuccess={() => {
+            setCreateMCPServerModal(false)
+            queryClient.invalidateQueries({ queryKey: ['mcp-servers', projectId] })
+            queryClient.invalidateQueries({ queryKey: ['restart-status'] })
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -416,26 +560,32 @@ function AgentRow({
   colorIndex,
   getRelativeTime,
   onDelete,
-  onShare,
   onExport,
   onDuplicate,
 }: {
-  agent: Agent
+  agent: AgentComponent
   colorIndex: number
   getRelativeTime: (date: string) => string
-  onDelete: (agent: Agent) => void
-  onShare: (agent: Agent) => void
-  onExport: (agent: Agent) => void
-  onDuplicate: (agent: Agent) => void
+  onDelete: (agent: AgentComponent) => void
+  onExport: (agent: AgentComponent) => void
+  onDuplicate: (agent: AgentComponent) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const gradientColor = getGradientColor(colorIndex)
 
   return (
     <div className="flex items-center gap-4 py-3 hover:bg-gray-50 transition-colors group">
-      {/* Gradient Icon */}
-      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradientColor} flex items-center justify-center flex-shrink-0`}>
-        <Dog className="w-4 h-4 text-white" />
+      {/* Avatar with Gradient Background */}
+      <div className={`w-10 h-10 rounded-full ${agent.avatar_url ? 'bg-violet-100' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+        {agent.avatar_url ? (
+          <img
+            src={agent.avatar_url}
+            alt={agent.name}
+            className="w-9 h-9 object-contain"
+          />
+        ) : (
+          <Dog className="w-5 h-5 text-white" />
+        )}
       </div>
 
       {/* Name and timestamp */}
@@ -516,17 +666,15 @@ function AgentCard({
   colorIndex,
   getRelativeTime,
   onDelete,
-  onShare,
   onExport,
   onDuplicate,
 }: {
-  agent: Agent
+  agent: AgentComponent
   colorIndex: number
   getRelativeTime: (date: string) => string
-  onDelete: (agent: Agent) => void
-  onShare: (agent: Agent) => void
-  onExport: (agent: Agent) => void
-  onDuplicate: (agent: Agent) => void
+  onDelete: (agent: AgentComponent) => void
+  onExport: (agent: AgentComponent) => void
+  onDuplicate: (agent: AgentComponent) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const gradientColor = getGradientColor(colorIndex)
@@ -534,8 +682,16 @@ function AgentCard({
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all group">
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradientColor} flex items-center justify-center`}>
-          <Dog className="w-5 h-5 text-white" />
+        <div className={`w-12 h-12 rounded-full ${agent.avatar_url ? 'bg-violet-100' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+          {agent.avatar_url ? (
+            <img
+              src={agent.avatar_url}
+              alt={agent.name}
+              className="w-11 h-11 object-contain"
+            />
+          ) : (
+            <Dog className="w-6 h-6 text-white" />
+          )}
         </div>
         <div className="relative">
           <button

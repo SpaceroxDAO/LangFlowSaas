@@ -8,10 +8,10 @@
  * - API: REST API endpoint for programmatic access
  */
 import React, { useState } from 'react'
-import type { Agent } from '@/types'
+import type { Agent, AgentComponent } from '@/types'
 
 interface ShareDeployModalProps {
-  agent: Agent
+  agent: Agent | AgentComponent
   isOpen: boolean
   onClose: () => void
 }
@@ -21,16 +21,24 @@ type TabType = 'share' | 'embed' | 'webhook' | 'api'
 // Get the Langflow host URL from environment or use default
 const LANGFLOW_HOST = import.meta.env.VITE_LANGFLOW_HOST || 'http://localhost:7860'
 
+// Helper to check if agent has langflow_flow_id (Agent type)
+function hasLangflowFlowId(agent: Agent | AgentComponent): agent is Agent {
+  return 'langflow_flow_id' in agent && !!agent.langflow_flow_id
+}
+
 export function ShareDeployModal({ agent, isOpen, onClose }: ShareDeployModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('share')
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
   if (!isOpen) return null
 
+  // Use langflow_flow_id if available (Agent type), otherwise use component id
+  const flowId = hasLangflowFlowId(agent) ? agent.langflow_flow_id : agent.id
+
   // URLs for different deployment methods
-  const shareUrl = `${LANGFLOW_HOST}/flow/${agent.langflow_flow_id}`
-  const webhookUrl = `${LANGFLOW_HOST}/api/v1/webhook/${agent.langflow_flow_id}`
-  const apiUrl = `${LANGFLOW_HOST}/api/v1/run/${agent.langflow_flow_id}`
+  const shareUrl = `${LANGFLOW_HOST}/flow/${flowId}`
+  const webhookUrl = `${LANGFLOW_HOST}/api/v1/webhook/${flowId}`
+  const apiUrl = `${LANGFLOW_HOST}/api/v1/run/${flowId}`
 
   const embedCode = `<!-- Teach Charlie AI Chat Widget -->
 <script
@@ -38,7 +46,7 @@ export function ShareDeployModal({ agent, isOpen, onClose }: ShareDeployModalPro
 </script>
 <langflow-chat
   window_title="${agent.name}"
-  flow_id="${agent.langflow_flow_id}"
+  flow_id="${flowId}"
   host_url="${LANGFLOW_HOST}"
   chat_trigger_style='{"backgroundColor": "#f97316", "borderRadius": "50%"}'
   bot_message_style='{"backgroundColor": "#f3f4f6", "color": "#1f2937"}'

@@ -44,7 +44,14 @@ export function WizardLayout({
   const styles = themeStyles[theme]
 
   return (
-    <div className="min-h-[calc(100vh-120px)] flex items-center justify-center px-4 py-8">
+    <div
+      className="min-h-[calc(100vh-120px)] flex items-center justify-center px-4 py-8"
+      style={{
+        backgroundColor: '#fafafa',
+        backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}
+    >
       <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-6">
         {/* Left Panel - Info Card */}
         <div
