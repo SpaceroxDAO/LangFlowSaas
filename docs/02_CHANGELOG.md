@@ -4,6 +4,94 @@
 
 ---
 
+## 2026-01-08 - Phase 11b: EditAgentPage Redesign & Avatar Fixes
+
+### Summary
+Major redesign of the EditAgentPage with proper header/footer action buttons, improved navigation flow, and avatar display fixes across all pages.
+
+### EditAgentPage UI Redesign
+
+#### Header Changes
+**Decision**: Replace single "Back to Chat" link with two action buttons.
+
+**Implementation**:
+- "Talk to Agent" button (violet, links to `/playground/:agentId`)
+- "Advanced Settings" button (gray outline, opens settings modal)
+
+**Rationale**: Users need quick access to both testing their agent and configuring advanced options.
+
+#### Footer Action Buttons
+**Decision**: Add dedicated footer with three action buttons.
+
+**Implementation**:
+1. **Save Draft** (gray) - Saves changes without navigation, shows success message
+2. **Publish / Publish Updates** (violet) - Publishes agent, shows restart modal
+3. **Create New Workflow** (outline) - Links to wrapped canvas at `/canvas/:agentId`
+
+**Key Behaviors**:
+- Save Draft and Publish stay on page (no navigation)
+- Save Draft shows "Changes saved!" message for 3 seconds
+- Publish shows restart modal (Restart Now / Later options)
+- Create New Workflow disabled until agent is published AND restarted
+- Button text changes from "Publish" to "Publish Updates" after initial publish
+
+#### Navigation Fixes
+**Problem**: Multiple navigation issues after user feedback.
+
+**Fixes Applied**:
+1. Save Draft no longer navigates to playground
+2. Publish no longer calls handleSave (which navigated) - inlined save logic
+3. Create New Workflow uses internal route `/canvas/:agentId` instead of external Langflow URL
+4. PlaygroundPage back button goes to Edit Agent page instead of dashboard
+5. Removed duplicate Advanced Settings section from page bottom
+
+### Avatar Fixes
+
+#### Display Scaling
+**Problem**: Avatar images in agent cards were too small.
+
+**Solution**: Changed avatar image scale from `scale-125` (125%) to `scale-150` (150%) in ProjectDetailPage.
+
+#### Generation Infrastructure
+**Problem**: Avatar generation was failing due to missing environment variable.
+
+**Fixes**:
+1. Added `OPENAI_API_KEY` environment variable to backend container in docker-compose.yml
+2. Fixed static files path in main.py to serve avatar images correctly
+
+#### E2E Test Added
+Created comprehensive `avatar-generation.spec.ts` test that:
+1. Creates an agent via the 3-step wizard
+2. Navigates to Edit page
+3. Clicks Generate avatar button
+4. Waits for avatar API response
+5. Verifies avatar image displays correctly
+6. Verifies avatar saved to database
+
+### Files Modified
+
+**Frontend**:
+- `src/frontend/src/pages/EditAgentPage.tsx` - Complete UI redesign with header/footer
+- `src/frontend/src/pages/PlaygroundPage.tsx` - Back button navigation fix
+- `src/frontend/src/pages/ProjectDetailPage.tsx` - Avatar scale adjustment (150%)
+
+**Backend**:
+- `src/backend/app/main.py` - Fixed static files path
+- `docker-compose.yml` - Added OPENAI_API_KEY
+
+**Tests**:
+- `src/frontend/e2e/tests/avatar-generation.spec.ts` - NEW: Avatar generation E2E test
+
+### Testing Verified
+- ✅ Save Draft stays on page with success message
+- ✅ Publish shows restart modal
+- ✅ Create New Workflow links to internal canvas route
+- ✅ Back button returns to Edit Agent page
+- ✅ Avatar generation working end-to-end
+- ✅ Avatar displays at correct scale in agent cards
+
+---
+
 ## 2026-01-08 - Phase 11: Custom Component Generation & E2E Testing
 
 ### Summary

@@ -1,12 +1,12 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-08 (Night)
-**Current Phase**: Phase 11 - Custom Component Generation & E2E Testing
+**Last Updated**: 2026-01-08 (Morning)
+**Current Phase**: Phase 11b - EditAgentPage Redesign & Avatar Fixes
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 11 - Custom Component Generation & E2E Testing
+**Phase**: Phase 11b - EditAgentPage Redesign & Avatar Fixes
 **Status**: ✅ Complete
 **Next Milestone**: Production Deploy
 
@@ -14,12 +14,12 @@
 
 | Metric | Status | Notes |
 |--------|--------|-------|
-| Documentation | ✅ Updated | This document updated 2026-01-07 |
+| Documentation | ✅ Updated | This document updated 2026-01-08 |
 | Backend API | ✅ Complete | 36+ new endpoints + avatar generation |
 | Database | ✅ Complete | New tables + workflow_id migration done |
 | Authentication | ✅ Complete | Clerk JWT + Dev Mode |
 | Langflow Integration | ✅ Enhanced | Share, Embed, Webhook, API, Analytics |
-| Frontend | ✅ Enhanced | Three-tab UI + avatar display |
+| Frontend | ✅ Enhanced | Three-tab UI + avatar display + EditAgentPage redesign |
 | Performance | ✅ Fixed | SQLAlchemy lazy loading optimized |
 | Tour System | ✅ Tested | Driver.js integrated and working |
 | Canvas Viewer | ✅ Fixed | Updated for AgentComponent/Workflow architecture |
@@ -47,11 +47,52 @@ All previous phases completed:
 - Phase 9: Three-Tab Architecture (Agents, Workflows, MCP Servers)
 - Phase 10: Avatar V2 & Architecture Fixes
 
+### Phase 11b: EditAgentPage Redesign & Avatar Fixes ✅ Complete
+
+**Goal**: Redesign EditAgentPage with proper action buttons and fix avatar display/generation issues
+
+#### Completed (2026-01-08 Morning)
+
+**EditAgentPage UI Redesign:**
+- [x] Added "Talk to Agent" button in header (links to playground)
+- [x] Added "Advanced Settings" button in header (opens settings modal)
+- [x] Created footer with three action buttons:
+  - Save Draft (stays on page, shows success message)
+  - Publish / Publish Updates (shows restart modal)
+  - Create New Workflow (disabled until published & restarted)
+- [x] Removed duplicate Advanced Settings section from bottom
+- [x] Added restart modal after publishing (restart now/later options)
+- [x] Create New Workflow uses internal route `/canvas/:agentId`
+
+**Behavior Fixes:**
+- [x] Save Draft no longer navigates to playground
+- [x] Publish no longer navigates away, shows feedback message
+- [x] Publish button text changes to "Publish Updates" after initial publish
+- [x] PlaygroundPage back button now goes to Edit Agent page
+
+**Avatar Fixes:**
+- [x] Avatar images in ProjectDetailPage cards display at 150% scale
+- [x] Added OPENAI_API_KEY environment variable to backend container
+- [x] Fixed static files path in main.py
+- [x] Added avatar-generation.spec.ts E2E test
+
+**Files Modified:**
+- `src/frontend/src/pages/EditAgentPage.tsx` - Complete UI redesign
+- `src/frontend/src/pages/PlaygroundPage.tsx` - Back button navigation fix
+- `src/frontend/src/pages/ProjectDetailPage.tsx` - Avatar scale adjustment
+- `docker-compose.yml` - Added OPENAI_API_KEY
+- `src/backend/app/main.py` - Fixed static path
+
+**Files Created:**
+- `src/frontend/e2e/tests/avatar-generation.spec.ts` - Avatar generation E2E test
+
+---
+
 ### Phase 11: Custom Component Generation & E2E Testing ✅ Complete
 
 **Goal**: Enable publishing agents as custom Langflow components + comprehensive E2E test coverage
 
-#### Completed (2026-01-08)
+#### Completed (2026-01-08 Night)
 
 **Custom Component Generation:**
 - [x] Fixed Docker permissions for backend container (user: "0:0")
@@ -298,19 +339,15 @@ cd src/frontend && npm run build
 cd src/backend && python3 -c "from app.main import app; print('OK')"
 ```
 
-## Git Status (2026-01-07)
+## Git Status (2026-01-08)
 
 Recent commits:
+- `29c066b` - feat: EditAgentPage redesign with header/footer actions & avatar fixes
+- `621855e` - feat: Phase 9 & 10 - Three-tab architecture and Avatar V2
 - `7898e8a` - docs: Add Phase 3 dynamic component generation implementation guide
 - `36b0dd5` - docs: Add detailed technical clarification and example walkthrough
-- `c2d0eee` - docs: Add Custom Components Strategy research document
 
-Uncommitted changes (ready to commit):
-- Phase 9: Three-tab architecture (backend + frontend)
-- Phase 10: Avatar V2 with auto-inference
-- Architecture fixes (CanvasViewerPage, PlaygroundPage)
-- Performance optimization (lazy loading)
-- Bug fixes (rename, dotted grid background, Edit Flow link)
+All changes committed and pushed to origin/main.
 
 ## Known Issues
 
@@ -339,7 +376,7 @@ Uncommitted changes (ready to commit):
 
 ---
 
-**Status Summary**: ✅ Green - Phase 10 complete. Avatar system V2 with auto-inference working. All architecture issues fixed (CanvasViewerPage, PlaygroundPage). Phase 9 three-tab architecture stable. Ready for production deploy.
+**Status Summary**: ✅ Green - Phase 11b complete. EditAgentPage redesigned with proper header/footer actions. Avatar generation and display working across all pages. All E2E tests passing. Ready for production deploy.
 
 ---
 
@@ -349,8 +386,8 @@ Uncommitted changes (ready to commit):
 |----------|---------|--------------|
 | `00_PROJECT_SPEC.md` | Product requirements, personas | 2026-01-03 |
 | `01_ARCHITECTURE.md` | Technical architecture, DB schema | 2026-01-03 |
-| `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-06 |
-| `03_STATUS.md` | **This file** - Current status | 2026-01-07 |
+| `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-08 |
+| `03_STATUS.md` | **This file** - Current status | 2026-01-08 |
 | `04_DEVELOPMENT_PLAN.md` | Original development plan | 2026-01-03 |
 | `05_EDUCATIONAL_OVERLAY_RESEARCH.md` | UX patterns research | 2026-01-05 |
 | `06_PROGRESSIVE_LEARNING_CURRICULUM.md` | 10-phase curriculum | 2026-01-05 |
