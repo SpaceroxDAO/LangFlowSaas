@@ -3,7 +3,7 @@
  * Matches the design mockup with sections for Identity, Instructions, and Tools
  */
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
@@ -48,7 +48,6 @@ function Tooltip({ text }: { text: string }) {
 
 export function EditAgentPage() {
   const { agentId } = useParams<{ agentId: string }>()
-  const navigate = useNavigate()
   const { getToken } = useAuth()
   const queryClient = useQueryClient()
 
@@ -73,8 +72,8 @@ export function EditAgentPage() {
   const [publishMessage, setPublishMessage] = useState<string | null>(null)
   const [needsRestart, setNeedsRestart] = useState(false)
   const [showRestartModal, setShowRestartModal] = useState(false)
-  const [hasRestartedAfterPublish, setHasRestartedAfterPublish] = useState(false)
-  const [langflowFlowId, setLangflowFlowId] = useState<string | null>(null)
+  const [_hasRestartedAfterPublish, setHasRestartedAfterPublish] = useState(false)
+  const [_langflowFlowId, setLangflowFlowId] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {

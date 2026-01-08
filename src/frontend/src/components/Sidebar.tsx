@@ -3,11 +3,210 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { ProjectMenu } from '@/components/ProjectMenu'
-// Project type is inferred from API response
+import type { Project } from '@/types'
 
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+}
+
+// Chevron icon component
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className={`w-3 h-3 transition-transform ${expanded ? 'rotate-90' : ''}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
+// Expandable project item component
+function ExpandableProject({
+  project,
+  isActive,
+  isRenaming,
+  renameValue,
+  renameInputRef,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
+  onStartRename,
+}: {
+  project: Project
+  isActive: boolean
+  isRenaming: boolean
+  renameValue: string
+  renameInputRef: React.RefObject<HTMLInputElement | null>
+  onRenameChange: (value: string) => void
+  onRenameSubmit: (e: React.FormEvent) => void
+  onRenameCancel: () => void
+  onStartRename: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const location = useLocation()
+
+  // Fetch project contents when expanded
+  const { data: agentComponents } = useQuery({
+    queryKey: ['agent-components', project.id],
+    queryFn: () => api.listAgentComponents(project.id),
+    enabled: expanded,
+  })
+
+  const { data: workflows } = useQuery({
+    queryKey: ['workflows', project.id],
+    queryFn: () => api.listWorkflows(project.id),
+    enabled: expanded,
+  })
+
+  const { data: mcpServers } = useQuery({
+    queryKey: ['mcp-servers', project.id],
+    queryFn: () => api.listMCPServers(project.id),
+    enabled: expanded,
+  })
+
+  const agents = agentComponents?.agent_components || []
+  const workflowList = workflows?.workflows || []
+  const mcpList = mcpServers?.mcp_servers || []
+
+  const hasContent = agents.length > 0 || workflowList.length > 0 || mcpList.length > 0
+
+  return (
+    <div>
+      {/* Project row */}
+      <div
+        className={`group flex items-center gap-1 px-2 py-1.5 rounded transition-colors ${
+          isActive ? 'bg-gray-100' : 'hover:bg-gray-50'
+        }`}
+      >
+        {/* Expand/collapse toggle */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <ChevronIcon expanded={expanded} />
+        </button>
+
+        {isRenaming ? (
+          <form onSubmit={onRenameSubmit} className="flex-1 min-w-0 flex gap-1">
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => onRenameChange(e.target.value)}
+              onBlur={() => setTimeout(onRenameCancel, 150)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') onRenameCancel()
+              }}
+              className="flex-1 px-1 py-0 text-sm bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:border-gray-400"
+              autoFocus
+            />
+          </form>
+        ) : (
+          <>
+            <Link
+              to={`/dashboard/project/${project.id}`}
+              className="flex-1 min-w-0 text-sm text-gray-900 truncate"
+            >
+              {project.name}
+            </Link>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <ProjectMenu
+                project={project}
+                onRename={onStartRename}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="ml-4 pl-2 border-l border-gray-200">
+          {/* Agents section */}
+          {agents.length > 0 && (
+            <div className="py-1">
+              <div className="px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                Agents
+              </div>
+              {agents.map((agent) => (
+                <Link
+                  key={agent.id}
+                  to={`/edit/${agent.id}`}
+                  className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors ${
+                    location.pathname === `/edit/${agent.id}`
+                      ? 'bg-violet-50 text-violet-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="truncate">{agent.name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Workflows section */}
+          {workflowList.length > 0 && (
+            <div className="py-1">
+              <div className="px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                Workflows
+              </div>
+              {workflowList.map((workflow) => (
+                <Link
+                  key={workflow.id}
+                  to={`/playground/workflow/${workflow.id}`}
+                  className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors ${
+                    location.pathname === `/playground/workflow/${workflow.id}`
+                      ? 'bg-violet-50 text-violet-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className="truncate">{workflow.name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* MCP Servers section */}
+          {mcpList.length > 0 && (
+            <div className="py-1">
+              <div className="px-2 py-0.5 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                MCP Servers
+              </div>
+              {mcpList.map((server) => (
+                <div
+                  key={server.id}
+                  className="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-600"
+                >
+                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
+                  </svg>
+                  <span className="truncate">{server.name}</span>
+                  <span className={`ml-auto w-1.5 h-1.5 rounded-full ${server.is_enabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!hasContent && expanded && (
+            <div className="px-2 py-2 text-[10px] text-gray-400 italic">
+              No items yet
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
@@ -186,7 +385,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   }
 
   return (
-    <div className="w-44 h-full bg-white border-r border-gray-200 flex flex-col">
+    <div className="w-52 h-full bg-white border-r border-gray-200 flex flex-col">
       {/* Hidden file input for import */}
       <input
         ref={fileInputRef}
@@ -263,46 +462,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         ) : (
           <div className="space-y-0.5 px-1">
             {projects.map((project) => (
-              <div
+              <ExpandableProject
                 key={project.id}
-                className={`group flex items-center gap-1 px-2 py-1.5 rounded transition-colors cursor-pointer ${
-                  isProjectActive(project.id)
-                    ? 'bg-gray-100'
-                    : 'hover:bg-gray-50'
-                }`}
-              >
-                {renamingProjectId === project.id ? (
-                  <form onSubmit={handleRenameSubmit} className="flex-1 min-w-0 flex gap-1">
-                    <input
-                      ref={renameInputRef}
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={() => setTimeout(handleRenameCancel, 150)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') handleRenameCancel()
-                      }}
-                      className="flex-1 px-1 py-0 text-sm bg-white border border-gray-300 rounded text-gray-900 focus:outline-none focus:border-gray-400"
-                      autoFocus
-                    />
-                  </form>
-                ) : (
-                  <>
-                    <Link
-                      to={`/dashboard/project/${project.id}`}
-                      className="flex-1 min-w-0 text-sm text-gray-900 truncate"
-                    >
-                      {project.name}
-                    </Link>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ProjectMenu
-                        project={project}
-                        onRename={() => handleStartRename(project.id, project.name)}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+                project={project}
+                isActive={isProjectActive(project.id)}
+                isRenaming={renamingProjectId === project.id}
+                renameValue={renameValue}
+                renameInputRef={renameInputRef}
+                onRenameChange={setRenameValue}
+                onRenameSubmit={handleRenameSubmit}
+                onRenameCancel={handleRenameCancel}
+                onStartRename={() => handleStartRename(project.id, project.name)}
+              />
             ))}
           </div>
         )}

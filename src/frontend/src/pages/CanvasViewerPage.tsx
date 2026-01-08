@@ -106,43 +106,8 @@ export function CanvasViewerPage() {
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              to={`/playground/${agentId}`}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">{agentComponent.name}'s Brain</h1>
-              <p className="text-sm text-gray-500">Explore how your agent thinks and processes messages</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to={`/playground/${agentId}`}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm"
-            >
-              Back to Chat
-            </Link>
-            <Link
-              to={`/edit/${agentId}`}
-              className="px-4 py-2 text-white bg-violet-500 rounded-lg hover:bg-violet-600 text-sm"
-            >
-              Edit Agent
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Canvas Viewer */}
-      <div className="flex-1 p-4 bg-gray-50">
+      {/* Canvas Viewer - Header removed, full height */}
+      <div className="flex-1">
         <LangflowCanvasViewer
           flowId={workflow.langflow_flow_id}
           agentName={agentComponent.name}

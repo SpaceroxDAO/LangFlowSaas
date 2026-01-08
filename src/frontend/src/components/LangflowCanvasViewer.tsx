@@ -22,25 +22,13 @@ interface LangflowCanvasViewerProps {
   onLevelChange?: (level: 1 | 2 | 3 | 4) => void;
 }
 
-// Educational labels for each level
-const levelLabels: Record<number, { title: string; description: string }> = {
-  1: {
-    title: "Charlie's Brain",
-    description: "See how Charlie processes your messages (read-only)",
-  },
-  2: {
-    title: "Explore Mode",
-    description: "Try adding tricks to Charlie's toolkit",
-  },
-  3: {
-    title: "Builder Mode",
-    description: "Full editing with guided assistance",
-  },
-  4: {
-    title: "Expert Mode",
-    description: "Full Langflow canvas access",
-  },
-};
+// Educational labels for each level (kept for future complexity selector)
+// const levelLabels: Record<number, { title: string; description: string }> = {
+//   1: { title: "Charlie's Brain", description: "See how Charlie processes your messages (read-only)" },
+//   2: { title: "Explore Mode", description: "Try adding tricks to Charlie's toolkit" },
+//   3: { title: "Builder Mode", description: "Full editing with guided assistance" },
+//   4: { title: "Expert Mode", description: "Full Langflow canvas access" },
+// };
 
 // Tour steps for introducing the canvas
 const canvasTourSteps: DriveStep[] = [
@@ -86,11 +74,11 @@ export function LangflowCanvasViewer({
   level = 1,
   showTour = false,
   onTourComplete,
-  onLevelChange,
+  // onLevelChange, // Kept for future complexity selector
 }: LangflowCanvasViewerProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentLevel, setCurrentLevel] = useState(level);
+  const currentLevel = level; // Use prop directly until complexity selector is added
   const { completeTour } = useTour();
 
   // Langflow is accessed via nginx on port 7861 with CSS/JS injection
@@ -121,55 +109,14 @@ export function LangflowCanvasViewer({
     }
   }, [showTour, completeTour, onTourComplete]);
 
-  // Handle level change
-  const handleLevelChange = (newLevel: 1 | 2 | 3 | 4) => {
-    setCurrentLevel(newLevel);
-    onLevelChange?.(newLevel);
-  };
-
-  const levelInfo = levelLabels[currentLevel];
+  // Handle level change (kept for future complexity selector)
+  // const handleLevelChange = (newLevel: 1 | 2 | 3 | 4) => {
+  //   setCurrentLevel(newLevel);
+  //   onLevelChange?.(newLevel);
+  // };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-      {/* Header with level controls */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <div>
-          <h3 className="text-sm font-medium text-gray-900">{levelInfo.title}</h3>
-          <p className="text-xs text-gray-500">{levelInfo.description}</p>
-        </div>
-
-        {/* Level selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Complexity:</span>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4].map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => handleLevelChange(lvl as 1 | 2 | 3 | 4)}
-                className={`w-8 h-8 rounded text-xs font-medium transition-colors ${
-                  currentLevel === lvl
-                    ? 'bg-violet-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                title={levelLabels[lvl].title}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
-
-          {/* Open in new tab */}
-          <a
-            href={canvasUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-2 px-3 py-1 text-xs text-gray-600 bg-gray-100 rounded hover:bg-gray-200"
-          >
-            Open Full Editor
-          </a>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Educational overlay for Level 1 */}
       {currentLevel === 1 && (
         <div className="relative">
