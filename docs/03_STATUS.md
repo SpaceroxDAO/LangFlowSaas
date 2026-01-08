@@ -1,12 +1,12 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-08 (Morning)
-**Current Phase**: Phase 11b - EditAgentPage Redesign & Avatar Fixes
+**Last Updated**: 2026-01-08 (Afternoon)
+**Current Phase**: Phase 11c - Langflow Proxy Fix & White-Label System
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 11b - EditAgentPage Redesign & Avatar Fixes
+**Phase**: Phase 11c - Langflow Proxy Fix & White-Label System
 **Status**: ✅ Complete
 **Next Milestone**: Production Deploy
 
@@ -18,7 +18,7 @@
 | Backend API | ✅ Complete | 36+ new endpoints + avatar generation |
 | Database | ✅ Complete | New tables + workflow_id migration done |
 | Authentication | ✅ Complete | Clerk JWT + Dev Mode |
-| Langflow Integration | ✅ Enhanced | Share, Embed, Webhook, API, Analytics |
+| Langflow Integration | ✅ Enhanced | Share, Embed, Webhook, API, Analytics + Nginx proxy fixed |
 | Frontend | ✅ Enhanced | Three-tab UI + avatar display + EditAgentPage redesign |
 | Performance | ✅ Fixed | SQLAlchemy lazy loading optimized |
 | Tour System | ✅ Tested | Driver.js integrated and working |
@@ -46,6 +46,48 @@ All previous phases completed:
 - Phase 8: UI Polish (Langflow-style violet theme, search, pagination, bulk ops)
 - Phase 9: Three-Tab Architecture (Agents, Workflows, MCP Servers)
 - Phase 10: Avatar V2 & Architecture Fixes
+
+### Phase 11c: Langflow Proxy Fix & White-Label System ✅ Complete
+
+**Goal**: Fix "Couldn't establish a connection" error in Langflow iframe and implement white-label CSS/JS injection
+
+#### Completed (2026-01-08 Afternoon)
+
+**Root Cause Found & Fixed:**
+- [x] Diagnosed "Couldn't establish a connection" popup in Langflow canvas
+- [x] Root cause: nginx `location /health` prefix match was intercepting `/health_check`
+- [x] Fix: Changed to `location = /health` (exact match)
+- [x] Langflow's `/health_check` endpoint now returns proper JSON: `{"status":"ok","chat":"ok","db":"ok"}`
+
+**Nginx Configuration:**
+- [x] WebSocket support with `proxy_buffering off;`
+- [x] Extended timeouts (24 hours for WebSocket idle)
+- [x] CSS/JS injection via `sub_filter` for white-labeling
+- [x] Removed restrictive Langflow headers for iframe embedding
+
+**White-Label System:**
+- [x] `nginx/overlay/style.css` - Hides Langflow branding (header, social links, logos)
+- [x] `nginx/overlay/script.js` - Hides branding text in navigation
+- [x] Preserved all functional UI (Playground, Logs, Settings dialogs)
+
+**Documentation:**
+- [x] Created `docs/LANGFLOW_PROXY_FIX.md` - Comprehensive debugging guide
+- [x] Updated `docs/02_CHANGELOG.md` with entry
+
+**Files Modified:**
+- `nginx/nginx.conf` - Fixed exact match for `/health`, WebSocket config
+- `nginx/overlay/style.css` - White-label CSS (branding only)
+- `nginx/overlay/script.js` - White-label script (branding text only)
+
+**Files Created:**
+- `docs/LANGFLOW_PROXY_FIX.md` - Connection error resolution guide
+
+**Key Lessons:**
+- Nginx location matching is prefix-based by default; use `= /path` for exact matches
+- Always compare direct vs proxied responses when debugging proxy issues
+- Langflow's `/health_check` endpoint returns JSON that the frontend parses
+
+---
 
 ### Phase 11b: EditAgentPage Redesign & Avatar Fixes ✅ Complete
 
@@ -376,7 +418,7 @@ All changes committed and pushed to origin/main.
 
 ---
 
-**Status Summary**: ✅ Green - Phase 11b complete. EditAgentPage redesigned with proper header/footer actions. Avatar generation and display working across all pages. All E2E tests passing. Ready for production deploy.
+**Status Summary**: ✅ Green - Phase 11c complete. Langflow proxy connection error fixed (nginx exact match for `/health`). White-label CSS/JS system working without blocking functional UI. All dialogs (Playground, Logs, Settings) operational. Ready for production deploy.
 
 ---
 
@@ -401,3 +443,4 @@ All changes committed and pushed to origin/main.
 | `13_LANGFLOW_INTEGRATION_STRATEGY.md` | Integration strategy | 2026-01-05 |
 | `14_CUSTOM_COMPONENTS_STRATEGY.md` | Component strategy | 2026-01-06 |
 | `15_PROJECT_TABS_REORGANIZATION.md` | **Three-tab plan** | 2026-01-07 |
+| `LANGFLOW_PROXY_FIX.md` | **Nginx proxy fix for Langflow** | 2026-01-08 |

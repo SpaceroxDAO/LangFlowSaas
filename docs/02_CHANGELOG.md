@@ -4,6 +4,64 @@
 
 ---
 
+## 2026-01-08 - Nginx Proxy Fix & White-Label Overlay System
+
+### Summary
+Fixed critical "Couldn't establish a connection" error in Langflow canvas caused by nginx misconfiguration. Implemented proper white-label overlay system that hides branding without blocking functional UI.
+
+### Root Cause Discovery
+**Problem**: Users saw persistent "Couldn't establish a connection" popup that blocked the Langflow canvas.
+
+**Root Cause**: Nginx `location /health` was using PREFIX match instead of EXACT match, causing `/health_check` requests to return nginx's simple `healthy` string instead of Langflow's expected JSON response.
+
+```nginx
+# BROKEN - Prefix match catches /health AND /health_check
+location /health { return 200 "healthy\n"; }
+
+# FIXED - Exact match only catches /health
+location = /health { return 200 "healthy\n"; }
+```
+
+### Debugging Journey
+1. Initially suspected WebSocket handshake issues
+2. Tried various nginx WebSocket configurations (map variables, forced headers, buffering)
+3. Added aggressive CSS to hide error modals (caused collateral damage - hid Playground/Logs)
+4. Compared direct Langflow response vs proxied response
+5. **Found the culprit**: `/health_check` returning wrong response through nginx
+
+### Files Modified
+
+**Nginx Configuration**:
+- `nginx/nginx.conf` - Fixed `/health` to `= /health` (exact match) on both port 80 and 7861
+
+**Overlay System (White-Label Only)**:
+- `nginx/overlay/style.css` - Simplified to only hide branding elements
+- `nginx/overlay/script.js` - Simplified to only handle white-label text matching
+
+**Documentation**:
+- `docs/LANGFLOW_PROXY_FIX.md` - NEW: Complete debugging guide and solution
+
+### White-Label Approach
+
+| Category | HIDE | KEEP |
+|----------|------|------|
+| Branding | Header, Logo, "Langflow" text | - |
+| Social | GitHub, Discord, Twitter links | - |
+| Dialogs | - | Playground, Logs, Settings |
+| UI | - | Dropdowns, tooltips, menus |
+
+**Key Principle**: Don't hide `[role="dialog"]`, `[data-radix-portal]`, or `.fixed.inset-0.z-50` - these are functional UI elements needed for Playground, Logs, etc.
+
+### Testing Verified
+- ✅ `/health_check` returns proper JSON through nginx
+- ✅ No more "Couldn't establish a connection" popup
+- ✅ Playground modal works
+- ✅ Logs modal works
+- ✅ All dropdowns and menus work
+- ✅ Branding elements hidden (header, social links)
+
+---
+
 ## 2026-01-08 - Phase 11b: EditAgentPage Redesign & Avatar Fixes
 
 ### Summary

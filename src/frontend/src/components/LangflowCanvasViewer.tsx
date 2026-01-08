@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { driver } from 'driver.js';
 import type { DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useTour } from '../providers/TourProvider';
 
 // Progressive disclosure levels for the Langflow canvas
+// Note: CSS injection is now handled by nginx sub_filter (see nginx/overlay/style.css)
+// These levels are kept for Phase 2 progressive disclosure implementation
+//
 // Level 1: Read-only view with heavy overlay - "Peek at Charlie's brain"
 // Level 2: Limited editing with simplified sidebar - "Explore mode"
 // Level 3: Full editing with some advanced features hidden - "Builder mode"
@@ -18,41 +21,6 @@ interface LangflowCanvasViewerProps {
   onTourComplete?: () => void;
   onLevelChange?: (level: 1 | 2 | 3 | 4) => void;
 }
-
-// CSS injection strings for each disclosure level
-const levelCSS: Record<number, string> = {
-  1: `
-    /* Level 1: Peek Mode - Read-only, minimal UI */
-    [data-testid="app-header"] { display: none !important; }
-    [data-testid="shad-sidebar"] { display: none !important; }
-    [data-testid="canvas_controls"] { display: none !important; }
-    [data-testid="main_canvas_controls"] { display: none !important; }
-    [data-testid="publish-button"] { display: none !important; }
-    .react-flow__pane { pointer-events: none !important; }
-    .react-flow__node { pointer-events: none !important; }
-  `,
-  2: `
-    /* Level 2: Explore Mode - Limited editing */
-    [data-testid="app-header"] { display: none !important; }
-    [data-testid="sidebar-nav-mcp"] { display: none !important; }
-    [data-testid="sidebar-nav-bundles"] { display: none !important; }
-    [data-testid="sidebar-custom-component-button"] { display: none !important; }
-    [data-testid="disclosure-llm operations"] { display: none !important; }
-    [data-testid="disclosure-processing"] { display: none !important; }
-    [data-testid="disclosure-flow control"] { display: none !important; }
-    [data-testid="lock-status"] { display: none !important; }
-  `,
-  3: `
-    /* Level 3: Builder Mode - Most features, some advanced hidden */
-    [data-testid="sidebar-nav-mcp"] { display: none !important; }
-    [data-testid="sidebar-nav-bundles"] { display: none !important; }
-    [data-testid="sidebar-custom-component-button"] { display: none !important; }
-  `,
-  4: `
-    /* Level 4: Expert Mode - Full access */
-    /* No hiding - full Langflow UI */
-  `,
-};
 
 // Educational labels for each level
 const levelLabels: Record<number, { title: string; description: string }> = {
@@ -122,50 +90,19 @@ export function LangflowCanvasViewer({
 }: LangflowCanvasViewerProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentLevel, setCurrentLevel] = useState(level);
   const { completeTour } = useTour();
 
-  // For same-origin deployment via Nginx proxy, use '/langflow'
-  // For development, use 'http://localhost:7860'
-  // CSS injection ONLY works with same-origin (production proxy setup)
-  const langflowHost = import.meta.env.VITE_LANGFLOW_HOST || 'http://localhost:7860';
-  const canvasUrl = `${langflowHost}/flow/${flowId}`;
-
-  // Inject CSS into iframe when it loads
-  const injectCSS = useCallback(() => {
-    if (!iframeRef.current?.contentDocument) return;
-
-    try {
-      const doc = iframeRef.current.contentDocument;
-
-      // Remove any previous injected style
-      const existingStyle = doc.getElementById('teachcharlie-disclosure-css');
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-
-      // Inject new style for current level
-      const style = doc.createElement('style');
-      style.id = 'teachcharlie-disclosure-css';
-      style.textContent = levelCSS[currentLevel];
-      doc.head.appendChild(style);
-
-      console.log(`Injected level ${currentLevel} CSS into Langflow iframe`);
-    } catch (e) {
-      // Cross-origin will block this - expected in production
-      console.warn('Could not inject CSS (cross-origin):', e);
-      setError('Canvas loading... If this persists, the canvas may need to be opened in a new tab.');
-    }
-  }, [currentLevel]);
+  // Langflow is accessed via nginx on port 7861 with CSS/JS injection
+  // We use the FULL URL (including protocol and port) as recommended
+  // This works because Langflow doesn't support subpath deployment
+  // CSS/JS injection is handled server-side by nginx sub_filter
+  const langflowUrl = import.meta.env.VITE_LANGFLOW_URL || 'http://localhost:7861';
+  const canvasUrl = `${langflowUrl}/flow/${flowId}`;
 
   // Handle iframe load
   const handleIframeLoad = useCallback(() => {
     setIsLoading(false);
-
-    // Try to inject CSS (may fail due to cross-origin)
-    // Give iframe time to render
-    setTimeout(injectCSS, 500);
 
     // Start tour if requested
     if (showTour) {
@@ -182,14 +119,7 @@ export function LangflowCanvasViewer({
         driverInstance.drive();
       }, 1000);
     }
-  }, [injectCSS, showTour, completeTour, onTourComplete]);
-
-  // Re-inject CSS when level changes
-  useEffect(() => {
-    if (!isLoading) {
-      injectCSS();
-    }
-  }, [currentLevel, isLoading, injectCSS]);
+  }, [showTour, completeTour, onTourComplete]);
 
   // Handle level change
   const handleLevelChange = (newLevel: 1 | 2 | 3 | 4) => {
@@ -263,13 +193,6 @@ export function LangflowCanvasViewer({
         </div>
       )}
 
-      {/* Error state */}
-      {error && (
-        <div className="absolute top-16 right-4 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 max-w-sm z-20">
-          <p className="text-xs text-yellow-700">{error}</p>
-        </div>
-      )}
-
       {/* Langflow iframe */}
       <iframe
         ref={iframeRef}
@@ -278,7 +201,7 @@ export function LangflowCanvasViewer({
         onLoad={handleIframeLoad}
         onError={() => {
           setIsLoading(false);
-          setError('Failed to load canvas. Please try opening in a new tab.');
+          console.error('Failed to load Langflow canvas');
         }}
         title={`${agentName}'s Flow Canvas`}
         sandbox="allow-same-origin allow-scripts allow-forms allow-popups"

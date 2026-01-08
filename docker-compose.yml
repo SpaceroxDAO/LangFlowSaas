@@ -1,6 +1,51 @@
 version: "3.8"
 
 services:
+  # =====================================================
+  # nginx Reverse Proxy - Main Entry Point
+  # All traffic goes through nginx for:
+  # - Single origin (enables iframe CSS injection)
+  # - WebSocket proxying
+  # - SSL termination (production)
+  # =====================================================
+  nginx:
+    image: nginx:alpine
+    container_name: teachcharlie-nginx
+    ports:
+      - "80:80"      # Frontend + Backend API
+      - "7861:7861"  # Langflow with CSS/JS injection (iframe source)
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/overlay:/usr/share/nginx/html/overlay:ro
+    depends_on:
+      - frontend
+      - backend
+      - langflow
+    networks:
+      - teachcharlie-network
+    restart: unless-stopped
+
+  # =====================================================
+  # React Frontend (Vite dev server)
+  # =====================================================
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: teachcharlie-frontend
+    volumes:
+      # Mount source for hot reload
+      - ./src/frontend:/app
+      # Prevent node_modules from being overwritten by mount
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=/api
+      - VITE_LANGFLOW_HOST=/langflow
+    networks:
+      - teachcharlie-network
+    # No port exposed - accessed via nginx
+
   # PostgreSQL Database
   postgres:
     image: postgres:16
