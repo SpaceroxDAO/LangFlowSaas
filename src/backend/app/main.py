@@ -87,7 +87,8 @@ app.include_router(avatars_router, prefix="/api/v1")
 app.include_router(langflow_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
-STATIC_DIR = Path(__file__).parent.parent / "static" / "avatars"
+# Path(__file__).parent = /app/app (where main.py is located)
+STATIC_DIR = Path(__file__).parent / "static" / "avatars"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static/avatars", StaticFiles(directory=str(STATIC_DIR)), name="avatars")
 

@@ -4,6 +4,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { ToolCard } from '@/components/ToolCard'
@@ -49,6 +50,7 @@ export function EditAgentPage() {
   const { agentId } = useParams<{ agentId: string }>()
   const navigate = useNavigate()
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -70,6 +72,10 @@ export function EditAgentPage() {
   const [isRestarting, setIsRestarting] = useState(false)
   const [publishMessage, setPublishMessage] = useState<string | null>(null)
   const [needsRestart, setNeedsRestart] = useState(false)
+  const [showRestartModal, setShowRestartModal] = useState(false)
+  const [hasRestartedAfterPublish, setHasRestartedAfterPublish] = useState(false)
+  const [langflowFlowId, setLangflowFlowId] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
@@ -96,6 +102,26 @@ export function EditAgentPage() {
       }
     }
     loadAgent()
+  }, [agentId])
+
+  // Fetch workflow data to get langflow_flow_id
+  useEffect(() => {
+    async function fetchWorkflow() {
+      if (!agentId) return
+      try {
+        // Get workflows and find the one containing this agent
+        const workflowsData = await api.listWorkflows()
+        const workflow = workflowsData.workflows.find(
+          (w: { agent_component_ids?: string[] }) => w.agent_component_ids?.includes(agentId)
+        )
+        if (workflow?.langflow_flow_id) {
+          setLangflowFlowId(workflow.langflow_flow_id)
+        }
+      } catch (err) {
+        console.error('Failed to fetch workflow:', err)
+      }
+    }
+    fetchWorkflow()
   }, [agentId])
 
   const toggleTool = (toolId: string) => {
@@ -129,6 +155,15 @@ export function EditAgentPage() {
       // Convert relative URL to full URL for the backend
       const fullUrl = `${window.location.protocol}//${window.location.hostname}:8000${result.image_url}`
       setAvatarUrl(fullUrl)
+
+      // Auto-save the avatar to the database immediately
+      if (agentId) {
+        await api.updateAgentComponent(agentId, {
+          avatar_url: fullUrl,
+        })
+        // Invalidate the agent-components cache so ProjectDetailPage shows updated avatar
+        queryClient.invalidateQueries({ queryKey: ['agent-components'] })
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate avatar. Please try again.'
       setSaveError(errorMessage)
@@ -156,6 +191,7 @@ export function EditAgentPage() {
 
     setIsSaving(true)
     setSaveError(null)
+    setSaveSuccess(false)
 
     try {
       // Convert tools array to comma-separated string
@@ -171,10 +207,16 @@ export function EditAgentPage() {
         avatar_url: avatarUrl || undefined,
       })
 
-      navigate(`/playground/${agentId}`)
+      // Invalidate cache so other pages see updated data
+      queryClient.invalidateQueries({ queryKey: ['agent-components'] })
+
+      // Show success message (auto-hide after 3 seconds)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save changes'
       setSaveError(errorMessage)
+    } finally {
       setIsSaving(false)
     }
   }
@@ -203,16 +245,50 @@ export function EditAgentPage() {
   const handlePublish = async () => {
     if (!agentId) return
 
+    // Validation
+    if (!name.trim()) {
+      setSaveError('Please give your agent a name')
+      return
+    }
+    if (!persona.trim() || persona.trim().length < 10) {
+      setSaveError('Please provide a persona description (at least 10 characters)')
+      return
+    }
+    if (!instructions.trim() || instructions.trim().length < 10) {
+      setSaveError('Please provide instructions (at least 10 characters)')
+      return
+    }
+
     setIsPublishing(true)
     setPublishMessage(null)
     setSaveError(null)
+    setSaveSuccess(false)
 
     try {
+      // First save the current state
+      const tricksText = selectedTools.length > 0
+        ? `Tools: ${selectedTools.map(t => AVAILABLE_TOOLS.find(at => at.id === t)?.title).join(', ')}`
+        : 'No specific tools selected'
+
+      await api.updateAgentComponent(agentId, {
+        name: name.trim(),
+        qa_who: persona.trim(),
+        qa_rules: instructions.trim(),
+        qa_tricks: tricksText,
+        avatar_url: avatarUrl || undefined,
+      })
+
+      // Then publish (this also updates the custom component)
       const result = await api.publishAgentComponent(agentId)
       setIsPublished(result.is_published)
       setPublishMessage(result.message)
+
+      // Invalidate cache
+      queryClient.invalidateQueries({ queryKey: ['agent-components'] })
+
       if (result.needs_restart) {
         setNeedsRestart(true)
+        setShowRestartModal(true)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to publish agent'
@@ -254,6 +330,8 @@ export function EditAgentPage() {
       if (result.success) {
         setPublishMessage(result.message)
         setNeedsRestart(false)
+        setHasRestartedAfterPublish(true)
+        setShowRestartModal(false)
       } else {
         setSaveError(result.message)
       }
@@ -264,6 +342,13 @@ export function EditAgentPage() {
       setIsRestarting(false)
     }
   }
+
+  const handleRestartLater = () => {
+    setShowRestartModal(false)
+  }
+
+  // Determine if Create New Workflow button should be enabled
+  const canCreateWorkflow = isPublished && !needsRestart
 
   // Loading state
   if (isLoading) {
@@ -333,12 +418,27 @@ export function EditAgentPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Edit {name}</h1>
-          <Link
-            to={`/playground/${agentId}`}
-            className="text-violet-600 hover:text-violet-700 font-medium text-sm"
-          >
-            Back to Chat
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to={`/playground/${agentId}`}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors border border-violet-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Talk to Agent
+            </Link>
+            <button
+              onClick={() => setIsAdvancedModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Advanced Settings
+            </button>
+          </div>
         </div>
 
       {/* Identity Section */}
@@ -460,162 +560,6 @@ export function EditAgentPage() {
         </div>
       </div>
 
-      {/* Advanced Settings Section */}
-      <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl border border-violet-200 p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Advanced Settings</h2>
-            <p className="text-sm text-gray-500">
-              Configure LLM model, temperature, and other agent behavior settings.
-            </p>
-            {advancedConfig && (
-              <div className="flex items-center gap-3 mt-2">
-                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-violet-700 bg-violet-100 rounded-full">
-                  {advancedConfig.model_provider} / {advancedConfig.model_name}
-                </span>
-                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
-                  Temp: {advancedConfig.temperature?.toFixed(2) || '0.70'}
-                </span>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => setIsAdvancedModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-violet-600 bg-white hover:bg-violet-50 rounded-xl transition-colors border border-violet-200 shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Configure
-          </button>
-        </div>
-      </div>
-
-      {/* Publish Section */}
-      <div className={`rounded-2xl border p-6 mb-6 ${isPublished ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'}`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-semibold text-gray-900">Publish to Langflow</h2>
-              {isPublished && (
-                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                  Published
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-gray-500">
-              {isPublished
-                ? 'This agent is available in the Langflow sidebar as a custom component.'
-                : 'Make this agent available as a custom component in Langflow workflows.'
-              }
-            </p>
-            {publishMessage && (
-              <p className="text-sm text-violet-600 mt-2 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {publishMessage}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {needsRestart && (
-              <button
-                onClick={handleRestartLangflow}
-                disabled={isRestarting}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-200 shadow-sm disabled:opacity-50"
-              >
-                {isRestarting ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Restarting...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Restart Langflow
-                  </>
-                )}
-              </button>
-            )}
-            {isPublished ? (
-              <button
-                onClick={handleUnpublish}
-                disabled={isPublishing || isRestarting}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-white hover:bg-red-50 rounded-xl transition-colors border border-red-200 shadow-sm disabled:opacity-50"
-              >
-                {isPublishing ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                    </svg>
-                    Unpublish
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                onClick={handlePublish}
-                disabled={isPublishing || isRestarting}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors shadow-sm disabled:opacity-50"
-              >
-                {isPublishing ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Publishing...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    Publish Agent
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Flow Editor Link */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Visual Flow Editor</h2>
-            <p className="text-sm text-gray-500">
-              Access the node-based workflow editor for advanced customizations.
-            </p>
-          </div>
-          <Link
-            to={`/canvas/${agentId}`}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 rounded-xl transition-colors border border-gray-200 shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-            </svg>
-            Open Flow Editor
-          </Link>
-        </div>
-      </div>
-
       {/* Error message */}
       {saveError && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -623,26 +567,183 @@ export function EditAgentPage() {
         </div>
       )}
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="px-8 py-3 bg-violet-500 text-white rounded-full font-medium hover:bg-violet-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
-        >
-          {isSaving ? (
-            <>
-              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+      {/* Save success message */}
+      {saveSuccess && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <p className="text-sm text-blue-600 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Draft saved successfully
+          </p>
+        </div>
+      )}
+
+      {/* Publish success message */}
+      {publishMessage && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+          <p className="text-sm text-green-600 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            {publishMessage}
+          </p>
+        </div>
+      )}
+
+      {/* Status Badge */}
+      {isPublished && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Published
+              </span>
+              <span className="text-sm text-gray-600">
+                {needsRestart ? 'Restart required to apply changes' : 'Available as a custom component in Langflow'}
+              </span>
+            </div>
+            {isPublished && (
+              <button
+                onClick={handleUnpublish}
+                disabled={isPublishing}
+                className="text-sm text-red-600 hover:text-red-700 font-medium"
+              >
+                Unpublish
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Footer Action Buttons */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between gap-4">
+          {/* Save Draft Button */}
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition-colors border border-gray-300 shadow-sm disabled:opacity-50"
+          >
+            {isSaving ? (
+              <>
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Saving...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                Save Draft
+              </>
+            )}
+          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Publish Button */}
+            <button
+              onClick={handlePublish}
+              disabled={isPublishing || isRestarting}
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors shadow-sm disabled:opacity-50"
+            >
+              {isPublishing ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  {isPublished ? 'Publish Updates' : 'Publish'}
+                </>
+              )}
+            </button>
+
+            {/* Create New Workflow Button */}
+            <Link
+              to={canCreateWorkflow ? `/canvas/${agentId}` : '#'}
+              className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-colors shadow-sm ${
+                canCreateWorkflow
+                  ? 'text-white bg-emerald-500 hover:bg-emerald-600'
+                  : 'text-gray-400 bg-gray-100 cursor-not-allowed pointer-events-none'
+              }`}
+              title={!canCreateWorkflow ? 'Publish and restart Langflow first to enable this' : 'Open in Flow Editor'}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
-              Saving...
-            </>
-          ) : (
-            'Save & Preview'
-          )}
-        </button>
+              Create New Workflow
+            </Link>
+          </div>
+        </div>
       </div>
+
+      {/* Restart Modal */}
+      {showRestartModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Agent Published Successfully!</h3>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-6">
+                Your AI agent has been published. To use it in workflows, the AI Canvas needs to restart to load the new component. This will take a few moments.
+              </p>
+
+              <div className="flex items-center gap-3 justify-end">
+                <button
+                  onClick={handleRestartLater}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-700 transition-colors"
+                >
+                  Restart Later
+                </button>
+                <button
+                  onClick={handleRestartLangflow}
+                  disabled={isRestarting}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {isRestarting ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Restarting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Restart Now
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Advanced Editor Modal */}

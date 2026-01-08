@@ -581,7 +581,7 @@ function AgentRow({
           <img
             src={agent.avatar_url}
             alt={agent.name}
-            className="w-full h-full object-contain scale-125"
+            className="w-full h-full object-contain scale-150"
           />
         ) : (
           <Dog className="w-5 h-5 text-white" />
@@ -687,7 +687,7 @@ function AgentCard({
             <img
               src={agent.avatar_url}
               alt={agent.name}
-              className="w-full h-full object-contain scale-125"
+              className="w-full h-full object-contain scale-150"
             />
           ) : (
             <Dog className="w-6 h-6 text-white" />

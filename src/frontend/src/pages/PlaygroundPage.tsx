@@ -159,7 +159,7 @@ export function PlaygroundPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
-              to="/dashboard"
+              to={editAgentComponentId ? `/edit/${editAgentComponentId}` : '/dashboard'}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
