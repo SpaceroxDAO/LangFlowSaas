@@ -24,6 +24,7 @@ from app.schemas.workflow import (
 )
 from app.services.langflow_client import LangflowClient, langflow_client
 from app.services.template_mapping import TemplateMapper, template_mapper
+from app.services.settings_service import SettingsService
 
 
 class WorkflowServiceError(Exception):
@@ -199,6 +200,20 @@ class WorkflowService:
         if not await self.langflow.health_check():
             raise WorkflowServiceError("Langflow isn't responding.")
 
+        # Get user's LLM settings
+        settings_service = SettingsService(self.session)
+        user_settings = await settings_service.get_or_create(user)
+        llm_provider = user_settings.default_llm_provider or "openai"
+        api_key = settings_service.get_api_key(user_settings, llm_provider)
+
+        if not api_key:
+            raise WorkflowServiceError(
+                f"No API key configured for {llm_provider}. "
+                "Please add your API key in Settings."
+            )
+
+        logger.info(f"Creating workflow with LLM provider: {llm_provider}")
+
         # Get the agent component
         component_id_str = str(data.agent_component_id)
         stmt = select(AgentComponent).where(
@@ -211,12 +226,14 @@ class WorkflowService:
         if not component:
             raise WorkflowServiceError("Agent component not found.")
 
-        # Generate flow from component's Q&A
+        # Generate flow from component's Q&A with user's LLM settings
         flow_data, _, _ = self.mapper.create_flow_from_qa(
             who=component.qa_who,
             rules=component.qa_rules,
             tricks=component.qa_tricks,
             template_name="agent_base",
+            llm_provider=llm_provider,
+            api_key=api_key,
         )
 
         workflow_name = data.name or f"{component.name} Workflow"
@@ -275,12 +292,27 @@ class WorkflowService:
         if not await self.langflow.health_check():
             raise WorkflowServiceError("Langflow isn't responding.")
 
+        # Get user's LLM settings
+        settings_service = SettingsService(self.session)
+        user_settings = await settings_service.get_or_create(user)
+        llm_provider = user_settings.default_llm_provider or "openai"
+        api_key = settings_service.get_api_key(user_settings, llm_provider)
+
+        if not api_key:
+            raise WorkflowServiceError(
+                f"No API key configured for {llm_provider}. "
+                "Please add your API key in Settings."
+            )
+
         # Load template
         try:
             flow_data = self.mapper.load_template(data.template_name)
         except Exception as e:
             logger.error(f"Template not found: {data.template_name}")
             raise WorkflowServiceError(f"Template '{data.template_name}' not found.")
+
+        # Inject user's LLM configuration into the template
+        flow_data = self.mapper.inject_llm_config(flow_data, llm_provider, api_key)
 
         workflow_name = data.name or f"{data.template_name.replace('_', ' ').title()} Workflow"
 

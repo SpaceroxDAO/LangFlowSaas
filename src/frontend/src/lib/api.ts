@@ -42,6 +42,10 @@ import type {
   // Dog avatar types
   DogAvatarResponse,
   AvailableJobsResponse,
+  // Langflow types
+  LangflowHealthResponse,
+  LangflowRestartResponse,
+  LangflowLogsResponse,
 } from '@/types'
 
 // Check dev mode from environment
@@ -529,6 +533,28 @@ class ApiClient {
 
   async getRestartStatus(): Promise<RestartStatusResponse> {
     return this.request('/api/v1/mcp-servers/restart-status')
+  }
+
+  // ===========================================================================
+  // Langflow Service (Unified Status & Restart)
+  // ===========================================================================
+
+  async getLangflowStatus(): Promise<RestartStatusResponse> {
+    return this.request('/api/v1/langflow/status')
+  }
+
+  async checkLangflowHealth(): Promise<LangflowHealthResponse> {
+    return this.request('/api/v1/langflow/health')
+  }
+
+  async restartLangflow(): Promise<LangflowRestartResponse> {
+    return this.request<LangflowRestartResponse>('/api/v1/langflow/restart', {
+      method: 'POST',
+    })
+  }
+
+  async getLangflowLogs(lines: number = 50): Promise<LangflowLogsResponse> {
+    return this.request(`/api/v1/langflow/logs?lines=${lines}`)
   }
 }
 

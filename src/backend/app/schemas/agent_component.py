@@ -8,6 +8,59 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class AgentComponentAdvancedConfig(BaseModel):
+    """
+    Advanced configuration for agent components.
+
+    These settings control the LLM behavior when the component is used.
+    All fields have sensible defaults for beginners.
+    """
+
+    # Model Selection
+    model_provider: str = Field(
+        default="OpenAI",
+        description="LLM provider (OpenAI, Anthropic, Google, Azure OpenAI)",
+    )
+    model_name: str = Field(
+        default="gpt-4o-mini",
+        description="Specific model to use",
+    )
+
+    # Generation Settings
+    temperature: float = Field(
+        default=0.7,
+        ge=0,
+        le=2,
+        description="Controls randomness (0=deterministic, 2=creative)",
+    )
+    max_tokens: int = Field(
+        default=4096,
+        ge=1,
+        le=128000,
+        description="Maximum tokens in the response",
+    )
+
+    # Agent Behavior
+    max_iterations: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum agent reasoning steps",
+    )
+    verbose: bool = Field(
+        default=False,
+        description="Show detailed reasoning steps",
+    )
+    handle_parsing_errors: bool = Field(
+        default=True,
+        description="Gracefully handle LLM output parsing errors",
+    )
+    chat_history_enabled: bool = Field(
+        default=True,
+        description="Enable multi-turn conversation memory",
+    )
+
+
 class AgentComponentBase(BaseModel):
     """Base agent component schema."""
 
@@ -109,6 +162,10 @@ class AgentComponentUpdate(BaseModel):
     color: Optional[str] = None
     avatar_url: Optional[str] = None
     is_active: Optional[bool] = None
+    advanced_config: Optional[AgentComponentAdvancedConfig] = Field(
+        None,
+        description="Advanced LLM configuration (model, temperature, etc.)",
+    )
 
 
 class GenerateAvatarRequest(BaseModel):
@@ -145,6 +202,7 @@ class AgentComponentResponse(BaseModel):
     qa_rules: str
     qa_tricks: str
     system_prompt: str
+    advanced_config: Optional[AgentComponentAdvancedConfig] = None
     component_file_path: Optional[str]
     component_class_name: Optional[str]
     is_published: bool

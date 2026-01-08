@@ -6,6 +6,7 @@ into a working AI agent configuration with tools.
 """
 import copy
 import json
+import os
 import random
 import re
 import string
@@ -27,6 +28,31 @@ TOOL_MAPPING = {
     "calculator": "calculator",
     "url_reader": "url_reader",
     "google_maps": "google_maps",
+}
+
+# LLM Provider configurations for the Agent component
+LLM_PROVIDER_CONFIGS = {
+    "openai": {
+        "agent_llm": "OpenAI",
+        "model_name": "gpt-4o-mini",
+        "model_options": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+        "base_url": "https://api.openai.com/v1",
+        "api_key_field": "api_key",
+    },
+    "anthropic": {
+        "agent_llm": "Anthropic",
+        "model_name": "claude-3-haiku-20240307",
+        "model_options": ["claude-3-haiku-20240307", "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"],
+        "base_url": "https://api.anthropic.com",
+        "api_key_field": "api_key",
+    },
+    "google": {
+        "agent_llm": "Google Generative AI",
+        "model_name": "gemini-1.5-flash",
+        "model_options": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+        "base_url": "",
+        "api_key_field": "api_key",
+    },
 }
 
 
@@ -307,6 +333,61 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
         tools_description = "\n".join(tools_description_parts)
         return flow_data, tools_description
 
+    def inject_llm_config(
+        self,
+        flow_data: Dict[str, Any],
+        llm_provider: str,
+        api_key: str,
+    ) -> Dict[str, Any]:
+        """
+        Inject LLM provider configuration into the Agent node.
+
+        Args:
+            flow_data: The flow data to modify
+            llm_provider: The LLM provider name (openai, anthropic, google)
+            api_key: The actual API key to use
+
+        Returns:
+            Modified flow_data
+        """
+        # Normalize provider name
+        provider = llm_provider.lower()
+        config = LLM_PROVIDER_CONFIGS.get(provider)
+
+        if not config:
+            # Default to OpenAI if provider not recognized
+            config = LLM_PROVIDER_CONFIGS["openai"]
+
+        # Find and update the Agent node
+        nodes = flow_data.get("data", {}).get("nodes", [])
+
+        for node in nodes:
+            node_data = node.get("data", {})
+            if node_data.get("type") == "Agent":
+                template_fields = node_data.get("node", {}).get("template", {})
+
+                # Set the LLM provider
+                if "agent_llm" in template_fields:
+                    template_fields["agent_llm"]["value"] = config["agent_llm"]
+
+                # Set the model name
+                if "model_name" in template_fields:
+                    template_fields["model_name"]["value"] = config["model_name"]
+                    template_fields["model_name"]["options"] = config["model_options"]
+
+                # Set the API key
+                if "api_key" in template_fields and api_key:
+                    template_fields["api_key"]["value"] = api_key
+                    template_fields["api_key"]["display_name"] = f"{config['agent_llm']} API Key"
+
+                # Set the base URL if applicable
+                if "base_url" in template_fields and config.get("base_url"):
+                    template_fields["base_url"]["value"] = config["base_url"]
+
+                break
+
+        return flow_data
+
     def inject_system_prompt(
         self,
         template: Dict[str, Any],
@@ -391,6 +472,8 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
         tricks: str = "",
         selected_tools: List[str] = None,
         template_name: str = "agent_base",
+        llm_provider: str = "openai",
+        api_key: str = None,
     ) -> Tuple[Dict[str, Any], str, str]:
         """
         Create a complete flow configuration from Q&A answers.
@@ -401,6 +484,8 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
             tricks: Answer to "What tricks does he know?" (legacy, kept for compatibility)
             selected_tools: List of tool IDs to add (e.g., ['web_search', 'calculator'])
             template_name: Template to use (default: agent_base)
+            llm_provider: LLM provider to use (openai, anthropic, google)
+            api_key: The API key for the LLM provider
 
         Returns:
             Tuple of (flow_data, system_prompt, agent_name)
@@ -412,6 +497,10 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
 
         # Inject system prompt placeholder and get agent node ID
         flow_data, agent_node_id = self.inject_system_prompt(template, "")
+
+        # Inject LLM provider configuration (provider + API key)
+        if api_key:
+            flow_data = self.inject_llm_config(flow_data, llm_provider, api_key)
 
         # Inject tools and get tools description
         flow_data, tools_description = self.inject_tools(

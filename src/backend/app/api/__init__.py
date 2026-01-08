@@ -11,6 +11,7 @@ from app.api.agent_components import router as agent_components_router
 from app.api.workflows import router as workflows_router
 from app.api.mcp_servers import router as mcp_servers_router
 from app.api.avatars import router as avatars_router
+from app.api.langflow import router as langflow_router
 
 __all__ = [
     "health_router",
@@ -23,4 +24,5 @@ __all__ = [
     "workflows_router",
     "mcp_servers_router",
     "avatars_router",
+    "langflow_router",
 ]

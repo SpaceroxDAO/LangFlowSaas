@@ -29,15 +29,17 @@ logger = logging.getLogger(__name__)
 
 PROMPT_VERSION = "v2"  # Bumped for description-based fallback
 
-# Paths
-BASE_DIR = Path(__file__).parent.parent.parent.parent.parent  # LangflowSaaS/
-ASSETS_DIR = BASE_DIR / "assets" / "avatars"
-STATIC_DIR = BASE_DIR / "src" / "backend" / "static" / "avatars"
+# Paths - Use /app as base when running in Docker, otherwise use file-based detection
+APP_DIR = Path(__file__).parent.parent  # /app/app -> /app (in Docker) or src/backend/app -> src/backend (local)
+# STATIC_DIR is where we store generated avatars
+STATIC_DIR = APP_DIR / "static" / "avatars"
+# ASSETS_DIR for base images (also in static for simplicity)
+ASSETS_DIR = APP_DIR / "static" / "assets"
 BASE_IMAGE_PATH = ASSETS_DIR / "dog_base.png"
 
 # Ensure directories exist
-ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # Job → Accessory Mapping

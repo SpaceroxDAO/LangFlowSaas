@@ -24,6 +24,7 @@ from app.api import (
     workflows_router,
     mcp_servers_router,
     avatars_router,
+    langflow_router,
 )
 
 
@@ -83,6 +84,7 @@ app.include_router(agent_components_router, prefix="/api/v1")
 app.include_router(workflows_router, prefix="/api/v1")
 app.include_router(mcp_servers_router, prefix="/api/v1")
 app.include_router(avatars_router, prefix="/api/v1")
+app.include_router(langflow_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
 STATIC_DIR = Path(__file__).parent.parent / "static" / "avatars"

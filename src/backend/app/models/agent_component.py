@@ -7,7 +7,7 @@ in the Langflow sidebar for use in workflows.
 import uuid
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import String, Text, ForeignKey, Boolean
+from sqlalchemy import String, Text, ForeignKey, Boolean, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel
@@ -105,6 +105,15 @@ class AgentComponent(BaseModel):
     system_prompt: Mapped[str] = mapped_column(
         Text,
         nullable=False,
+    )
+
+    # Advanced configuration for published components
+    # Stores model settings, temperature, max_tokens, etc.
+    advanced_config: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True,
+        default=None,
+        comment="Advanced configuration: model_provider, model_name, temperature, max_tokens, etc.",
     )
 
     # Python component file (for sidebar publishing)

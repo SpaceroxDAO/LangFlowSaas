@@ -15,9 +15,11 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.user_settings import UserSettings
 from app.schemas.agent import AgentCreateFromQA, AgentUpdate
 from app.services.langflow_client import LangflowClient, langflow_client
 from app.services.template_mapping import TemplateMapper, template_mapper
+from app.services.settings_service import SettingsService
 
 
 class AgentServiceError(Exception):
@@ -134,6 +136,21 @@ class AgentService:
                 "Charlie's brain isn't responding right now. Please try again in a moment."
             )
 
+        # Get user's settings for LLM provider and API key
+        settings_service = SettingsService(self.session)
+        user_settings = await settings_service.get_or_create(user)
+
+        llm_provider = user_settings.default_llm_provider or "openai"
+        api_key = settings_service.get_api_key(user_settings, llm_provider)
+
+        if not api_key:
+            raise AgentServiceError(
+                f"No API key configured for {llm_provider}. "
+                "Please add your API key in Settings before creating an agent."
+            )
+
+        logger.info(f"Creating agent with LLM provider: {llm_provider}")
+
         # Determine project_id - use provided or get/create default
         project_id = None
         if qa_data.project_id:
@@ -178,13 +195,15 @@ class AgentService:
                 project_id = str(default_project.id)
                 logger.info(f"Created default project for user {user.id}")
 
-        # Generate flow from Q&A with selected tools
+        # Generate flow from Q&A with selected tools and user's LLM settings
         flow_data, system_prompt, auto_name = self.mapper.create_flow_from_qa(
             who=qa_data.who,
             rules=qa_data.rules,
             tricks=qa_data.tricks,
             selected_tools=qa_data.selected_tools,
             template_name=template_name,
+            llm_provider=llm_provider,
+            api_key=api_key,
         )
 
         # Use provided name or auto-generated

@@ -1,14 +1,14 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-07 (Night)
-**Current Phase**: Phase 10 - Avatar V2 & Architecture Fixes
+**Last Updated**: 2026-01-08 (Night)
+**Current Phase**: Phase 11 - Custom Component Generation & E2E Testing
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 10 - Avatar V2 & Architecture Fixes
+**Phase**: Phase 11 - Custom Component Generation & E2E Testing
 **Status**: ✅ Complete
-**Next Milestone**: Production Deploy, Data Migration (Optional)
+**Next Milestone**: Production Deploy
 
 ## Health Indicators
 
@@ -24,16 +24,18 @@
 | Tour System | ✅ Tested | Driver.js integrated and working |
 | Canvas Viewer | ✅ Fixed | Updated for AgentComponent/Workflow architecture |
 | Streaming | ✅ Added | Backend streaming support enabled |
-| Testing | ✅ Complete | 5 E2E tests passing for three-tab + create flow |
+| Testing | ✅ Complete | 15+ E2E tests (chat, publish, multi-turn) |
 | Import/Export | ✅ Added | Agent JSON import/export working |
 | New Data Flow | ✅ Working | CreateAgent → AgentComponent + Workflow |
 | Avatar System | ✅ Complete | Auto-inference, three-tier generation |
+| Custom Components | ✅ Complete | Publish agent → Langflow sidebar working |
+| Chat Playground | ✅ Fixed | Multi-turn conversations, LLM settings fix |
 
 Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
 ## Phase Progress
 
-### Phases 0-9: Complete ✅
+### Phases 0-10: Complete ✅
 
 All previous phases completed:
 - Phase 0-4: MVP Foundation (Q&A wizard, Playground, EditAgent)
@@ -43,6 +45,48 @@ All previous phases completed:
 - Phase 7b: Langflow Integration (Share, Embed, Webhook, API tabs)
 - Phase 8: UI Polish (Langflow-style violet theme, search, pagination, bulk ops)
 - Phase 9: Three-Tab Architecture (Agents, Workflows, MCP Servers)
+- Phase 10: Avatar V2 & Architecture Fixes
+
+### Phase 11: Custom Component Generation & E2E Testing ✅ Complete
+
+**Goal**: Enable publishing agents as custom Langflow components + comprehensive E2E test coverage
+
+#### Completed (2026-01-08)
+
+**Custom Component Generation:**
+- [x] Fixed Docker permissions for backend container (user: "0:0")
+- [x] Installed Docker CLI in backend container for Langflow restart
+- [x] Publish Agent button generates Python component file
+- [x] Component file written to shared `custom_components/my_agents/` volume
+- [x] Restart Langflow button triggers container restart
+- [x] Published components appear in Langflow sidebar under "my_agents" category
+- [x] Unpublish removes component file
+
+**Chat Playground Fixes:**
+- [x] Fixed "Failed to send" error - workflow_service now passes user LLM settings
+- [x] Fixed old workflows with broken Anthropic placeholder keys
+- [x] Synced fixed workflows to Langflow
+- [x] Multi-turn conversations working (verified with 2-turn test)
+
+**E2E Test Suite (Playwright):**
+- [x] `chat-debug.spec.ts` - Debug test for chat functionality
+- [x] `multi-turn-chat.spec.ts` - 2-turn conversation verification
+- [x] `publish-agent.spec.ts` - Full publish flow with Langflow verification:
+  - Create agent via wizard
+  - Navigate to edit page
+  - Click "Publish Agent"
+  - Verify component generated
+  - Click "Restart Langflow"
+  - Navigate to Langflow
+  - Verify "my_agents" category contains published components
+- [x] `comprehensive.spec.ts` - P001 chat message flow test
+
+**Files Created:**
+- `src/backend/Dockerfile` - Added Docker CE CLI installation
+- `docker-compose.yml` - Added `user: "0:0"` to backend service
+- `src/frontend/e2e/tests/publish-agent.spec.ts` - 4 E2E tests for publish flow
+- `src/frontend/e2e/tests/multi-turn-chat.spec.ts` - Multi-turn conversation test
+- `src/frontend/e2e/tests/chat-debug.spec.ts` - Chat debugging test
 
 ### Phase 10: Avatar V2 & Architecture Fixes ✅ Complete
 
@@ -277,7 +321,7 @@ Uncommitted changes (ready to commit):
 
 2. **MCP servers not synced**: Creating MCP server in UI doesn't sync to `.mcp.json`
 
-3. **Publish not implemented**: Agent publish/unpublish buttons exist but don't generate Python components
+3. ~~**Publish not implemented**~~ ✅ **RESOLVED** (Phase 11): Agent publish generates Python components and appears in Langflow sidebar
 
 ## Next Steps (Priority Order)
 

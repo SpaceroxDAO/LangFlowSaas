@@ -4,6 +4,92 @@
 
 ---
 
+## 2026-01-08 - Phase 11: Custom Component Generation & E2E Testing
+
+### Summary
+Implemented full custom component generation pipeline allowing users to publish their agents as reusable Langflow components. Also fixed critical chat issues and added comprehensive E2E test coverage.
+
+### Custom Component Generation
+
+#### Docker Infrastructure Fixes
+**Problem**: Backend container couldn't write to shared `custom_components` volume or restart Langflow.
+
+**Root Cause**:
+1. Backend ran as non-root user (`appuser`) but Docker volume was created with root permissions
+2. Docker CLI wasn't installed in the backend container
+
+**Solution**:
+1. Added `user: "0:0"` to backend service in `docker-compose.yml` (matching Langflow container)
+2. Updated `Dockerfile` to install Docker CE CLI for container restart capability
+
+#### Component Generation Flow
+**Decision**: Generate Python component files that Langflow loads on restart.
+
+**Implementation**:
+1. User clicks "Publish Agent" on Edit page
+2. Backend generates Python file via Jinja2 template
+3. File written to `/app/custom_components/my_agents/{name}_{id}.py`
+4. User clicks "Restart Langflow"
+5. Backend uses Docker CLI to restart Langflow container
+6. Langflow reloads and shows component in sidebar under "my_agents" category
+
+**Files Modified**:
+- `docker-compose.yml` - Added `user: "0:0"` for backend
+- `src/backend/Dockerfile` - Added Docker CE CLI installation
+
+### Chat Playground Fixes
+
+#### "Failed to send" Error Resolution
+**Problem**: Chat messages failed with "Failed to send" error for newly created workflows.
+
+**Root Cause**: `workflow_service.py` wasn't passing user's LLM settings (provider, API key) to the template mapper when creating workflows. Workflows were created with placeholder values like `ANTHROPIC_API_KEY`.
+
+**Solution**:
+1. Updated `workflow_service.py` to fetch user settings and pass `llm_provider` and `api_key` to template mapper
+2. Created script to fix existing workflows with broken config
+3. Synced fixed workflows to Langflow via `langflow_client.update_flow()`
+
+#### Multi-Turn Conversation Verification
+**Decision**: Add explicit E2E tests for multi-turn conversations.
+
+**Implementation**: Created `multi-turn-chat.spec.ts` that:
+1. Creates a new agent
+2. Sends first message, verifies response
+3. Sends second message, verifies different response
+4. Confirms both turns succeed without errors
+
+### E2E Test Suite
+
+#### Test Files Created
+| File | Purpose | Tests |
+|------|---------|-------|
+| `publish-agent.spec.ts` | Full publish flow with Langflow verification | 4 tests |
+| `multi-turn-chat.spec.ts` | 2-turn conversation verification | 2 tests |
+| `chat-debug.spec.ts` | Chat functionality debugging | 2 tests |
+| `comprehensive.spec.ts` | P001 chat message flow | 1 test |
+
+#### Publish Agent Test Flow
+The most comprehensive test (`publish-agent.spec.ts`) verifies:
+1. ✅ Create agent via wizard
+2. ✅ Navigate to edit page
+3. ✅ Click "Publish Agent" button
+4. ✅ Verify component file generated
+5. ✅ Click "Restart Langflow" button
+6. ✅ Wait for Langflow to restart (poll health endpoint)
+7. ✅ Navigate to Langflow directly (port 7860)
+8. ✅ Click "New Flow" → "Blank Flow"
+9. ✅ Verify "my_agents" category visible in sidebar
+10. ✅ Verify published components listed
+
+### Testing Verified
+- ✅ 4/4 publish-agent tests passing
+- ✅ 2/2 multi-turn-chat tests passing
+- ✅ Chat playground working with correct LLM settings
+- ✅ Custom components appear in Langflow sidebar
+- ✅ Langflow restart triggered from UI
+
+---
+
 ## 2026-01-07 - Phase 10: Avatar V2 & Architecture Fixes
 
 ### Summary

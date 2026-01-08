@@ -140,6 +140,29 @@ class SettingsService:
 
         return settings
 
+    def get_api_key(self, settings: UserSettings, provider: str) -> Optional[str]:
+        """
+        Get the actual API key for a provider.
+
+        Args:
+            settings: User settings
+            provider: LLM provider name (e.g., 'openai', 'anthropic')
+
+        Returns:
+            The API key string or None if not set
+        """
+        if not settings.api_keys_encrypted:
+            return None
+
+        # Normalize provider name to lowercase
+        provider = provider.lower()
+        key_data = settings.api_keys_encrypted.get(provider)
+
+        if isinstance(key_data, dict):
+            return key_data.get("key")
+
+        return None
+
     def get_api_keys_list(self, settings: UserSettings) -> List[ApiKeyResponse]:
         """
         Get list of API keys (masked) for response.

@@ -164,6 +164,17 @@ export interface TourStatus {
 // Agent Component Types (Reusable AI Personalities)
 // =============================================================================
 
+export interface AgentComponentAdvancedConfig {
+  model_provider: string
+  model_name: string
+  temperature: number
+  max_tokens: number
+  max_iterations: number
+  verbose: boolean
+  handle_parsing_errors: boolean
+  chat_history_enabled: boolean
+}
+
 export interface AgentComponent {
   id: string
   project_id?: string
@@ -176,6 +187,7 @@ export interface AgentComponent {
   qa_rules: string
   qa_tricks: string
   system_prompt: string
+  advanced_config?: AgentComponentAdvancedConfig
   component_file_path?: string
   component_class_name?: string
   is_published: boolean
@@ -206,6 +218,7 @@ export interface AgentComponentUpdate {
   qa_rules?: string
   qa_tricks?: string
   is_active?: boolean
+  advanced_config?: Partial<AgentComponentAdvancedConfig>
 }
 
 export interface AgentComponentListResponse {
@@ -389,6 +402,24 @@ export interface RestartStatusResponse {
   is_restarting: boolean
   last_restart?: string
   langflow_healthy: boolean
+}
+
+// =============================================================================
+// Langflow Service Types
+// =============================================================================
+
+export interface LangflowHealthResponse {
+  healthy: boolean
+  message: string
+}
+
+export interface LangflowRestartResponse {
+  success: boolean
+  message: string
+}
+
+export interface LangflowLogsResponse {
+  logs: string
 }
 
 // =============================================================================
