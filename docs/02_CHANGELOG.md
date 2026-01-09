@@ -4,6 +4,116 @@
 
 ---
 
+## 2026-01-09 - Configuration Management & Local Dev Nginx Setup
+
+### Summary
+Fixed critical configuration management issues where hardcoded values caused Docker container name mismatches. Implemented a single source of truth pattern and created a dedicated local development Docker Compose setup for nginx-proxied Langflow.
+
+### Problems Discovered & Fixed
+
+#### 1. Langflow Container Restart Failed
+**Problem**: Clicking "Restart Langflow" showed error: `No such container: langflow`
+
+**Root Cause**: Container name mismatch
+- `docker-compose.yml` defined: `teachcharlie-langflow`
+- `langflow_service.py` hardcoded: `langflow`
+
+**Solution**: Single source of truth pattern
+```
+.env (LANGFLOW_CONTAINER_NAME) → config.py → services
+```
+
+#### 2. Canvas Not Loading in Local Dev
+**Problem**: Canvas iframe showed broken image/nothing after publishing agent
+
+**Root Cause**:
+- nginx container was in restart loop (depends_on frontend, which doesn't run in Docker for local dev)
+- Frontend URL defaulted to port 7861 (nginx) but nginx wasn't working
+
+**Solution**: Created dedicated `docker-compose.dev.yml` for local development that only runs:
+- PostgreSQL (database)
+- Langflow (AI engine)
+- nginx (Langflow proxy with CSS injection)
+
+Frontend and backend run directly on host machine.
+
+### Implementation Details
+
+#### Single Source of Truth Pattern
+| Setting | .env.example | config.py | Usage |
+|---------|-------------|-----------|-------|
+| `LANGFLOW_CONTAINER_NAME` | Line 85 | `langflow_container_name` | `langflow_service.py` |
+| `LANGFLOW_API_URL` | Line 81 | `langflow_api_url` | Health checks |
+
+#### Startup Validation
+Added `validate_container_config()` method to `LangflowService` that:
+1. Checks if Docker is available
+2. Verifies configured container exists
+3. Logs clear error if misconfigured
+
+```python
+# app/main.py - Called at startup
+langflow_validator = LangflowService(session=None)
+langflow_validator.validate_container_config()
+```
+
+### Files Created
+| File | Purpose |
+|------|---------|
+| `nginx/nginx.dev.conf` | Simplified nginx config for local dev (Langflow proxy only) |
+| `docker-compose.dev.yml` | Local dev compose (postgres + langflow + nginx) |
+
+### Files Modified
+| File | Change |
+|------|--------|
+| `.env.example` | Added LANGFLOW_CONTAINER_NAME, updated VITE_LANGFLOW_URL docs |
+| `src/backend/app/config.py` | Added langflow_container_name setting |
+| `src/backend/app/services/langflow_service.py` | Refactored to use centralized settings |
+| `src/backend/app/main.py` | Added startup validation |
+| `docker-compose.yml` | Container name from env var, removed obsolete version |
+| `src/frontend/src/components/LangflowCanvasViewer.tsx` | Default to port 7861 (nginx) |
+
+### Local Development Architecture
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Host Machine                          │
+│  ┌──────────────┐          ┌──────────────┐             │
+│  │   Frontend   │          │   Backend    │             │
+│  │ localhost:3001│         │ localhost:8000│            │
+│  └──────────────┘          └──────────────┘             │
+└─────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│                Docker (docker-compose.dev.yml)          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   postgres   │  │   langflow   │  │    nginx     │  │
+│  │   :5432      │  │   :7860      │◄─│   :7861      │  │
+│  └──────────────┘  └──────────────┘  │ (CSS inject) │  │
+│                                       └──────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Usage
+```bash
+# Start local dev services
+docker-compose -f docker-compose.dev.yml up -d
+
+# Run frontend on host
+cd src/frontend && npm run dev
+
+# Run backend on host
+cd src/backend && uvicorn app.main:app --reload
+
+# Canvas URL (always via nginx)
+http://localhost:7861/flow/{flowId}
+```
+
+### Key Principle
+**nginx is ALWAYS required** for Langflow canvas viewing because it handles CSS/JS injection for white-labeling. Never bypass nginx (port 7860) for end-user views.
+
+---
+
 ## 2026-01-08 - Nginx Proxy Fix & White-Label Overlay System
 
 ### Summary

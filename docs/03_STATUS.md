@@ -1,12 +1,12 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-08 (Afternoon)
-**Current Phase**: Phase 11c - Langflow Proxy Fix & White-Label System
+**Last Updated**: 2026-01-09 (Afternoon)
+**Current Phase**: Phase 11d - Configuration Management & Local Dev Nginx Setup
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 11c - Langflow Proxy Fix & White-Label System
+**Phase**: Phase 11d - Configuration Management & Local Dev Nginx Setup
 **Status**: ✅ Complete
 **Next Milestone**: Production Deploy
 
@@ -46,6 +46,65 @@ All previous phases completed:
 - Phase 8: UI Polish (Langflow-style violet theme, search, pagination, bulk ops)
 - Phase 9: Three-Tab Architecture (Agents, Workflows, MCP Servers)
 - Phase 10: Avatar V2 & Architecture Fixes
+
+### Phase 11d: Configuration Management & Local Dev Nginx Setup ✅ Complete
+
+**Goal**: Fix configuration management issues and enable nginx proxy for local development
+
+#### Completed (2026-01-09 Afternoon)
+
+**Configuration Management Fixes:**
+- [x] Fixed Langflow container name mismatch (`langflow` vs `teachcharlie-langflow`)
+- [x] Created single source of truth pattern: `.env` → `config.py` → services
+- [x] Added `LANGFLOW_CONTAINER_NAME` to `.env.example` and `config.py`
+- [x] Updated `docker-compose.yml` to use `${LANGFLOW_CONTAINER_NAME:-teachcharlie-langflow}`
+- [x] Updated `langflow_service.py` to use centralized config instead of hardcoded values
+- [x] Added startup validation to check container exists (warns early on misconfiguration)
+
+**Local Development Nginx Setup:**
+- [x] Created `nginx/nginx.dev.conf` - simplified nginx config for local dev (Langflow proxy only)
+- [x] Created `docker-compose.dev.yml` - lightweight compose for local dev (postgres + langflow + nginx)
+- [x] nginx on port 7861 handles CSS/JS injection for white-label overlay
+- [x] Frontend/backend run on host machine, only Docker services proxied
+
+**Frontend Langflow URL Fix:**
+- [x] Updated `LangflowCanvasViewer.tsx` to default to port 7861 (nginx)
+- [x] Canvas always goes through nginx for CSS injection (never direct to 7860)
+
+**Documentation:**
+- [x] Updated `.env.example` with local dev instructions
+- [x] Documented configuration dependencies in CLAUDE.md
+
+**Files Created:**
+- `nginx/nginx.dev.conf` - Local dev nginx config
+- `docker-compose.dev.yml` - Local dev Docker Compose
+
+**Files Modified:**
+- `.env.example` - Added LANGFLOW_CONTAINER_NAME, updated VITE_LANGFLOW_URL docs
+- `src/backend/app/config.py` - Added langflow_container_name setting
+- `src/backend/app/services/langflow_service.py` - Refactored to use settings
+- `src/backend/app/main.py` - Added startup validation
+- `docker-compose.yml` - Container name from env var, removed obsolete version
+- `src/frontend/src/components/LangflowCanvasViewer.tsx` - Default to nginx port
+
+**Local Dev Commands:**
+```bash
+# Start services for local development
+docker-compose -f docker-compose.dev.yml up -d
+
+# Then run frontend and backend on host
+cd src/frontend && npm run dev
+cd src/backend && uvicorn app.main:app --reload
+```
+
+**Architecture (Local Dev):**
+- Frontend: `localhost:3001` (host)
+- Backend: `localhost:8000` (host)
+- Langflow (via nginx): `localhost:7861` (Docker, with CSS injection)
+- Langflow (direct): `localhost:7860` (Docker, no CSS)
+- PostgreSQL: `localhost:5432` (Docker)
+
+---
 
 ### Phase 11c: Langflow Proxy Fix & White-Label System ✅ Complete
 
@@ -418,7 +477,7 @@ All changes committed and pushed to origin/main.
 
 ---
 
-**Status Summary**: ✅ Green - Phase 11c complete. Langflow proxy connection error fixed (nginx exact match for `/health`). White-label CSS/JS system working without blocking functional UI. All dialogs (Playground, Logs, Settings) operational. Ready for production deploy.
+**Status Summary**: ✅ Green - Phase 11d complete. Configuration management improved with single source of truth pattern. Local dev nginx setup working for CSS injection. All canvas views go through nginx proxy. Ready for production deploy.
 
 ---
 
@@ -428,8 +487,8 @@ All changes committed and pushed to origin/main.
 |----------|---------|--------------|
 | `00_PROJECT_SPEC.md` | Product requirements, personas | 2026-01-03 |
 | `01_ARCHITECTURE.md` | Technical architecture, DB schema | 2026-01-03 |
-| `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-08 |
-| `03_STATUS.md` | **This file** - Current status | 2026-01-08 |
+| `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-09 |
+| `03_STATUS.md` | **This file** - Current status | 2026-01-09 |
 | `04_DEVELOPMENT_PLAN.md` | Original development plan | 2026-01-03 |
 | `05_EDUCATIONAL_OVERLAY_RESEARCH.md` | UX patterns research | 2026-01-05 |
 | `06_PROGRESSIVE_LEARNING_CURRICULUM.md` | 10-phase curriculum | 2026-01-05 |

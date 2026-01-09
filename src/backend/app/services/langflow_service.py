@@ -7,15 +7,14 @@ This service provides:
 3. Docker-based restart functionality
 """
 import logging
-import os
 import subprocess
 import uuid
-from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.agent_component import AgentComponent
 from app.models.mcp_server import MCPServer
 from app.schemas.mcp_server import PendingChange, RestartStatusResponse
@@ -33,16 +32,15 @@ class LangflowService:
     Service for managing Langflow integration.
 
     Provides unified status tracking, health checks, and restart functionality.
+
+    Configuration is loaded from app.config.settings (single source of truth).
     """
-
-    # Docker container name for Langflow (from docker-compose)
-    LANGFLOW_CONTAINER_NAME = os.environ.get("LANGFLOW_CONTAINER_NAME", "langflow")
-
-    # Langflow health check URL
-    LANGFLOW_HEALTH_URL = os.environ.get("LANGFLOW_URL", "http://localhost:7860") + "/health"
 
     def __init__(self, session: AsyncSession):
         self.session = session
+        # Load from centralized config (see config.py and .env.example)
+        self.container_name = settings.langflow_container_name
+        self.health_url = f"{settings.langflow_api_url}/health"
 
     async def get_pending_component_changes(
         self,
@@ -141,7 +139,7 @@ class LangflowService:
         try:
             import httpx
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(self.LANGFLOW_HEALTH_URL)
+                response = await client.get(self.health_url)
                 return response.status_code == 200
         except Exception as e:
             logger.warning(f"Langflow health check failed: {e}")
@@ -157,8 +155,6 @@ class LangflowService:
         Returns:
             dict with status and message
         """
-        container_name = self.LANGFLOW_CONTAINER_NAME
-
         try:
             # Check if running in Docker environment
             if not self._is_docker_available():
@@ -169,10 +165,10 @@ class LangflowService:
                 }
 
             # Restart the Langflow container
-            logger.info(f"Restarting Langflow container: {container_name}")
+            logger.info(f"Restarting Langflow container: {self.container_name}")
 
             result = subprocess.run(
-                ["docker", "restart", container_name],
+                ["docker", "restart", self.container_name],
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -223,17 +219,54 @@ class LangflowService:
         except Exception:
             return False
 
+    def validate_container_config(self) -> bool:
+        """
+        Validate that the configured Langflow container exists.
+
+        Call this at startup to catch configuration mismatches early.
+        Returns True if valid, False if container doesn't exist.
+        Logs appropriate warnings/errors.
+        """
+        if not self._is_docker_available():
+            logger.info(f"Docker not available - skipping container validation for '{self.container_name}'")
+            return True  # Don't fail if Docker isn't available (dev mode)
+
+        try:
+            # Check if container exists (running or stopped)
+            result = subprocess.run(
+                ["docker", "ps", "-a", "--filter", f"name=^{self.container_name}$", "--format", "{{.Names}}"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+
+            container_exists = self.container_name in result.stdout.strip()
+
+            if not container_exists:
+                logger.error(
+                    f"❌ CONFIGURATION ERROR: Langflow container '{self.container_name}' not found!\n"
+                    f"   Check that LANGFLOW_CONTAINER_NAME in .env matches docker-compose.yml container_name.\n"
+                    f"   Expected: '{self.container_name}'\n"
+                    f"   Available containers: {result.stdout.strip() or '(none)'}"
+                )
+                return False
+
+            logger.info(f"✅ Langflow container '{self.container_name}' found")
+            return True
+
+        except Exception as e:
+            logger.warning(f"Could not validate container config: {e}")
+            return True  # Don't fail on validation errors
+
     async def get_langflow_logs(self, lines: int = 50) -> str:
         """
         Get recent Langflow container logs.
 
         Useful for debugging component loading issues.
         """
-        container_name = self.LANGFLOW_CONTAINER_NAME
-
         try:
             result = subprocess.run(
-                ["docker", "logs", "--tail", str(lines), container_name],
+                ["docker", "logs", "--tail", str(lines), self.container_name],
                 capture_output=True,
                 text=True,
                 timeout=10,

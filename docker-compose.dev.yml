@@ -1,0 +1,99 @@
+# Teach Charlie AI - Local Development Docker Compose
+#
+# This file is for LOCAL DEVELOPMENT where:
+#   - Frontend runs on host: cd src/frontend && npm run dev (port 3001)
+#   - Backend runs on host: cd src/backend && uvicorn app.main:app (port 8000)
+#   - Docker runs: postgres, langflow, nginx (langflow proxy only)
+#
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up -d
+#
+# Access:
+#   - Frontend: http://localhost:3001 (runs on host)
+#   - Backend API: http://localhost:8000 (runs on host)
+#   - Langflow (via nginx): http://localhost:7861 (Docker, with CSS injection)
+#   - Langflow (direct): http://localhost:7860 (Docker, no CSS injection)
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: teachcharlie-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-teachcharlie}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teachcharlie-network
+
+  # Langflow AI Agent Engine
+  langflow:
+    image: langflowai/langflow:latest
+    container_name: ${LANGFLOW_CONTAINER_NAME:-teachcharlie-langflow}
+    user: "0:0"
+    environment:
+      LANGFLOW_DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/langflow
+      LANGFLOW_HOST: 0.0.0.0
+      LANGFLOW_PORT: 7860
+      LANGFLOW_WORKERS: 1
+      LANGFLOW_CONFIG_DIR: /app/langflow
+      LANGFLOW_COMPONENTS_PATH: /app/custom_components
+      LANGFLOW_AUTO_LOGIN: "true"
+      LANGFLOW_SKIP_AUTH_AUTO_LOGIN: "true"
+      LANGFLOW_API_KEY: ${LANGFLOW_API_KEY:-dev-langflow-api-key}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LANGFLOW_SECRET_KEY: ${LANGFLOW_SECRET_KEY:-dev-secret-key-change-in-production}
+      LANGFLOW_BACKEND_ONLY: "false"
+    ports:
+      - "7860:7860"
+    volumes:
+      - langflow_data:/app/langflow
+      - custom_components:/app/custom_components
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - teachcharlie-network
+
+  # nginx - ONLY for Langflow proxy with CSS injection
+  # Does NOT proxy frontend/backend (they run on host in local dev)
+  nginx:
+    image: nginx:alpine
+    container_name: teachcharlie-nginx
+    ports:
+      - "7861:7861"  # Langflow with CSS/JS injection
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/overlay:/usr/share/nginx/html/overlay:ro
+    depends_on:
+      langflow:
+        condition: service_healthy
+    networks:
+      - teachcharlie-network
+    restart: unless-stopped
+
+networks:
+  teachcharlie-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  langflow_data:
+  custom_components:

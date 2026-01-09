@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     # Langflow
     langflow_api_url: str = "http://localhost:7860"
     langflow_api_key: str = "dev-langflow-api-key"
+    langflow_container_name: str = "teachcharlie-langflow"  # Must match docker-compose.yml
 
     # Clerk Authentication
     clerk_publishable_key: str = ""
@@ -55,6 +56,10 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_per_minute: int = 60
     rate_limit_per_hour: int = 1000
+
+    # Encryption key for sensitive data (API keys, credentials)
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    encryption_key: str = ""
 
     @property
     def authorized_parties_list(self) -> List[str]:

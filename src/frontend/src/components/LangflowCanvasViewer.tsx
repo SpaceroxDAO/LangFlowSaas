@@ -81,10 +81,10 @@ export function LangflowCanvasViewer({
   const currentLevel = level; // Use prop directly until complexity selector is added
   const { completeTour } = useTour();
 
-  // Langflow is accessed via nginx on port 7861 with CSS/JS injection
-  // We use the FULL URL (including protocol and port) as recommended
-  // This works because Langflow doesn't support subpath deployment
-  // CSS/JS injection is handled server-side by nginx sub_filter
+  // Langflow URL configuration:
+  // ALWAYS use http://localhost:7861 (nginx) for CSS injection/white-label overlay
+  // The nginx proxy handles CSS/JS injection to hide Langflow UI elements
+  // Use docker-compose.dev.yml to run nginx + langflow for local dev
   const langflowUrl = import.meta.env.VITE_LANGFLOW_URL || 'http://localhost:7861';
   const canvasUrl = `${langflowUrl}/flow/${flowId}`;
 

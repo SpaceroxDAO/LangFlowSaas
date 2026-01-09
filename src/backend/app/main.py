@@ -25,6 +25,7 @@ from app.api import (
     mcp_servers_router,
     avatars_router,
     langflow_router,
+    files_router,
 )
 
 
@@ -36,6 +37,12 @@ async def lifespan(app: FastAPI):
     """
     # Startup: Validate environment configuration
     settings.validate_startup()
+
+    # Validate Langflow container configuration (warns if misconfigured)
+    # This catches container name mismatches early at startup
+    from app.services.langflow_service import LangflowService
+    langflow_validator = LangflowService(session=None)  # No DB needed for validation
+    langflow_validator.validate_container_config()
 
     # In development, create tables automatically
     # In production, use Alembic migrations
@@ -85,6 +92,7 @@ app.include_router(workflows_router, prefix="/api/v1")
 app.include_router(mcp_servers_router, prefix="/api/v1")
 app.include_router(avatars_router, prefix="/api/v1")
 app.include_router(langflow_router, prefix="/api/v1")
+app.include_router(files_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
 # Path(__file__).parent = /app/app (where main.py is located)
