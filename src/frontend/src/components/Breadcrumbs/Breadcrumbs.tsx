@@ -203,23 +203,23 @@ export function Breadcrumbs() {
   if (items.length <= 1) return null
 
   return (
-    <nav aria-label="Breadcrumb" className="px-4 py-2">
-      <ol className="flex items-center gap-1 text-sm">
+    <nav aria-label="Breadcrumb" className="overflow-hidden">
+      <ol className="flex items-center gap-1.5 text-sm truncate">
         {items.map((item, index) => (
           <Fragment key={item.key}>
             {index > 0 && <ChevronRightIcon />}
-            <li className="flex items-center">
+            <li className="flex items-center shrink-0">
               {item.to && !item.isCurrent ? (
                 <Link
                   to={item.to}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  className="text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
                   aria-current={item.isCurrent ? 'page' : undefined}
-                  className={item.isCurrent ? 'text-gray-900 font-medium' : 'text-gray-500'}
+                  className={`whitespace-nowrap ${item.isCurrent ? 'text-gray-900 font-medium' : 'text-gray-500'}`}
                 >
                   {item.label}
                 </span>

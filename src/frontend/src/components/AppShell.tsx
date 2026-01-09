@@ -66,14 +66,19 @@ export function AppShell({ children }: AppShellProps) {
       <DevModeBanner />
 
       {/* Top header bar - full width */}
-      <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0">
+      <header className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0">
         {/* Left side - Logo */}
-        <Link to="/dashboard" className="text-gray-900 hover:text-gray-600 transition-colors">
+        <Link to="/dashboard" className="text-gray-900 hover:text-gray-600 transition-colors shrink-0">
           <Dog className="w-6 h-6" />
         </Link>
 
+        {/* Breadcrumb navigation - in header, after logo */}
+        <div className="flex-1 ml-4 min-w-0">
+          <Breadcrumbs />
+        </div>
+
         {/* Right side actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           {/* Dev mode only: Link to AI Canvas (Langflow) */}
           {isDevMode && (
             <a
@@ -99,16 +104,8 @@ export function AppShell({ children }: AppShellProps) {
         <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
 
         {/* Main content area */}
-        <main className="flex-1 overflow-auto bg-white flex flex-col">
-          {/* Breadcrumb navigation */}
-          <div className="border-b border-gray-100 bg-gray-50/50 shrink-0">
-            <Breadcrumbs />
-          </div>
-
-          {/* Page content */}
-          <div className="flex-1 overflow-auto">
-            {children}
-          </div>
+        <main className="flex-1 overflow-auto bg-white">
+          {children}
         </main>
       </div>
     </div>

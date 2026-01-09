@@ -45,7 +45,7 @@ export function WizardLayout({
 
   return (
     <div
-      className="min-h-[calc(100vh-120px)] flex items-center justify-center px-4 py-8"
+      className="min-h-full flex items-center justify-center px-4 py-8"
       style={{
         backgroundColor: '#fafafa',
         backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',

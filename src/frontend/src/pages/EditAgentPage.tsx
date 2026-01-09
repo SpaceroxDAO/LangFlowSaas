@@ -353,7 +353,7 @@ export function EditAgentPage() {
   if (isLoading) {
     return (
       <div
-        className="min-h-[calc(100vh-64px)] flex items-center justify-center"
+        className="min-h-full flex items-center justify-center"
         style={{
           backgroundColor: '#fafafa',
           backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
@@ -375,7 +375,7 @@ export function EditAgentPage() {
   if (loadError) {
     return (
       <div
-        className="min-h-[calc(100vh-64px)] flex items-center justify-center"
+        className="min-h-full flex items-center justify-center"
         style={{
           backgroundColor: '#fafafa',
           backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
@@ -406,7 +406,7 @@ export function EditAgentPage() {
 
   return (
     <div
-      className="min-h-[calc(100vh-64px)]"
+      className="min-h-full"
       style={{
         backgroundColor: '#fafafa',
         backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
