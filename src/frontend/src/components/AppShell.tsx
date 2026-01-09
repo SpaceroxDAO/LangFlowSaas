@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { UserButton } from '@clerk/clerk-react'
 import { Dog } from 'lucide-react'
 import { Sidebar } from './Sidebar'
+import { Breadcrumbs } from './Breadcrumbs'
 import { isDevMode, DevUserButton } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 
@@ -98,8 +99,16 @@ export function AppShell({ children }: AppShellProps) {
         <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
 
         {/* Main content area */}
-        <main className="flex-1 overflow-auto bg-white">
-          {children}
+        <main className="flex-1 overflow-auto bg-white flex flex-col">
+          {/* Breadcrumb navigation */}
+          <div className="border-b border-gray-100 bg-gray-50/50 shrink-0">
+            <Breadcrumbs />
+          </div>
+
+          {/* Page content */}
+          <div className="flex-1 overflow-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
