@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Dog, GitBranch, Server } from 'lucide-react'
 import { api } from '@/lib/api'
 import { ShareDeployModal } from '@/components/ShareDeployModal'
-import { WorkflowsTab, CreateWorkflowModal } from '@/components/WorkflowsTab'
+import { WorkflowsTab } from '@/components/WorkflowsTab'
+import { TemplateGalleryModal } from '@/components/TemplateGallery'
 import { MCPServersTab, CreateMCPServerModal } from '@/components/MCPServersTab'
 import type { AgentComponent, ProjectTab } from '@/types'
 
@@ -525,16 +526,12 @@ export function ProjectDetailPage() {
         />
       )}
 
-      {/* Create Workflow Modal */}
-      {createWorkflowModal && projectId && (
-        <CreateWorkflowModal
-          projectId={projectId}
-          agentComponents={[]}
+      {/* Template Gallery Modal */}
+      {projectId && (
+        <TemplateGalleryModal
+          isOpen={createWorkflowModal}
           onClose={() => setCreateWorkflowModal(false)}
-          onSuccess={() => {
-            setCreateWorkflowModal(false)
-            queryClient.invalidateQueries({ queryKey: ['workflows', projectId] })
-          }}
+          projectId={projectId}
         />
       )}
 

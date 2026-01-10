@@ -1,41 +1,27 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-// api will be used when backend is implemented
-// import { api } from '@/lib/api'
-
-interface UserFile {
-  id: string
-  name: string
-  size: number
-  type: string
-  created_at: string
-  url?: string
-}
+import { api } from '@/lib/api'
+import type { UserFile } from '@/types'
 
 export function FilesPage() {
   const queryClient = useQueryClient()
   const [isDragging, setIsDragging] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // Fetch files - placeholder that returns empty list until backend is implemented
-  const { data: files = [], isLoading } = useQuery({
+  // Fetch files from backend API
+  const { data: filesResponse, isLoading } = useQuery({
     queryKey: ['files'],
-    queryFn: async (): Promise<UserFile[]> => {
-      // TODO: Implement backend API
-      // return api.listFiles()
-      return []
+    queryFn: async () => {
+      return api.listFiles()
     },
   })
 
-  // Upload mutation - placeholder
+  const files = filesResponse?.files || []
+
+  // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      // TODO: Implement backend file upload
-      // const formData = new FormData()
-      // formData.append('file', file)
-      // return api.uploadFile(formData)
-      console.log('Would upload:', file.name)
-      throw new Error('File upload not yet implemented')
+      return api.uploadFile(file)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['files'] })
@@ -46,13 +32,10 @@ export function FilesPage() {
     },
   })
 
-  // Delete mutation - placeholder
+  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (fileId: string) => {
-      // TODO: Implement backend file delete
-      // return api.deleteFile(fileId)
-      console.log('Would delete:', fileId)
-      throw new Error('File delete not yet implemented')
+      return api.deleteFile(fileId)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['files'] })
@@ -102,6 +85,9 @@ export function FilesPage() {
     if (type.includes('pdf')) return '📄'
     if (type.includes('spreadsheet') || type.includes('excel')) return '📊'
     if (type.includes('document') || type.includes('word')) return '📝'
+    if (type.includes('json')) return '📋'
+    if (type.includes('csv')) return '📊'
+    if (type.includes('text')) return '📝'
     return '📁'
   }
 
@@ -142,12 +128,12 @@ export function FilesPage() {
               type="file"
               className="hidden"
               onChange={handleFileSelect}
-              accept="*/*"
+              accept=".pdf,.txt,.doc,.docx,.csv,.json,.md,.xlsx,.xls"
             />
           </label>
         </p>
         <p className="text-sm text-gray-400">
-          Supported formats: PDF, TXT, DOC, DOCX, CSV, JSON
+          Supported formats: PDF, TXT, DOC, DOCX, CSV, JSON, MD, XLSX (max 10MB)
         </p>
 
         {uploadMutation.isPending && (
@@ -162,27 +148,6 @@ export function FilesPage() {
             {uploadError}
           </div>
         )}
-      </div>
-
-      {/* Coming Soon Notice */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
-        <div className="flex items-start gap-3">
-          <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <div>
-            <p className="font-medium text-yellow-800">Coming Soon</p>
-            <p className="text-sm text-yellow-700 mt-1">
-              File storage is being developed. Soon you'll be able to upload documents
-              that your agents can reference and use for answering questions.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Files List */}
@@ -207,7 +172,7 @@ export function FilesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {files.map((file) => (
+          {files.map((file: UserFile) => (
             <div
               key={file.id}
               className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"

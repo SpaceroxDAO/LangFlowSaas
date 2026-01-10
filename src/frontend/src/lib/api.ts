@@ -46,6 +46,16 @@ import type {
   LangflowHealthResponse,
   LangflowRestartResponse,
   LangflowLogsResponse,
+  // File types
+  UserFile,
+  FileListResponse,
+  StorageStatsResponse,
+  AllowedTypesResponse,
+  // Knowledge source types
+  KnowledgeSource,
+  KnowledgeSourceCreateFromURL,
+  KnowledgeSourceCreateFromText,
+  KnowledgeSourceListResponse,
 } from '@/types'
 
 // Check dev mode from environment
@@ -386,6 +396,22 @@ class ApiClient {
   // Workflows (Langflow Flows)
   // ===========================================================================
 
+  async getWorkflowTemplates(): Promise<TemplatesResponse> {
+    return this.request<TemplatesResponse>('/api/v1/workflows/templates')
+  }
+
+  async createWorkflowFromLangflowData(data: {
+    name: string
+    flow_data: Record<string, unknown>
+    project_id?: string
+    description?: string
+  }): Promise<Workflow> {
+    return this.request<Workflow>('/api/v1/workflows', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async createWorkflow(data: WorkflowCreate): Promise<Workflow> {
     return this.request<Workflow>('/api/v1/workflows', {
       method: 'POST',
@@ -456,6 +482,19 @@ class ApiClient {
 
   async listWorkflowConversations(workflowId: string): Promise<WorkflowConversationsResponse> {
     return this.request(`/api/v1/workflows/${workflowId}/conversations`)
+  }
+
+  async getConversationMessages(workflowId: string, conversationId: string): Promise<{
+    messages: Array<{
+      id: string
+      role: 'user' | 'assistant'
+      content: string
+      timestamp: string
+    }>
+    conversation_id: string
+    total: number
+  }> {
+    return this.request(`/api/v1/workflows/${workflowId}/conversations/${conversationId}/messages`)
   }
 
   // ===========================================================================
@@ -555,6 +594,135 @@ class ApiClient {
 
   async getLangflowLogs(lines: number = 50): Promise<LangflowLogsResponse> {
     return this.request(`/api/v1/langflow/logs?lines=${lines}`)
+  }
+
+  // ===========================================================================
+  // Files (User File Storage)
+  // ===========================================================================
+
+  async listFiles(
+    projectId?: string,
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<FileListResponse> {
+    const params = new URLSearchParams()
+    if (projectId) params.append('project_id', projectId)
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    return this.request(`/api/v1/files?${params}`)
+  }
+
+  async uploadFile(file: File, projectId?: string, description?: string): Promise<UserFile> {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (projectId) formData.append('project_id', projectId)
+    if (description) formData.append('description', description)
+
+    // Use fetch directly for multipart/form-data (don't set Content-Type header)
+    const headers: Record<string, string> = {}
+
+    if (!isDevMode && this.getToken) {
+      const token = await this.getToken()
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/v1/files`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  async getFile(fileId: string): Promise<UserFile> {
+    return this.request(`/api/v1/files/${fileId}`)
+  }
+
+  async deleteFile(fileId: string): Promise<void> {
+    return this.request(`/api/v1/files/${fileId}`, { method: 'DELETE' })
+  }
+
+  async getStorageStats(): Promise<StorageStatsResponse> {
+    return this.request('/api/v1/files/stats/storage')
+  }
+
+  async getAllowedFileTypes(): Promise<AllowedTypesResponse> {
+    return this.request('/api/v1/files/info/allowed-types')
+  }
+
+  // ===========================================================================
+  // Knowledge Sources (RAG)
+  // ===========================================================================
+
+  async listKnowledgeSources(
+    projectId?: string,
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<KnowledgeSourceListResponse> {
+    const params = new URLSearchParams()
+    if (projectId) params.append('project_id', projectId)
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    return this.request(`/api/v1/knowledge-sources?${params}`)
+  }
+
+  async getKnowledgeSource(id: string): Promise<KnowledgeSource> {
+    return this.request(`/api/v1/knowledge-sources/${id}`)
+  }
+
+  async uploadKnowledgeSource(file: File, projectId?: string): Promise<KnowledgeSource> {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (projectId) formData.append('project_id', projectId)
+
+    // Use fetch directly for multipart/form-data (don't set Content-Type header)
+    const headers: Record<string, string> = {}
+
+    if (!isDevMode && this.getToken) {
+      const token = await this.getToken()
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/v1/knowledge-sources/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return response.json()
+  }
+
+  async addKnowledgeSourceFromURL(data: KnowledgeSourceCreateFromURL): Promise<KnowledgeSource> {
+    return this.request<KnowledgeSource>('/api/v1/knowledge-sources/url', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async addKnowledgeSourceFromText(data: KnowledgeSourceCreateFromText): Promise<KnowledgeSource> {
+    return this.request<KnowledgeSource>('/api/v1/knowledge-sources/text', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteKnowledgeSource(id: string): Promise<void> {
+    return this.request(`/api/v1/knowledge-sources/${id}`, { method: 'DELETE' })
   }
 }
 

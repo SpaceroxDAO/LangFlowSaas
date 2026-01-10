@@ -1,0 +1,190 @@
+{
+  "id_prefix": "TavilySearchComponent",
+  "component_type": "TavilySearchComponent",
+  "display_name": "Web Search (Tavily)",
+  "description": "Search the web using Tavily AI-optimized search API",
+  "icon": "Search",
+  "node": {
+    "data": {
+      "id": "TavilySearchComponent-tav01",
+      "node": {
+        "base_classes": [
+          "Data"
+        ],
+        "beta": false,
+        "category": "tools",
+        "conditional_paths": [],
+        "custom_fields": {},
+        "description": "Search the web using Tavily AI-optimized search API",
+        "display_name": "Web Search (Tavily)",
+        "documentation": "https://tavily.com/",
+        "edited": false,
+        "field_order": [
+          "query",
+          "max_results"
+        ],
+        "frozen": false,
+        "icon": "Search",
+        "key": "TavilySearchComponent",
+        "legacy": false,
+        "metadata": {},
+        "minimized": false,
+        "output_types": [],
+        "outputs": [
+          {
+            "allows_loop": false,
+            "cache": true,
+            "display_name": "Toolset",
+            "group_outputs": false,
+            "hidden": false,
+            "loop_types": null,
+            "method": "to_toolkit",
+            "name": "component_as_tool",
+            "options": null,
+            "required_inputs": null,
+            "selected": "Tool",
+            "tool_mode": true,
+            "types": [
+              "Tool"
+            ],
+            "value": "__UNDEFINED__"
+          }
+        ],
+        "pinned": false,
+        "template": {
+          "_type": "Component",
+          "code": {
+            "advanced": true,
+            "dynamic": true,
+            "fileTypes": [],
+            "file_path": "",
+            "info": "",
+            "list": false,
+            "load_from_db": false,
+            "multiline": true,
+            "name": "code",
+            "password": false,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "code",
+            "value": "import os\nfrom typing import List\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput, IntInput, SecretStrInput\nfrom langflow.io import Output\nfrom langflow.schema.data import Data\n\n\nclass TavilySearchComponent(Component):\n    \"\"\"Search the web using Tavily AI-optimized search.\"\"\"\n\n    display_name = \"Web Search (Tavily)\"\n    description = \"Search the web using Tavily AI-optimized search API\"\n    documentation = \"https://tavily.com/\"\n    icon = \"Search\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query to execute\",\n            tool_mode=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            info=\"Your Tavily API key (get one free at tavily.com)\",\n            required=True,\n            value=\"TAVILY_API_KEY\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of search results to return\",\n            value=5,\n            advanced=True,\n            required=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Search Results\", name=\"results\", type_=Data, method=\"search\"),\n    ]\n\n    def search(self) -> Data:\n        \"\"\"Execute Tavily search and return results.\"\"\"\n        try:\n            from langchain_community.tools.tavily_search import TavilySearchResults\n            \n            # Set API key in environment\n            api_key = self.api_key\n            if api_key and api_key != \"TAVILY_API_KEY\":\n                os.environ[\"TAVILY_API_KEY\"] = api_key\n            \n            # Create search tool\n            tool = TavilySearchResults(max_results=self.max_results or 5)\n            \n            # Execute search\n            results = tool.invoke(str(self.query))\n            \n            if not results:\n                return Data(text=\"No results found\", data={\"results\": []})\n            \n            # Format results\n            formatted_results = []\n            result_text_parts = []\n            \n            for i, result in enumerate(results, 1):\n                title = result.get(\"title\", \"No title\")\n                url = result.get(\"url\", \"\")\n                content = result.get(\"content\", \"\")[:300]\n                \n                formatted_results.append({\n                    \"title\": title,\n                    \"url\": url,\n                    \"content\": content\n                })\n                result_text_parts.append(f\"{i}. {title}\\n   {content}\\n   URL: {url}\")\n            \n            result_text = \"\\n\\n\".join(result_text_parts)\n            self.status = f\"Found {len(results)} results\"\n            \n            return Data(text=result_text, data={\"results\": formatted_results})\n            \n        except Exception as e:\n            error_msg = f\"Search error: {str(e)}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n"
+          },
+          "query": {
+            "_input_type": "MessageTextInput",
+            "advanced": false,
+            "display_name": "Search Query",
+            "dynamic": false,
+            "info": "The search query to execute",
+            "input_types": [
+              "Message"
+            ],
+            "list": false,
+            "load_from_db": false,
+            "name": "query",
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "tool_mode": true,
+            "trace_as_input": true,
+            "type": "str",
+            "value": ""
+          },
+          "api_key": {
+            "_input_type": "SecretStrInput",
+            "advanced": false,
+            "display_name": "Tavily API Key",
+            "dynamic": false,
+            "info": "Your Tavily API key (get one free at tavily.com)",
+            "input_types": [],
+            "list": false,
+            "load_from_db": false,
+            "name": "api_key",
+            "password": true,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "str",
+            "value": ""
+          },
+          "max_results": {
+            "_input_type": "IntInput",
+            "advanced": true,
+            "display_name": "Max Results",
+            "dynamic": false,
+            "info": "Maximum number of search results to return",
+            "list": false,
+            "name": "max_results",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "int",
+            "value": 5
+          },
+          "is_refresh": false,
+          "tools_metadata": {
+            "_input_type": "ToolsInput",
+            "advanced": false,
+            "display_name": "Actions",
+            "dynamic": false,
+            "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+            "is_list": true,
+            "name": "tools_metadata",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "type": "tools",
+            "value": [
+              {
+                "args": {
+                  "query": {
+                    "description": "The search query to execute",
+                    "title": "Query",
+                    "type": "string"
+                  }
+                },
+                "description": "Search the web using Tavily AI-optimized search API for current information",
+                "display_description": "Search the web for current information",
+                "display_name": "search",
+                "name": "search",
+                "status": true,
+                "tags": [
+                  "search"
+                ]
+              }
+            ]
+          }
+        },
+        "tool_mode": true
+      },
+      "showNode": true,
+      "type": "TavilySearchComponent"
+    },
+    "id": "TavilySearchComponent-tav01",
+    "measured": {
+      "height": 250,
+      "width": 320
+    },
+    "position": {
+      "x": 100,
+      "y": 100
+    },
+    "selected": false,
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "component_as_tool",
+    "output_types": [
+      "Tool"
+    ]
+  },
+  "default_values": {
+    "api_key": "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"
+  }
+}

@@ -12,6 +12,8 @@ from app.api.workflows import router as workflows_router
 from app.api.mcp_servers import router as mcp_servers_router
 from app.api.avatars import router as avatars_router
 from app.api.langflow import router as langflow_router
+from app.api.files import router as files_router
+from app.api.knowledge_sources import router as knowledge_sources_router
 
 __all__ = [
     "health_router",
@@ -25,4 +27,6 @@ __all__ = [
     "mcp_servers_router",
     "avatars_router",
     "langflow_router",
+    "files_router",
+    "knowledge_sources_router",
 ]

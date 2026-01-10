@@ -176,6 +176,8 @@ class AgentComponentService:
             qa_who=qa_data.who,
             qa_rules=qa_data.rules,
             qa_tricks=qa_data.tricks,
+            selected_tools=qa_data.selected_tools or [],  # Store selected tool IDs
+            knowledge_source_ids=qa_data.knowledge_source_ids or [],  # Store knowledge source IDs
             system_prompt=system_prompt,
             is_published=False,  # Not published by default
             is_active=True,
@@ -201,19 +203,21 @@ class AgentComponentService:
             if hasattr(data["advanced_config"], "model_dump"):
                 data["advanced_config"] = data["advanced_config"].model_dump()
 
-        # If Q&A fields changed, regenerate system prompt
-        qa_changed = any(k in data for k in ["qa_who", "qa_rules", "qa_tricks"])
+        # If Q&A fields or tools changed, regenerate system prompt
+        qa_changed = any(k in data for k in ["qa_who", "qa_rules", "qa_tricks", "selected_tools"])
 
         if qa_changed:
             who = data.get("qa_who", component.qa_who)
             rules = data.get("qa_rules", component.qa_rules)
             tricks = data.get("qa_tricks", component.qa_tricks)
+            selected_tools = data.get("selected_tools", component.selected_tools or [])
 
-            # Regenerate system prompt
+            # Regenerate system prompt with tools
             _, system_prompt, _ = self.mapper.create_flow_from_qa(
                 who=who,
                 rules=rules,
                 tricks=tricks,
+                selected_tools=selected_tools,
                 template_name="agent_base",
             )
             data["system_prompt"] = system_prompt
@@ -275,6 +279,8 @@ class AgentComponentService:
             qa_who=component.qa_who,
             qa_rules=component.qa_rules,
             qa_tricks=component.qa_tricks,
+            selected_tools=component.selected_tools,  # Copy selected tools
+            knowledge_source_ids=component.knowledge_source_ids,  # Copy knowledge sources
             system_prompt=component.system_prompt,
             advanced_config=component.advanced_config,  # Copy advanced config
             is_published=False,  # Copies are not published
@@ -437,9 +443,11 @@ class AgentComponentService:
             "qa_who": component.qa_who,
             "qa_rules": component.qa_rules,
             "qa_tricks": component.qa_tricks,
+            "selected_tools": component.selected_tools,
+            "knowledge_source_ids": component.knowledge_source_ids,
             "system_prompt": component.system_prompt,
             "advanced_config": component.advanced_config,
-            "version": "1.1",  # Updated version for advanced_config support
+            "version": "1.3",  # Updated version for knowledge_source_ids support
             "type": "agent_component",
         }
 
@@ -472,6 +480,8 @@ class AgentComponentService:
             qa_who=import_data.get("qa_who", ""),
             qa_rules=import_data.get("qa_rules", ""),
             qa_tricks=import_data.get("qa_tricks", ""),
+            selected_tools=import_data.get("selected_tools", []),
+            knowledge_source_ids=import_data.get("knowledge_source_ids", []),
             system_prompt=import_data.get("system_prompt", ""),
             advanced_config=import_data.get("advanced_config"),
             is_published=False,

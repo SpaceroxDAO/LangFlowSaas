@@ -186,6 +186,8 @@ export interface AgentComponent {
   qa_who: string
   qa_rules: string
   qa_tricks: string
+  selected_tools?: string[]
+  knowledge_source_ids?: string[]
   system_prompt: string
   advanced_config?: AgentComponentAdvancedConfig
   component_file_path?: string
@@ -202,6 +204,7 @@ export interface AgentComponentCreateFromQA {
   rules: string
   tricks?: string
   selected_tools?: string[]
+  knowledge_source_ids?: string[]
   project_id?: string
   icon?: string
   color?: string
@@ -217,6 +220,8 @@ export interface AgentComponentUpdate {
   qa_who?: string
   qa_rules?: string
   qa_tricks?: string
+  selected_tools?: string[]
+  knowledge_source_ids?: string[]
   is_active?: boolean
   advanced_config?: Partial<AgentComponentAdvancedConfig>
 }
@@ -301,6 +306,36 @@ export interface WorkflowConversation {
 export interface WorkflowConversationsResponse {
   conversations: WorkflowConversation[]
   total: number
+}
+
+// =============================================================================
+// Template Types (Workflow Templates)
+// =============================================================================
+
+export interface TemplateCategory {
+  id: string
+  name: string
+  icon: string
+  group: string | null
+}
+
+export interface WorkflowTemplate {
+  id: string
+  name: string
+  description: string
+  category: string
+  tags: string[]
+  gradient: string
+  icon: string
+  is_blank?: boolean
+  is_builtin?: boolean
+  is_langflow_starter?: boolean
+  data?: Record<string, unknown>
+}
+
+export interface TemplatesResponse {
+  categories: TemplateCategory[]
+  templates: WorkflowTemplate[]
 }
 
 // =============================================================================
@@ -459,4 +494,79 @@ export interface DogAvatarResponse {
 export interface AvailableJobsResponse {
   jobs: string[]
   count: number
+}
+
+// =============================================================================
+// User File Types
+// =============================================================================
+
+export interface UserFile {
+  id: string
+  name: string
+  size: number
+  type: string
+  created_at: string
+  url: string
+  project_id?: string
+  description?: string
+}
+
+export interface FileListResponse {
+  files: UserFile[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface StorageStatsResponse {
+  file_count: number
+  total_size: number
+  total_size_mb: number
+}
+
+export interface AllowedTypesResponse {
+  extensions: string[]
+  max_size_bytes: number
+  max_size_mb: number
+}
+
+// =============================================================================
+// Knowledge Source Types (RAG)
+// =============================================================================
+
+export interface KnowledgeSource {
+  id: string
+  project_id?: string
+  name: string
+  source_type: 'file' | 'url' | 'text'
+  file_path?: string
+  original_filename?: string
+  url?: string
+  mime_type?: string
+  file_size?: number
+  status: 'pending' | 'processing' | 'ready' | 'error'
+  error_message?: string
+  chunk_count: number
+  collection_id?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface KnowledgeSourceCreateFromURL {
+  url: string
+  name?: string
+  project_id?: string
+}
+
+export interface KnowledgeSourceCreateFromText {
+  content: string
+  name?: string
+  project_id?: string
+}
+
+export interface KnowledgeSourceListResponse {
+  knowledge_sources: KnowledgeSource[]
+  total: number
+  page: number
+  page_size: number
 }

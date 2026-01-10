@@ -213,6 +213,29 @@ git push origin main
 - Fill in API keys (OpenAI, Anthropic, Clerk)
 - **NEVER commit `.env`** to git (it's in .gitignore)
 
+### Configuration Dependencies (CRITICAL)
+
+**Single Source of Truth Pattern**: All configuration flows from `.env` → `config.py` → services.
+
+These values MUST stay in sync across files:
+
+| Variable | .env.example | config.py | docker-compose.yml |
+|----------|-------------|-----------|-------------------|
+| `LANGFLOW_CONTAINER_NAME` | Line 85 | `langflow_container_name` | Line 74 |
+| `LANGFLOW_API_URL` | Line 81 | `langflow_api_url` | Line 132 |
+| `DATABASE_URL` | Line 26 | `database_url` | Line 130 |
+
+**Startup Validation**: The backend validates container configuration at startup. If `LANGFLOW_CONTAINER_NAME` doesn't match an actual Docker container, you'll see:
+```
+❌ CONFIGURATION ERROR: Langflow container 'xxx' not found!
+```
+
+**Adding New Shared Config**:
+1. Add to `.env.example` with documentation
+2. Add to `config.py` Settings class
+3. Update `docker-compose.yml` if needed (use `${VAR:-default}` syntax)
+4. Never hardcode defaults in service files - import from `config.py`
+
 ### IDE Setup
 - Recommended: VS Code or Cursor
 - Extensions: Python, ESLint, Prettier, Tailwind CSS IntelliSense

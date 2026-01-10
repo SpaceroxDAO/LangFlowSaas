@@ -385,6 +385,88 @@ class LangflowClient:
 
             return response.json()
 
+    async def get_starter_templates(self) -> list:
+        """
+        Get Langflow's starter project templates.
+
+        Returns:
+            List of starter template flows
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(
+                f"{self.base_url}/api/v1/starter-projects/",
+                headers=await self._get_headers(),
+            )
+
+            if response.status_code != 200:
+                raise LangflowClientError(
+                    f"Failed to get starter templates: {response.text}",
+                    status_code=response.status_code,
+                )
+
+            return response.json()
+
+    async def get_store_components(
+        self,
+        skip: int = 0,
+        limit: int = 20,
+        tags: list = None,
+        sort_by: str = None,
+    ) -> Dict[str, Any]:
+        """
+        Get components from Langflow's community store.
+
+        Args:
+            skip: Pagination offset
+            limit: Results per page
+            tags: Filter by tags
+            sort_by: Sort order
+
+        Returns:
+            Store components with pagination info
+        """
+        params = {"skip": skip, "limit": limit}
+        if tags:
+            params["tags"] = ",".join(tags)
+        if sort_by:
+            params["sort_by"] = sort_by
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(
+                f"{self.base_url}/api/v1/store/components/",
+                headers=await self._get_headers(),
+                params=params,
+            )
+
+            if response.status_code != 200:
+                raise LangflowClientError(
+                    f"Failed to get store components: {response.text}",
+                    status_code=response.status_code,
+                )
+
+            return response.json()
+
+    async def get_store_tags(self) -> list:
+        """
+        Get available tags from Langflow's community store.
+
+        Returns:
+            List of tags for filtering
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(
+                f"{self.base_url}/api/v1/store/tags",
+                headers=await self._get_headers(),
+            )
+
+            if response.status_code != 200:
+                raise LangflowClientError(
+                    f"Failed to get store tags: {response.text}",
+                    status_code=response.status_code,
+                )
+
+            return response.json()
+
     async def get_message_stats(
         self,
         flow_id: str,

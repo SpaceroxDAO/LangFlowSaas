@@ -26,6 +26,7 @@ from app.api import (
     avatars_router,
     langflow_router,
     files_router,
+    knowledge_sources_router,
 )
 
 
@@ -93,6 +94,7 @@ app.include_router(mcp_servers_router, prefix="/api/v1")
 app.include_router(avatars_router, prefix="/api/v1")
 app.include_router(langflow_router, prefix="/api/v1")
 app.include_router(files_router, prefix="/api/v1")
+app.include_router(knowledge_sources_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
 # Path(__file__).parent = /app/app (where main.py is located)

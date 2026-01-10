@@ -4,6 +4,136 @@
 
 ---
 
+## 2026-01-10 - Phase 12: Knowledge Sources & RAG Foundation
+
+### Summary
+Implemented comprehensive knowledge source support for AI agents, enabling users to add context from text, files, and URLs. The system uses a keyword-based search fallback while Langflow-native RAG ingestion is being refined.
+
+### Knowledge Source Types Implemented
+
+#### 1. Paste Text
+- Users can paste text content directly into agents
+- Useful for FAQs, handbooks, product info
+- Stored as text files in knowledge storage
+
+#### 2. Upload File
+- Supports PDF, TXT, MD, DOCX, CSV formats
+- Max file size: 10MB each
+- Files stored per-user in `uploads/knowledge/{user_id}/`
+
+#### 3. Add URL
+- Fetches and indexes content from web pages
+- HTML converted to plain text for indexing
+- Supports any public URL
+
+### Technical Implementation
+
+#### Database Migrations
+Created two new migrations for agent component enhancements:
+```sql
+-- 20260109_0001: Add tool selection
+ALTER TABLE agent_components ADD COLUMN selected_tools JSON;
+
+-- 20260110_0001: Add knowledge source tracking
+ALTER TABLE agent_components ADD COLUMN knowledge_source_ids JSON;
+```
+
+#### Knowledge Search Tool
+Created custom `KnowledgeRetrieverComponent` for Langflow:
+- Keyword-based search with relevance scoring
+- Paragraph and sentence-level chunking
+- Returns top-k most relevant passages
+- Tool mode enabled for agent integration
+
+#### RAG Architecture (Two Approaches)
+
+**Approach A: Langflow-Native RAG (Planned, Not Working Yet)**
+```
+Ingestion: File → SplitText → Embeddings → Chroma
+Retrieval: Query → Embeddings → Chroma Search → Agent
+```
+- Uses Langflow's built-in components
+- Vector/semantic search via Chroma
+- Currently fails due to template validation issues
+
+**Approach B: Keyword-Based Fallback (Working)**
+```
+Ingestion: File content loaded into knowledge_content field
+Retrieval: Query → Keyword matching → Relevance scoring → Agent
+```
+- Simpler, more reliable
+- Works with all knowledge source types
+- Automatic fallback when RAG fails
+
+#### Graceful Fallback System
+```python
+# workflow_service.py
+try:
+    await self._ingest_knowledge_sources(...)  # Try RAG
+    flow_data = self.mapper.create_rag_flow_from_qa(...)
+except Exception as e:
+    logger.warning(f"RAG ingestion failed, falling back to keyword search: {e}")
+    # Load content directly into knowledge_content field
+    knowledge_content = await knowledge_service.load_combined_content(...)
+    flow_data = self.mapper.create_flow_from_qa(..., knowledge_content=knowledge_content)
+```
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `templates/tools/knowledge_retriever.json` | Knowledge search tool component |
+| `templates/rag/ingest_documents.json` | RAG ingestion flow template |
+| `templates/rag_agent.json` | RAG agent flow template |
+| `alembic/versions/20260110_0001_*.py` | knowledge_source_ids migration |
+| `e2e/tests/rag-integration.spec.ts` | Comprehensive E2E test |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `workflow_service.py` | Added RAG/fallback logic, ingestion support |
+| `template_mapping.py` | Added RAG template configuration methods |
+| `knowledge_service.py` | Added debug logging, load_combined_content |
+| `docker-compose.yml` | Added chroma_data volume |
+
+### E2E Testing Results
+
+All knowledge source types tested and verified:
+
+| Type | Test Query | Expected | Actual | Status |
+|------|------------|----------|--------|--------|
+| Text | "How many days of PTO?" | 20 days | "20 days per year" | ✅ |
+| Text | "What are office hours?" | 9-6 M-F | Correct hours listed | ✅ |
+| File | "Price of Premium Widget Pro?" | $299.99 | "$299.99 with warranty" | ✅ |
+| File | "Return policy?" | 30 days | "30-day return policy" | ✅ |
+| URL | "What about Moby Dick?" | Found | Identified the reference | ✅ |
+| URL | "Who is Herman Melville?" | Author | Found in document | ✅ |
+
+### Known Limitations
+
+1. **RAG Ingestion Not Working**: The Langflow-native ingestion template fails validation
+   - Chroma/OpenAI Embeddings components don't match expected format
+   - Falls back to keyword search automatically (users unaffected)
+
+2. **Future Improvements Needed**:
+   - Fix RAG template to match Langflow's exact component structure
+   - Enable true semantic/vector search
+   - Add embedding model configuration
+   - Add chunk size/overlap settings
+
+### Architecture Decision
+
+**Decision**: Ship with keyword-based fallback, refine RAG later
+
+**Rationale**:
+- Users can create agents with knowledge sources today
+- Keyword search works well for structured content (FAQs, handbooks)
+- RAG ingestion can be fixed without changing user-facing behavior
+- Follows "wrapper not fork" philosophy - using Langflow's components when possible
+
+---
+
 ## 2026-01-09 - Configuration Management & Local Dev Nginx Setup
 
 ### Summary

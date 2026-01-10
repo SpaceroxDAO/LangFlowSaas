@@ -1,6 +1,7 @@
 """
 MCPServer service for managing MCP server configurations.
 """
+import base64
 import json
 import logging
 import os
@@ -8,6 +9,8 @@ import uuid
 from datetime import datetime
 from typing import List, Optional, Tuple
 
+import httpx
+from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -240,10 +243,68 @@ class MCPServerService:
 
         This attempts to spawn the server process briefly to verify it can start.
         """
-        # TODO: Implement actual health check by spawning process
-        # For now, just update timestamp
+        import asyncio
+        import shutil
+
         server.last_health_check = datetime.utcnow()
-        server.health_status = "unknown"  # Would be "healthy" or "unhealthy" after real check
+        message = ""
+
+        try:
+            # Check if the command exists
+            command = server.command
+            if not command:
+                server.health_status = "unhealthy"
+                message = "No command configured"
+            elif not shutil.which(command):
+                server.health_status = "unhealthy"
+                message = f"Command '{command}' not found in PATH"
+            else:
+                # Try to spawn the process with --version or --help to verify it starts
+                try:
+                    # Build env with decrypted credentials
+                    env = dict(os.environ)
+                    if server.env:
+                        env.update(server.env)
+                    if server.credentials_encrypted:
+                        credentials = self._decrypt_credentials(server.credentials_encrypted)
+                        env.update({k: str(v) for k, v in credentials.items()})
+
+                    # Try running with --help flag (most CLIs support this)
+                    proc = await asyncio.create_subprocess_exec(
+                        command,
+                        "--help",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        env=env,
+                    )
+
+                    # Wait with timeout
+                    try:
+                        await asyncio.wait_for(proc.communicate(), timeout=5.0)
+                        server.health_status = "healthy"
+                        message = f"Command '{command}' is available and executable"
+                    except asyncio.TimeoutError:
+                        proc.kill()
+                        await proc.wait()
+                        # Timeout might be okay - some servers don't exit on --help
+                        server.health_status = "healthy"
+                        message = f"Command '{command}' started (timed out on --help)"
+
+                except FileNotFoundError:
+                    server.health_status = "unhealthy"
+                    message = f"Command '{command}' not found"
+                except PermissionError:
+                    server.health_status = "unhealthy"
+                    message = f"Permission denied to execute '{command}'"
+                except Exception as e:
+                    server.health_status = "unhealthy"
+                    message = f"Failed to spawn process: {str(e)}"
+
+        except Exception as e:
+            server.health_status = "unhealthy"
+            message = f"Health check error: {str(e)}"
+            logger.error(f"Health check failed for server {server.id}: {e}")
+
         await self.session.flush()
 
         return MCPServerHealthResponse(
@@ -251,7 +312,7 @@ class MCPServerService:
             name=server.name,
             health_status=server.health_status,
             last_health_check=server.last_health_check,
-            message="Health check not yet implemented",
+            message=message,
         )
 
     async def sync_to_config(self) -> MCPServerSyncResponse:
@@ -323,8 +384,8 @@ class MCPServerService:
         """Get current restart status."""
         pending = await self.get_pending_changes(user_id)
 
-        # TODO: Check actual Langflow health
-        langflow_healthy = True
+        # Check actual Langflow health via HTTP request
+        langflow_healthy = await self._check_langflow_health()
 
         return RestartStatusResponse(
             pending_changes=pending,
@@ -332,6 +393,26 @@ class MCPServerService:
             last_restart=None,
             langflow_healthy=langflow_healthy,
         )
+
+    async def _check_langflow_health(self) -> bool:
+        """Check if Langflow service is healthy via HTTP request."""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{settings.langflow_api_url}/health_check")
+                if response.status_code == 200:
+                    return True
+                # Also try /health endpoint as fallback
+                response = await client.get(f"{settings.langflow_api_url}/health")
+                return response.status_code == 200
+        except httpx.TimeoutException:
+            logger.warning("Langflow health check timed out")
+            return False
+        except httpx.ConnectError:
+            logger.warning("Could not connect to Langflow")
+            return False
+        except Exception as e:
+            logger.error(f"Langflow health check failed: {e}")
+            return False
 
     def get_templates(self) -> List[MCPServerTemplateResponse]:
         """Get list of available MCP server templates."""
@@ -348,17 +429,55 @@ class MCPServerService:
             for key, template in MCP_SERVER_TEMPLATES.items()
         ]
 
+    def _get_fernet(self) -> Optional[Fernet]:
+        """Get Fernet instance for encryption/decryption."""
+        if not settings.encryption_key:
+            logger.warning("ENCRYPTION_KEY not set - credentials will be stored in plaintext")
+            return None
+        try:
+            return Fernet(settings.encryption_key.encode())
+        except Exception as e:
+            logger.error(f"Invalid ENCRYPTION_KEY format: {e}")
+            return None
+
     def _encrypt_credentials(self, credentials: dict) -> str:
-        """Encrypt credentials for storage."""
-        # TODO: Implement proper encryption using Fernet
-        # For now, just JSON encode (NOT SECURE - placeholder)
-        return json.dumps(credentials)
+        """Encrypt credentials for storage using Fernet."""
+        json_data = json.dumps(credentials)
+        fernet = self._get_fernet()
+
+        if fernet:
+            # Encrypt and prefix with 'enc:' marker
+            encrypted = fernet.encrypt(json_data.encode())
+            return f"enc:{encrypted.decode()}"
+        else:
+            # Fallback to plaintext (development only)
+            return json_data
 
     def _decrypt_credentials(self, encrypted: str) -> dict:
-        """Decrypt credentials from storage."""
-        # TODO: Implement proper decryption using Fernet
-        # For now, just JSON decode (NOT SECURE - placeholder)
-        try:
-            return json.loads(encrypted)
-        except Exception:
+        """Decrypt credentials from storage using Fernet."""
+        if not encrypted:
             return {}
+
+        # Check if data is encrypted (has 'enc:' prefix)
+        if encrypted.startswith("enc:"):
+            fernet = self._get_fernet()
+            if fernet:
+                try:
+                    encrypted_data = encrypted[4:]  # Remove 'enc:' prefix
+                    decrypted = fernet.decrypt(encrypted_data.encode())
+                    return json.loads(decrypted.decode())
+                except InvalidToken:
+                    logger.error("Failed to decrypt credentials - invalid token or key")
+                    return {}
+                except Exception as e:
+                    logger.error(f"Failed to decrypt credentials: {e}")
+                    return {}
+            else:
+                logger.error("Cannot decrypt - ENCRYPTION_KEY not set")
+                return {}
+        else:
+            # Handle legacy unencrypted data (plain JSON)
+            try:
+                return json.loads(encrypted)
+            except Exception:
+                return {}

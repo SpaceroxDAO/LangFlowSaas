@@ -105,6 +105,13 @@ class AgentComponentCreateFromQA(BaseModel):
         examples=[["web_search", "calculator"]],
     )
 
+    # Knowledge sources for RAG
+    knowledge_source_ids: List[str] = Field(
+        default=[],
+        description="List of knowledge source IDs for RAG retrieval",
+        examples=[["uuid-1", "uuid-2"]],
+    )
+
     # Optional name (auto-generated if not provided)
     name: Optional[str] = Field(
         None,
@@ -158,6 +165,14 @@ class AgentComponentUpdate(BaseModel):
     qa_who: Optional[str] = None
     qa_rules: Optional[str] = None
     qa_tricks: Optional[str] = None
+    selected_tools: Optional[List[str]] = Field(
+        None,
+        description="Array of selected tool IDs (e.g., ['web_search', 'weather'])",
+    )
+    knowledge_source_ids: Optional[List[str]] = Field(
+        None,
+        description="Array of knowledge source IDs for RAG retrieval",
+    )
     icon: Optional[str] = None
     color: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -201,6 +216,8 @@ class AgentComponentResponse(BaseModel):
     qa_who: str
     qa_rules: str
     qa_tricks: str
+    selected_tools: Optional[List[str]] = None
+    knowledge_source_ids: Optional[List[str]] = None
     system_prompt: str
     advanced_config: Optional[AgentComponentAdvancedConfig] = None
     component_file_path: Optional[str]

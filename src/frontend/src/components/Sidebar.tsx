@@ -160,9 +160,9 @@ function ExpandableProject({
               {workflowList.map((workflow) => (
                 <Link
                   key={workflow.id}
-                  to={`/playground/workflow/${workflow.id}`}
+                  to={`/canvas/${workflow.id}`}
                   className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors ${
-                    location.pathname === `/playground/workflow/${workflow.id}`
+                    location.pathname === `/canvas/${workflow.id}`
                       ? 'bg-violet-50 text-violet-700'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}

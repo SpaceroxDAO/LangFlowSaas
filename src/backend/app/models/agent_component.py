@@ -101,6 +101,22 @@ class AgentComponent(BaseModel):
         comment="Answer to: What tricks does Charlie know? (tools)",
     )
 
+    # Selected tools (array of tool IDs)
+    selected_tools: Mapped[Optional[list]] = mapped_column(
+        JSON,
+        nullable=True,
+        default=None,
+        comment="Array of selected tool IDs (e.g., ['web_search', 'weather'])",
+    )
+
+    # Knowledge sources for RAG (array of knowledge source IDs)
+    knowledge_source_ids: Mapped[Optional[list]] = mapped_column(
+        JSON,
+        nullable=True,
+        default=None,
+        comment="Array of knowledge source IDs for RAG retrieval",
+    )
+
     # Generated system prompt (from Q&A mapping)
     system_prompt: Mapped[str] = mapped_column(
         Text,

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { GitBranch, ExternalLink } from 'lucide-react'
 import { api } from '@/lib/api'
-import type { Workflow, AgentComponent } from '@/types'
+import { TemplateGalleryModal } from '@/components/TemplateGallery'
+import type { Workflow } from '@/types'
 
 interface WorkflowsTabProps {
   projectId: string
@@ -49,12 +50,6 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
     queryFn: () => api.listWorkflows(projectId),
   })
 
-  // Fetch agent components for the "Quick from Agent" option
-  const { data: agentComponentsData } = useQuery({
-    queryKey: ['agent-components', projectId],
-    queryFn: () => api.listAgentComponents(projectId),
-  })
-
   // Delete workflow mutation
   const deleteWorkflowMutation = useMutation({
     mutationFn: (workflowId: string) => api.deleteWorkflow(workflowId),
@@ -65,7 +60,6 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
   })
 
   const workflows = data?.workflows || []
-  const agentComponents = agentComponentsData?.agent_components || []
 
   // Filter workflows by search query
   const filteredWorkflows = useMemo(() => {
@@ -354,151 +348,13 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
         </div>
       )}
 
-      {/* Create Workflow Modal */}
-      {createModal && (
-        <CreateWorkflowModal
-          projectId={projectId}
-          agentComponents={agentComponents}
-          onClose={() => setCreateModal(false)}
-          onSuccess={() => {
-            setCreateModal(false)
-            queryClient.invalidateQueries({ queryKey: ['workflows', projectId] })
-          }}
-        />
-      )}
+      {/* Template Gallery Modal */}
+      <TemplateGalleryModal
+        isOpen={createModal}
+        onClose={() => setCreateModal(false)}
+        projectId={projectId}
+      />
     </>
-  )
-}
-
-// Create Workflow Modal
-function CreateWorkflowModal({
-  projectId,
-  agentComponents,
-  onClose,
-  onSuccess,
-}: {
-  projectId: string
-  agentComponents: AgentComponent[]
-  onClose: () => void
-  onSuccess: () => void
-}) {
-  const [mode, setMode] = useState<'blank' | 'agent' | 'template'>('blank')
-  const [name, setName] = useState('')
-  const [selectedAgent, setSelectedAgent] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-
-  const handleCreate = async () => {
-    setIsCreating(true)
-    try {
-      if (mode === 'blank') {
-        await api.createWorkflow({
-          name: name || 'New Workflow',
-          project_id: projectId,
-        })
-      } else if (mode === 'agent' && selectedAgent) {
-        await api.createWorkflowFromAgent({
-          agent_component_id: selectedAgent,
-          name: name || undefined,
-          project_id: projectId,
-        })
-      }
-      onSuccess()
-    } catch (error) {
-      console.error('Failed to create workflow:', error)
-      alert('Failed to create workflow. Please try again.')
-    } finally {
-      setIsCreating(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Create Workflow</h2>
-
-        {/* Mode Selection */}
-        <div className="space-y-3 mb-6">
-          <button
-            onClick={() => setMode('blank')}
-            className={`w-full p-4 border rounded-lg text-left transition-colors ${
-              mode === 'blank' ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Blank Workflow</div>
-            <div className="text-sm text-gray-500">Start with an empty canvas</div>
-          </button>
-
-          <button
-            onClick={() => setMode('agent')}
-            className={`w-full p-4 border rounded-lg text-left transition-colors ${
-              mode === 'agent' ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className="font-medium text-gray-900">Quick from Agent</div>
-            <div className="text-sm text-gray-500">Create ChatInput → Agent → ChatOutput flow</div>
-          </button>
-        </div>
-
-        {/* Name Input */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Workflow Name (optional)
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="My Workflow"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-violet-500"
-          />
-        </div>
-
-        {/* Agent Selection (when mode is 'agent') */}
-        {mode === 'agent' && (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Agent Component
-            </label>
-            {agentComponents.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No agent components available. Create an agent first.
-              </p>
-            ) : (
-              <select
-                value={selectedAgent}
-                onChange={(e) => setSelectedAgent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-violet-500"
-              >
-                <option value="">Select an agent...</option>
-                {agentComponents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            disabled={isCreating}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={isCreating || (mode === 'agent' && !selectedAgent)}
-            className="px-4 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-700 transition-colors text-sm disabled:opacity-50"
-          >
-            {isCreating ? 'Creating...' : 'Create Workflow'}
-          </button>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -543,17 +399,13 @@ function WorkflowRow({
 
       {/* Actions */}
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
-        {workflow.langflow_flow_id && (
-          <a
-            href={`http://localhost:7860/flow/${workflow.langflow_flow_id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
-            title="Open in Langflow"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        )}
+        <Link
+          to={`/canvas/${workflow.id}`}
+          className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
+          title="Open in AI Canvas"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </Link>
       </div>
 
       {/* Menu */}
@@ -571,17 +423,13 @@ function WorkflowRow({
         </button>
         {menuOpen && (
           <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
-            {workflow.langflow_flow_id && (
-              <a
-                href={`http://localhost:7860/flow/${workflow.langflow_flow_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open in Langflow
-              </a>
-            )}
+            <Link
+              to={`/canvas/${workflow.id}`}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open in AI Canvas
+            </Link>
             <button
               onClick={() => { setMenuOpen(false); onExport(workflow) }}
               className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
@@ -656,17 +504,13 @@ function WorkflowCard({
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
-              {workflow.langflow_flow_id && (
-                <a
-                  href={`http://localhost:7860/flow/${workflow.langflow_flow_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Open in Langflow
-                </a>
-              )}
+              <Link
+                to={`/canvas/${workflow.id}`}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Open in AI Canvas
+              </Link>
               <button
                 onClick={() => { setMenuOpen(false); onExport(workflow) }}
                 className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
@@ -712,4 +556,3 @@ function WorkflowCard({
   )
 }
 
-export { CreateWorkflowModal }

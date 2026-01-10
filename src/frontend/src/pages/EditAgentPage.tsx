@@ -9,26 +9,52 @@ import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { ToolCard } from '@/components/ToolCard'
 import { AdvancedEditorModal } from '@/components/AdvancedEditorModal'
+import { KnowledgeSourcesModal } from '@/components/KnowledgeSourcesModal'
 import { inferJobFromDescription } from '@/lib/avatarJobInference'
 import type { AgentComponent, AgentComponentAdvancedConfig } from '@/types'
 
-// Available tools
+// Available tools - must match CreateAgentPage.tsx
 const AVAILABLE_TOOLS = [
-  { id: 'web_search', title: 'Web Search', description: 'Search the internet for current facts.' },
-  { id: 'google_maps', title: 'Google Maps', description: 'Find real-world locations.' },
-  { id: 'image_generator', title: 'Image Generator', description: 'Create AI images from text descriptions.' },
-  { id: 'video_creator', title: 'Video Creator', description: 'Generate short AI videos (requires API Key).' },
+  {
+    id: 'web_search',
+    title: 'Web Search',
+    description: 'Search the internet for current information, news, and facts.',
+  },
+  {
+    id: 'calculator',
+    title: 'Calculator',
+    description: 'Perform math calculations and arithmetic operations.',
+  },
+  {
+    id: 'weather',
+    title: 'Get Weather',
+    description: 'Get current weather conditions for any location worldwide.',
+  },
+  {
+    id: 'knowledge_search',
+    title: 'Knowledge Search',
+    description: 'Search through your uploaded documents and knowledge base.',
+    opensModal: true,
+  },
 ]
 
-// Parse tools from qa_tricks string
-function parseToolsFromTricks(tricks: string): string[] {
-  const tools: string[] = []
-  AVAILABLE_TOOLS.forEach((tool) => {
-    if (tricks.toLowerCase().includes(tool.title.toLowerCase())) {
-      tools.push(tool.id)
-    }
-  })
-  return tools
+// Parse tools - prefer selected_tools array, fallback to qa_tricks string for legacy data
+function parseTools(selectedTools?: string[], tricks?: string): string[] {
+  // Use selected_tools if available
+  if (selectedTools && selectedTools.length > 0) {
+    return selectedTools.filter(id => AVAILABLE_TOOLS.some(t => t.id === id))
+  }
+  // Fallback: parse from qa_tricks string for legacy agents
+  if (tricks) {
+    const tools: string[] = []
+    AVAILABLE_TOOLS.forEach((tool) => {
+      if (tricks.toLowerCase().includes(tool.title.toLowerCase())) {
+        tools.push(tool.id)
+      }
+    })
+    return tools
+  }
+  return []
 }
 
 // Tooltip component
@@ -63,6 +89,8 @@ export function EditAgentPage() {
   const [persona, setPersona] = useState('')
   const [instructions, setInstructions] = useState('')
   const [selectedTools, setSelectedTools] = useState<string[]>([])
+  const [knowledgeSourceIds, setKnowledgeSourceIds] = useState<string[]>([])
+  const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [advancedConfig, setAdvancedConfig] = useState<Partial<AgentComponentAdvancedConfig> | undefined>()
   const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false)
@@ -89,7 +117,8 @@ export function EditAgentPage() {
         setName(agent.name)
         setPersona(agent.qa_who)
         setInstructions(agent.qa_rules)
-        setSelectedTools(parseToolsFromTricks(agent.qa_tricks))
+        setSelectedTools(parseTools(agent.selected_tools, agent.qa_tricks))
+        setKnowledgeSourceIds(agent.knowledge_source_ids || [])
         setAvatarUrl(agent.avatar_url || null)
         setAdvancedConfig(agent.advanced_config || undefined)
         setIsPublished(agent.is_published)
@@ -124,11 +153,25 @@ export function EditAgentPage() {
   }, [agentId])
 
   const toggleTool = (toolId: string) => {
+    if (toolId === 'knowledge_search') {
+      setIsKnowledgeModalOpen(true)
+      return
+    }
     setSelectedTools((prev) =>
       prev.includes(toolId)
         ? prev.filter((t) => t !== toolId)
         : [...prev, toolId]
     )
+  }
+
+  const handleKnowledgeSourcesChange = (sourceIds: string[]) => {
+    setKnowledgeSourceIds(sourceIds)
+    // Auto-toggle knowledge_search tool based on selection
+    if (sourceIds.length > 0 && !selectedTools.includes('knowledge_search')) {
+      setSelectedTools(prev => [...prev, 'knowledge_search'])
+    } else if (sourceIds.length === 0 && selectedTools.includes('knowledge_search')) {
+      setSelectedTools(prev => prev.filter(t => t !== 'knowledge_search'))
+    }
   }
 
   const handleGenerateAvatar = async () => {
@@ -203,6 +246,8 @@ export function EditAgentPage() {
         qa_who: persona.trim(),
         qa_rules: instructions.trim(),
         qa_tricks: tricksText,
+        selected_tools: selectedTools,  // Include selected tool IDs
+        knowledge_source_ids: knowledgeSourceIds,  // Include knowledge source IDs
         avatar_url: avatarUrl || undefined,
       })
 
@@ -274,6 +319,8 @@ export function EditAgentPage() {
         qa_who: persona.trim(),
         qa_rules: instructions.trim(),
         qa_tricks: tricksText,
+        selected_tools: selectedTools,  // Include selected tool IDs
+        knowledge_source_ids: knowledgeSourceIds,  // Include knowledge source IDs
         avatar_url: avatarUrl || undefined,
       })
 
@@ -539,10 +586,10 @@ export function EditAgentPage() {
         />
       </div>
 
-      {/* Tools Section */}
+      {/* Actions Section */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
         <div className="flex items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Tools</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Actions</h2>
           <Tooltip text="Special capabilities your agent can use to help users" />
         </div>
 
@@ -551,7 +598,11 @@ export function EditAgentPage() {
             <ToolCard
               key={tool.id}
               title={tool.title}
-              description={tool.description}
+              description={
+                tool.id === 'knowledge_search' && knowledgeSourceIds.length > 0
+                  ? `${knowledgeSourceIds.length} source${knowledgeSourceIds.length !== 1 ? 's' : ''} selected`
+                  : tool.description
+              }
               selected={selectedTools.includes(tool.id)}
               onToggle={() => toggleTool(tool.id)}
             />
@@ -752,6 +803,14 @@ export function EditAgentPage() {
         onSave={handleSaveAdvancedConfig}
         initialConfig={advancedConfig}
         isSaving={isSavingAdvanced}
+      />
+
+      {/* Knowledge Sources Modal */}
+      <KnowledgeSourcesModal
+        isOpen={isKnowledgeModalOpen}
+        onClose={() => setIsKnowledgeModalOpen(false)}
+        selectedSourceIds={knowledgeSourceIds}
+        onSelectionChange={handleKnowledgeSourcesChange}
       />
     </div>
   )

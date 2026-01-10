@@ -1,13 +1,13 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-09 (Afternoon)
-**Current Phase**: Phase 11d - Configuration Management & Local Dev Nginx Setup
+**Last Updated**: 2026-01-10 (Morning)
+**Current Phase**: Phase 12 - Knowledge Sources & RAG Foundation
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 11d - Configuration Management & Local Dev Nginx Setup
-**Status**: ✅ Complete
+**Phase**: Phase 12 - Knowledge Sources & RAG Foundation
+**Status**: ✅ Complete (with known limitations)
 **Next Milestone**: Production Deploy
 
 ## Health Indicators
@@ -24,7 +24,9 @@
 | Tour System | ✅ Tested | Driver.js integrated and working |
 | Canvas Viewer | ✅ Fixed | Updated for AgentComponent/Workflow architecture |
 | Streaming | ✅ Added | Backend streaming support enabled |
-| Testing | ✅ Complete | 15+ E2E tests (chat, publish, multi-turn) |
+| Testing | ✅ Complete | 15+ E2E tests (chat, publish, multi-turn, RAG) |
+| Knowledge Sources | ✅ Working | Text, File Upload, URL - all tested |
+| RAG Search | ⚠️ Partial | Keyword-based fallback working; vector ingestion needs work |
 | Import/Export | ✅ Added | Agent JSON import/export working |
 | New Data Flow | ✅ Working | CreateAgent → AgentComponent + Workflow |
 | Avatar System | ✅ Complete | Auto-inference, three-tier generation |
@@ -35,7 +37,7 @@ Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
 ## Phase Progress
 
-### Phases 0-10: Complete ✅
+### Phases 0-11: Complete ✅
 
 All previous phases completed:
 - Phase 0-4: MVP Foundation (Q&A wizard, Playground, EditAgent)
@@ -46,6 +48,78 @@ All previous phases completed:
 - Phase 8: UI Polish (Langflow-style violet theme, search, pagination, bulk ops)
 - Phase 9: Three-Tab Architecture (Agents, Workflows, MCP Servers)
 - Phase 10: Avatar V2 & Architecture Fixes
+- Phase 11: Custom Component Generation & E2E Testing
+- Phase 11b-d: EditAgent Redesign, Proxy Fix, Config Management
+
+### Phase 12: Knowledge Sources & RAG Foundation ✅ Complete
+
+**Goal**: Enable users to add knowledge sources (text, files, URLs) to their agents for context-aware responses
+
+#### Completed (2026-01-10 Morning)
+
+**Knowledge Source Types - All Working:**
+- [x] **Paste Text**: Users can paste text content directly (e.g., employee handbooks, FAQs)
+- [x] **Upload File**: Support for PDF, TXT, MD, DOCX, CSV (max 10MB each)
+- [x] **Add URL**: Fetch and index content from web pages
+
+**Database Migrations:**
+- [x] Created `20260109_0001` - Added `selected_tools` column to agent_components
+- [x] Created `20260110_0001` - Added `knowledge_source_ids` column to agent_components
+
+**Knowledge Search Tool:**
+- [x] Created `KnowledgeRetrieverComponent` - Custom Langflow component for keyword-based search
+- [x] Implemented keyword matching with relevance scoring
+- [x] Content chunking with paragraph/sentence splitting
+- [x] Tool properly injected into agent workflows
+
+**RAG Fallback System:**
+- [x] Implemented graceful fallback when Langflow-native RAG ingestion fails
+- [x] System falls back to keyword-based search automatically
+- [x] User experience unaffected - agents still work with knowledge sources
+
+**E2E Testing:**
+- [x] Created comprehensive `rag-integration.spec.ts` test
+- [x] Tested all three knowledge source types via Playwright MCP
+- [x] Verified chat responses use knowledge content correctly
+
+**Files Created:**
+- `src/backend/templates/tools/knowledge_retriever.json` - Knowledge search tool component
+- `src/backend/templates/rag/ingest_documents.json` - RAG ingestion flow template
+- `src/backend/templates/rag_agent.json` - RAG agent flow template
+- `src/backend/alembic/versions/20260110_0001_add_knowledge_source_ids.py` - DB migration
+- `src/frontend/e2e/tests/rag-integration.spec.ts` - E2E test for RAG workflow
+
+**Files Modified:**
+- `src/backend/app/services/workflow_service.py` - Added RAG fallback, ingestion support
+- `src/backend/app/services/template_mapping.py` - Added RAG template configuration
+- `src/backend/app/services/knowledge_service.py` - Added debug logging
+- `docker-compose.yml` - Added chroma_data volume for vector persistence
+
+#### Known Limitations
+
+**RAG Ingestion Still Needs Work:**
+- Langflow-native vector ingestion (Chroma + OpenAI Embeddings) fails with template validation errors
+- The ingestion flow template format doesn't match Langflow's expected component structure exactly
+- Current workaround: Automatic fallback to keyword-based search (works reliably)
+
+**Future Improvements (Post-MVP):**
+- [ ] Fix RAG ingestion flow template to match Langflow's exact format
+- [ ] Enable true vector/semantic search via Chroma
+- [ ] Add embedding model selection (OpenAI, Ollama)
+- [ ] Add chunk size/overlap configuration options
+
+#### Test Results (All Passing)
+
+| Knowledge Source | Test | Result |
+|------------------|------|--------|
+| Paste Text | PTO query → "20 days per year" | ✅ Correct |
+| Paste Text | Office hours query → Mon-Fri 9-6 | ✅ Correct |
+| Upload File | Product price query → "$299.99" | ✅ Correct |
+| Upload File | Return policy query → "30 days" | ✅ Correct |
+| Add URL | Moby Dick query → Found content | ✅ Correct |
+| Add URL | Author query → "Herman Melville" | ✅ Correct |
+
+---
 
 ### Phase 11d: Configuration Management & Local Dev Nginx Setup ✅ Complete
 
@@ -311,9 +385,10 @@ cd src/backend && uvicorn app.main:app --reload
 - [ ] MCP server sync to .mcp.json
 - [ ] Restart notification banner
 
-### Phase 10-11: Planned
-- [ ] Phase 10: RAG/Documents (high effort, research needed)
-- [ ] Phase 11: Agent reasoning visibility
+### Phase 13+: Planned (Post-MVP)
+- [ ] Fix RAG vector ingestion (export real template from Langflow UI)
+- [ ] Agent reasoning visibility / chain-of-thought display
+- [ ] Advanced RAG settings (chunk size, embedding models, search type)
 
 ## Frontend Pages
 
@@ -477,7 +552,7 @@ All changes committed and pushed to origin/main.
 
 ---
 
-**Status Summary**: ✅ Green - Phase 11d complete. Configuration management improved with single source of truth pattern. Local dev nginx setup working for CSS injection. All canvas views go through nginx proxy. Ready for production deploy.
+**Status Summary**: ✅ Green - Phase 12 complete. Knowledge sources (text, file, URL) working with keyword-based search. RAG vector ingestion needs refinement but has graceful fallback. All 3 knowledge source types tested and passing. Ready for production deploy.
 
 ---
 
@@ -502,4 +577,5 @@ All changes committed and pushed to origin/main.
 | `13_LANGFLOW_INTEGRATION_STRATEGY.md` | Integration strategy | 2026-01-05 |
 | `14_CUSTOM_COMPONENTS_STRATEGY.md` | Component strategy | 2026-01-06 |
 | `15_PROJECT_TABS_REORGANIZATION.md` | **Three-tab plan** | 2026-01-07 |
-| `LANGFLOW_PROXY_FIX.md` | **Nginx proxy fix for Langflow** | 2026-01-08 |
+| `LANGFLOW_PROXY_FIX.md` | Nginx proxy fix for Langflow | 2026-01-08 |
+| `RAG_IMPLEMENTATION_MASTERPLAN.md` | **RAG architecture & status** | 2026-01-10 |

@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.agent_component import AgentComponent
     from app.models.workflow import Workflow
     from app.models.mcp_server import MCPServer
+    from app.models.user_file import UserFile
 
 
 class User(BaseModel):
@@ -109,6 +110,13 @@ class User(BaseModel):
 
     mcp_servers: Mapped[List["MCPServer"]] = relationship(
         "MCPServer",
+        back_populates="user",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    files: Mapped[List["UserFile"]] = relationship(
+        "UserFile",
         back_populates="user",
         lazy="select",
         cascade="all, delete-orphan",

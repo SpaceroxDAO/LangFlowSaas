@@ -1,0 +1,219 @@
+{
+  "id_prefix": "LangSearchComponent",
+  "component_type": "LangSearchComponent",
+  "display_name": "Web Search (LangSearch)",
+  "description": "Search the web using LangSearch API with AI-optimized results and summaries (free tier available)",
+  "icon": "Search",
+  "node": {
+    "data": {
+      "id": "LangSearchComponent-lsrc1",
+      "node": {
+        "base_classes": [
+          "Data"
+        ],
+        "beta": false,
+        "category": "tools",
+        "conditional_paths": [],
+        "custom_fields": {},
+        "description": "Search the web using LangSearch API with AI-optimized results and summaries (free tier available)",
+        "display_name": "Web Search (LangSearch)",
+        "documentation": "https://docs.langsearch.com/",
+        "edited": false,
+        "field_order": [
+          "query",
+          "api_key",
+          "max_results",
+          "freshness",
+          "include_summary"
+        ],
+        "frozen": false,
+        "icon": "Search",
+        "key": "LangSearchComponent",
+        "legacy": false,
+        "metadata": {},
+        "minimized": false,
+        "output_types": [],
+        "outputs": [
+          {
+            "allows_loop": false,
+            "cache": true,
+            "display_name": "Toolset",
+            "group_outputs": false,
+            "hidden": false,
+            "loop_types": null,
+            "method": "to_toolkit",
+            "name": "component_as_tool",
+            "options": null,
+            "required_inputs": null,
+            "selected": "Tool",
+            "tool_mode": true,
+            "types": [
+              "Tool"
+            ],
+            "value": "__UNDEFINED__"
+          }
+        ],
+        "pinned": false,
+        "template": {
+          "_type": "Component",
+          "code": {
+            "advanced": true,
+            "dynamic": true,
+            "fileTypes": [],
+            "file_path": "",
+            "info": "",
+            "list": false,
+            "load_from_db": false,
+            "multiline": true,
+            "name": "code",
+            "password": false,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "code",
+            "value": "import httpx\nimport os\nfrom typing import Optional\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput, SecretStrInput, IntInput, DropdownInput, BoolInput\nfrom langflow.io import Output\nfrom langflow.schema.data import Data\n\n\nLANGSEARCH_API_URL = \"https://api.langsearch.com/v1/web-search\"\n\n\nclass LangSearchComponent(Component):\n    \"\"\"Search the web using LangSearch API.\"\"\"\n\n    display_name = \"Web Search (LangSearch)\"\n    description = \"Search the web using LangSearch API with AI-optimized results and summaries (free tier available)\"\n    documentation = \"https://docs.langsearch.com/\"\n    icon = \"Search\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query to execute\",\n            tool_mode=True,\n            required=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"LangSearch API Key\",\n            info=\"Your LangSearch API key (get free key at langsearch.com/dashboard)\",\n            required=False,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            value=5,\n            info=\"Maximum number of search results to return (1-10)\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"freshness\",\n            display_name=\"Time Range\",\n            options=[\"noLimit\", \"oneDay\", \"oneWeek\", \"oneMonth\", \"oneYear\"],\n            value=\"noLimit\",\n            info=\"Filter results by time period\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_summary\",\n            display_name=\"Include Summaries\",\n            value=True,\n            info=\"Include AI-generated summaries for each result\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Search Results\", name=\"search_results\", type_=Data, method=\"search_web\"),\n    ]\n\n    def search_web(self) -> Data:\n        \"\"\"Execute web search and return results.\"\"\"\n        try:\n            # Get API key from input or environment\n            api_key = self.api_key or os.getenv(\"LANGSEARCH_API_KEY\")\n            if not api_key:\n                error_msg = \"LangSearch API key is required. Get a free key at langsearch.com/dashboard\"\n                self.status = error_msg\n                return Data(text=error_msg, data={\"error\": error_msg})\n\n            # Make API request\n            headers = {\n                \"Authorization\": f\"Bearer {api_key}\",\n                \"Content-Type\": \"application/json\"\n            }\n            payload = {\n                \"query\": self.query,\n                \"count\": min(max(1, self.max_results), 10),\n                \"freshness\": self.freshness,\n                \"summary\": self.include_summary\n            }\n\n            with httpx.Client(timeout=15.0) as client:\n                response = client.post(\n                    LANGSEARCH_API_URL,\n                    headers=headers,\n                    json=payload\n                )\n                response.raise_for_status()\n                data = response.json()\n\n            # Parse results\n            if data.get(\"code\") != 200:\n                error_msg = data.get(\"message\", \"Unknown API error\")\n                self.status = error_msg\n                return Data(text=error_msg, data={\"error\": error_msg})\n\n            web_pages = data.get(\"data\", {}).get(\"webPages\", {}).get(\"value\", [])\n            \n            if not web_pages:\n                no_results_msg = f\"No results found for: {self.query}\"\n                self.status = no_results_msg\n                return Data(text=no_results_msg, data={\"results\": [], \"query\": self.query})\n\n            # Format results\n            results = []\n            formatted_text_parts = [f\"Search results for '{self.query}':\"]\n            \n            for i, page in enumerate(web_pages, 1):\n                result = {\n                    \"title\": page.get(\"name\", \"No title\"),\n                    \"url\": page.get(\"url\", \"\"),\n                    \"summary\": page.get(\"summary\", page.get(\"snippet\", \"No summary available\"))\n                }\n                results.append(result)\n                formatted_text_parts.append(f\"\\n{i}. {result['title']}\")\n                formatted_text_parts.append(f\"   URL: {result['url']}\")\n                if result['summary']:\n                    summary_preview = result['summary'][:200] + \"...\" if len(result['summary']) > 200 else result['summary']\n                    formatted_text_parts.append(f\"   {summary_preview}\")\n\n            formatted_text = \"\\n\".join(formatted_text_parts)\n            self.status = f\"Found {len(results)} results\"\n            \n            return Data(\n                text=formatted_text,\n                data={\n                    \"results\": results,\n                    \"query\": self.query,\n                    \"total_results\": len(results)\n                }\n            )\n\n        except httpx.HTTPStatusError as e:\n            if e.response.status_code == 401:\n                error_msg = \"Invalid API key. Get a free key at langsearch.com/dashboard\"\n            elif e.response.status_code == 429:\n                error_msg = \"Rate limit exceeded. Please wait and try again.\"\n            else:\n                error_msg = f\"API error: {e.response.status_code}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": error_msg})\n        except httpx.HTTPError as e:\n            error_msg = f\"Network error: {str(e)}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n        except Exception as e:\n            error_msg = f\"Unexpected error: {str(e)}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n"
+          },
+          "query": {
+            "_input_type": "MessageTextInput",
+            "advanced": false,
+            "display_name": "Search Query",
+            "dynamic": false,
+            "info": "The search query to execute",
+            "input_types": [
+              "Message"
+            ],
+            "list": false,
+            "load_from_db": false,
+            "name": "query",
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "tool_mode": true,
+            "trace_as_input": true,
+            "type": "str",
+            "value": ""
+          },
+          "api_key": {
+            "_input_type": "SecretStrInput",
+            "advanced": false,
+            "display_name": "LangSearch API Key",
+            "dynamic": false,
+            "info": "Your LangSearch API key (get free key at langsearch.com/dashboard)",
+            "list": false,
+            "name": "api_key",
+            "password": true,
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "str",
+            "value": ""
+          },
+          "max_results": {
+            "_input_type": "IntInput",
+            "advanced": true,
+            "display_name": "Max Results",
+            "dynamic": false,
+            "info": "Maximum number of search results to return (1-10)",
+            "list": false,
+            "name": "max_results",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "int",
+            "value": 5
+          },
+          "freshness": {
+            "_input_type": "DropdownInput",
+            "advanced": true,
+            "display_name": "Time Range",
+            "dynamic": false,
+            "info": "Filter results by time period",
+            "list": false,
+            "name": "freshness",
+            "options": ["noLimit", "oneDay", "oneWeek", "oneMonth", "oneYear"],
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "str",
+            "value": "noLimit"
+          },
+          "include_summary": {
+            "_input_type": "BoolInput",
+            "advanced": true,
+            "display_name": "Include Summaries",
+            "dynamic": false,
+            "info": "Include AI-generated summaries for each result",
+            "list": false,
+            "name": "include_summary",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "bool",
+            "value": true
+          },
+          "is_refresh": false,
+          "tools_metadata": {
+            "_input_type": "ToolsInput",
+            "advanced": false,
+            "display_name": "Actions",
+            "dynamic": false,
+            "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+            "is_list": true,
+            "name": "tools_metadata",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "type": "tools",
+            "value": [
+              {
+                "args": {
+                  "query": {
+                    "description": "The search query to execute",
+                    "title": "Query",
+                    "type": "string"
+                  }
+                },
+                "description": "Search the web using LangSearch API with AI-optimized results and summaries",
+                "display_description": "Search the web for current information",
+                "display_name": "search_web",
+                "name": "search_web",
+                "status": true,
+                "tags": [
+                  "search_web"
+                ]
+              }
+            ]
+          }
+        },
+        "tool_mode": true
+      },
+      "showNode": true,
+      "type": "LangSearchComponent"
+    },
+    "id": "LangSearchComponent-lsrc1",
+    "measured": {
+      "height": 218,
+      "width": 320
+    },
+    "position": {
+      "x": 100,
+      "y": 350
+    },
+    "selected": false,
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "component_as_tool",
+    "output_types": [
+      "Tool"
+    ]
+  }
+}

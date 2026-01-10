@@ -1,0 +1,79 @@
+ACME PRODUCTS CATALOG - 2026 EDITION
+
+=====================================
+CATEGORY: OFFICE SUPPLIES
+=====================================
+
+PRODUCT: Premium Paper Clips (Box of 1000)
+SKU: OFS-PC-1000
+Price: $8.99
+Description: Heavy-duty stainless steel paper clips, jumbo size.
+In Stock: Yes
+
+PRODUCT: Deluxe Stapler
+SKU: OFS-ST-500
+Price: $24.99
+Description: Desktop stapler with 50-sheet capacity. Available in black, silver, and red.
+In Stock: Yes
+
+PRODUCT: Ergonomic Pen Set (12-pack)
+SKU: OFS-PN-12
+Price: $15.99
+Description: Comfort grip ballpoint pens with blue, black, and red ink options.
+In Stock: Limited
+
+=====================================
+CATEGORY: TECHNOLOGY
+=====================================
+
+PRODUCT: Wireless Mouse Pro
+SKU: TECH-WM-200
+Price: $49.99
+Description: Bluetooth 5.0 wireless mouse with 6 programmable buttons and 3-month battery life.
+In Stock: Yes
+
+PRODUCT: USB-C Hub 7-in-1
+SKU: TECH-USB-700
+Price: $59.99
+Description: Includes HDMI, 2x USB-A, 1x USB-C, SD card, microSD, and ethernet ports.
+In Stock: Yes
+
+PRODUCT: Noise-Canceling Headphones
+SKU: TECH-NCH-300
+Price: $199.99
+Description: Over-ear headphones with 30-hour battery life and active noise cancellation.
+In Stock: Backorder (2-3 weeks)
+
+=====================================
+CATEGORY: FURNITURE
+=====================================
+
+PRODUCT: Standing Desk Converter
+SKU: FURN-SDC-100
+Price: $299.99
+Description: Adjustable height desk converter with keyboard tray. Holds up to 35 lbs.
+In Stock: Yes
+
+PRODUCT: Ergonomic Office Chair
+SKU: FURN-EOC-500
+Price: $449.99
+Description: Mesh-back chair with lumbar support, adjustable armrests, and headrest.
+In Stock: Yes
+
+PRODUCT: Monitor Stand with Drawers
+SKU: FURN-MS-200
+Price: $79.99
+Description: Bamboo monitor riser with 2 storage drawers. Supports monitors up to 27 inches.
+In Stock: Yes
+
+=====================================
+ORDERING INFORMATION
+=====================================
+
+Minimum Order: $25 for free shipping
+Express Shipping: Available for $12.99 (2-day delivery)
+Bulk Discounts: 10% off orders over $500, 15% off orders over $1000
+Returns: 30-day money-back guarantee on all products
+
+Contact: orders@acmecorp.com
+Phone: 1-800-ACME-BUY

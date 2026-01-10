@@ -1,0 +1,191 @@
+{
+  "id_prefix": "KnowledgeRetrieverComponent",
+  "component_type": "KnowledgeRetrieverComponent",
+  "display_name": "Knowledge Search",
+  "description": "Search through your uploaded documents and knowledge sources",
+  "icon": "BookOpen",
+  "node": {
+    "data": {
+      "id": "KnowledgeRetrieverComponent-kr01",
+      "node": {
+        "base_classes": [
+          "Data"
+        ],
+        "beta": false,
+        "category": "tools",
+        "conditional_paths": [],
+        "custom_fields": {},
+        "description": "Search through uploaded documents and knowledge sources",
+        "display_name": "Knowledge Search",
+        "documentation": "",
+        "edited": false,
+        "field_order": [
+          "query",
+          "knowledge_content",
+          "top_k"
+        ],
+        "frozen": false,
+        "icon": "BookOpen",
+        "key": "KnowledgeRetrieverComponent",
+        "legacy": false,
+        "metadata": {},
+        "minimized": false,
+        "output_types": [],
+        "outputs": [
+          {
+            "allows_loop": false,
+            "cache": true,
+            "display_name": "Toolset",
+            "group_outputs": false,
+            "hidden": false,
+            "loop_types": null,
+            "method": "to_toolkit",
+            "name": "component_as_tool",
+            "options": null,
+            "required_inputs": null,
+            "selected": "Tool",
+            "tool_mode": true,
+            "types": [
+              "Tool"
+            ],
+            "value": "__UNDEFINED__"
+          }
+        ],
+        "pinned": false,
+        "template": {
+          "_type": "Component",
+          "code": {
+            "advanced": true,
+            "dynamic": true,
+            "fileTypes": [],
+            "file_path": "",
+            "info": "",
+            "list": false,
+            "load_from_db": false,
+            "multiline": true,
+            "name": "code",
+            "password": false,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "code",
+            "value": "import re\nfrom typing import List\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput, IntInput\nfrom langflow.io import Output, MultilineInput\nfrom langflow.schema.data import Data\n\n\nclass KnowledgeRetrieverComponent(Component):\n    \"\"\"Search through uploaded documents and knowledge sources.\"\"\"\n\n    display_name = \"Knowledge Search\"\n    description = \"Search through uploaded documents and knowledge sources\"\n    icon = \"BookOpen\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"What to search for in your knowledge base\",\n            tool_mode=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"knowledge_content\",\n            display_name=\"Knowledge Content\",\n            info=\"The content from your uploaded documents (injected automatically)\",\n            required=True,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Number of Results\",\n            info=\"How many relevant passages to return\",\n            value=3,\n            advanced=True,\n            required=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Search Results\", name=\"results\", type_=Data, method=\"search\"),\n    ]\n\n    def _simple_tokenize(self, text: str) -> List[str]:\n        \"\"\"Simple word tokenization.\"\"\"\n        return re.findall(r'\\b\\w+\\b', text.lower())\n\n    def _calculate_relevance(self, query_tokens: List[str], chunk: str) -> float:\n        \"\"\"Calculate simple relevance score based on token overlap.\"\"\"\n        chunk_tokens = set(self._simple_tokenize(chunk))\n        if not chunk_tokens:\n            return 0.0\n        matches = sum(1 for token in query_tokens if token in chunk_tokens)\n        return matches / len(query_tokens) if query_tokens else 0.0\n\n    def search(self) -> Data:\n        \"\"\"Search the knowledge base and return relevant passages.\"\"\"\n        try:\n            query = str(self.query).strip()\n            content = str(self.knowledge_content).strip()\n            top_k = self.top_k or 3\n\n            if not content:\n                return Data(text=\"No knowledge content available.\", data={\"results\": []})\n\n            if not query:\n                return Data(text=\"Please provide a search query.\", data={\"results\": []})\n\n            # Split content into chunks (by paragraphs or fixed size)\n            # First try splitting by double newlines (paragraphs)\n            chunks = [c.strip() for c in re.split(r'\\n\\n+', content) if c.strip()]\n            \n            # If chunks are too large, split further\n            processed_chunks = []\n            for chunk in chunks:\n                if len(chunk) > 1000:\n                    # Split large chunks by sentences\n                    sentences = re.split(r'(?<=[.!?])\\s+', chunk)\n                    current_chunk = \"\"\n                    for sentence in sentences:\n                        if len(current_chunk) + len(sentence) > 800:\n                            if current_chunk:\n                                processed_chunks.append(current_chunk.strip())\n                            current_chunk = sentence\n                        else:\n                            current_chunk += \" \" + sentence\n                    if current_chunk:\n                        processed_chunks.append(current_chunk.strip())\n                else:\n                    processed_chunks.append(chunk)\n\n            if not processed_chunks:\n                return Data(text=\"Could not process knowledge content.\", data={\"results\": []})\n\n            # Score each chunk\n            query_tokens = self._simple_tokenize(query)\n            scored_chunks = []\n            for i, chunk in enumerate(processed_chunks):\n                score = self._calculate_relevance(query_tokens, chunk)\n                if score > 0:\n                    scored_chunks.append((score, i, chunk))\n\n            # Sort by score and get top_k\n            scored_chunks.sort(reverse=True, key=lambda x: x[0])\n            top_chunks = scored_chunks[:top_k]\n\n            if not top_chunks:\n                return Data(\n                    text=f\"No relevant information found for: {query}\",\n                    data={\"results\": [], \"query\": query}\n                )\n\n            # Format results\n            results = []\n            result_text_parts = []\n            for i, (score, idx, chunk) in enumerate(top_chunks, 1):\n                results.append({\n                    \"passage\": chunk,\n                    \"relevance_score\": round(score, 3),\n                    \"chunk_index\": idx\n                })\n                result_text_parts.append(f\"[Passage {i}]\\n{chunk}\")\n\n            result_text = \"\\n\\n---\\n\\n\".join(result_text_parts)\n            self.status = f\"Found {len(results)} relevant passages\"\n\n            return Data(\n                text=result_text,\n                data={\"results\": results, \"query\": query}\n            )\n\n        except Exception as e:\n            error_msg = f\"Search error: {str(e)}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n"
+          },
+          "query": {
+            "_input_type": "MessageTextInput",
+            "advanced": false,
+            "display_name": "Search Query",
+            "dynamic": false,
+            "info": "What to search for in your knowledge base",
+            "input_types": [
+              "Message"
+            ],
+            "list": false,
+            "load_from_db": false,
+            "name": "query",
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "tool_mode": true,
+            "trace_as_input": true,
+            "type": "str",
+            "value": ""
+          },
+          "knowledge_content": {
+            "_input_type": "MultilineInput",
+            "advanced": true,
+            "display_name": "Knowledge Content",
+            "dynamic": false,
+            "info": "The content from your uploaded documents (injected automatically)",
+            "input_types": [],
+            "list": false,
+            "load_from_db": false,
+            "multiline": true,
+            "name": "knowledge_content",
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "str",
+            "value": ""
+          },
+          "top_k": {
+            "_input_type": "IntInput",
+            "advanced": true,
+            "display_name": "Number of Results",
+            "dynamic": false,
+            "info": "How many relevant passages to return",
+            "list": false,
+            "name": "top_k",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "int",
+            "value": 3
+          },
+          "is_refresh": false,
+          "tools_metadata": {
+            "_input_type": "ToolsInput",
+            "advanced": false,
+            "display_name": "Actions",
+            "dynamic": false,
+            "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+            "is_list": true,
+            "name": "tools_metadata",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "type": "tools",
+            "value": [
+              {
+                "args": {
+                  "query": {
+                    "description": "The search query to find relevant information",
+                    "title": "Query",
+                    "type": "string"
+                  }
+                },
+                "description": "Search through uploaded documents and knowledge sources to find relevant information",
+                "display_description": "Search your knowledge base for relevant information",
+                "display_name": "search",
+                "name": "search",
+                "status": true,
+                "tags": [
+                  "search",
+                  "rag",
+                  "knowledge"
+                ]
+              }
+            ]
+          }
+        },
+        "tool_mode": true
+      },
+      "showNode": true,
+      "type": "KnowledgeRetrieverComponent"
+    },
+    "id": "KnowledgeRetrieverComponent-kr01",
+    "measured": {
+      "height": 250,
+      "width": 320
+    },
+    "position": {
+      "x": 100,
+      "y": 100
+    },
+    "selected": false,
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "component_as_tool",
+    "output_types": [
+      "Tool"
+    ]
+  },
+  "knowledge_source_required": true
+}

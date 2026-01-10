@@ -11,6 +11,8 @@ from app.models.user_settings import UserSettings
 from app.models.agent_component import AgentComponent
 from app.models.workflow import Workflow
 from app.models.mcp_server import MCPServer
+from app.models.user_file import UserFile
+from app.models.knowledge_source import KnowledgeSource
 
 __all__ = [
     "User",
@@ -23,4 +25,6 @@ __all__ = [
     "AgentComponent",
     "Workflow",
     "MCPServer",
+    "UserFile",
+    "KnowledgeSource",
 ]

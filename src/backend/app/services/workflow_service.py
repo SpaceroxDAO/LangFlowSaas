@@ -25,11 +25,18 @@ from app.schemas.workflow import (
 from app.services.langflow_client import LangflowClient, langflow_client
 from app.services.template_mapping import TemplateMapper, template_mapper
 from app.services.settings_service import SettingsService
+from app.services.knowledge_service import KnowledgeService
 
 
 class WorkflowServiceError(Exception):
     """Exception raised when workflow operations fail."""
     pass
+
+
+# RAG Configuration
+RAG_CHUNK_SIZE = 1000
+RAG_CHUNK_OVERLAP = 200
+RAG_NUMBER_OF_RESULTS = 5
 
 
 class WorkflowService:
@@ -93,6 +100,101 @@ class WorkflowService:
         workflows = list(result.scalars().all())
 
         return workflows, total
+
+    async def _ingest_knowledge_sources(
+        self,
+        user: User,
+        source_ids: List[str],
+        collection_name: str,
+        openai_api_key: str,
+    ) -> bool:
+        """
+        Run ingestion flow to populate Chroma vector store with documents.
+
+        This creates a temporary flow in Langflow, runs it to ingest the documents,
+        then deletes the flow. The Chroma data persists in the mounted volume.
+
+        Args:
+            user: The user whose documents to ingest
+            source_ids: List of knowledge source IDs
+            collection_name: Chroma collection name
+            openai_api_key: OpenAI API key for embeddings
+
+        Returns:
+            True if ingestion succeeded
+        """
+        if not source_ids:
+            return True
+
+        knowledge_service = KnowledgeService(self.session)
+        sources = await knowledge_service.get_sources_by_ids(source_ids, user.id)
+
+        if not sources:
+            logger.warning(f"No valid knowledge sources found for ingestion")
+            return False
+
+        # Get file paths
+        file_paths = []
+        for source in sources:
+            path = knowledge_service.get_file_absolute_path(source)
+            if path and path.exists():
+                file_paths.append(str(path))
+            else:
+                logger.warning(f"Knowledge source {source.id} has no valid file path")
+
+        if not file_paths:
+            logger.warning(f"No valid file paths for ingestion")
+            return False
+
+        logger.info(f"Ingesting {len(file_paths)} files into collection '{collection_name}'")
+
+        # Load and configure ingestion flow
+        try:
+            ingest_template = self.mapper.load_rag_template("ingest")
+            ingest_flow = self.mapper.configure_ingestion_flow(
+                flow_data=ingest_template,
+                file_paths=file_paths,
+                collection_name=collection_name,
+                openai_api_key=openai_api_key,
+                chunk_size=RAG_CHUNK_SIZE,
+                chunk_overlap=RAG_CHUNK_OVERLAP,
+            )
+        except Exception as e:
+            logger.error(f"Failed to configure ingestion flow: {e}")
+            raise WorkflowServiceError(f"Failed to prepare document ingestion: {e}")
+
+        # Create temporary flow in Langflow
+        temp_flow_id = None
+        try:
+            temp_flow_id = await self.langflow.create_flow(
+                name=f"Ingest-{collection_name}",
+                data=ingest_flow.get("data", {}),
+                description="Temporary ingestion flow",
+            )
+            logger.info(f"Created temporary ingestion flow: {temp_flow_id}")
+
+            # Run the ingestion flow
+            # Note: Ingestion flows don't need user input, but Langflow requires a message
+            await self.langflow.run_flow(
+                flow_id=temp_flow_id,
+                message="ingest",
+                session_id=f"ingest-{collection_name}",
+            )
+            logger.info(f"Completed ingestion for collection '{collection_name}'")
+            return True
+
+        except Exception as e:
+            logger.error(f"Ingestion failed: {e}")
+            raise WorkflowServiceError(f"Document ingestion failed: {e}")
+
+        finally:
+            # Always cleanup the temporary flow
+            if temp_flow_id:
+                try:
+                    await self.langflow.delete_flow(temp_flow_id)
+                    logger.info(f"Cleaned up temporary ingestion flow")
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup ingestion flow: {e}")
 
     async def _get_or_create_default_project(self, user: User) -> str:
         """Get or create the user's default project."""
@@ -226,15 +328,85 @@ class WorkflowService:
         if not component:
             raise WorkflowServiceError("Agent component not found.")
 
-        # Generate flow from component's Q&A with user's LLM settings
-        flow_data, _, _ = self.mapper.create_flow_from_qa(
-            who=component.qa_who,
-            rules=component.qa_rules,
-            tricks=component.qa_tricks,
-            template_name="agent_base",
-            llm_provider=llm_provider,
-            api_key=api_key,
-        )
+        # Determine if RAG should be used (based on knowledge sources)
+        use_rag = self.mapper.should_use_rag_template(component.knowledge_source_ids)
+        rag_failed = False
+
+        if use_rag:
+            # Use RAG template with Chroma vector search
+            logger.info(f"Using RAG template for workflow with {len(component.knowledge_source_ids)} knowledge sources")
+
+            # Generate unique collection name for this workflow
+            # We use a temporary workflow ID since we don't have the real one yet
+            temp_workflow_id = str(uuid.uuid4())
+            collection_name = self.mapper.generate_collection_name(str(user.id), temp_workflow_id)
+
+            # Get OpenAI API key for embeddings (required for RAG)
+            openai_key = settings_service.get_api_key(user_settings, "openai")
+            if not openai_key:
+                # Fall back to keyword search if no OpenAI key
+                logger.warning("No OpenAI API key for RAG embeddings, falling back to keyword search")
+                use_rag = False
+                rag_failed = True
+            else:
+                try:
+                    # Run document ingestion
+                    await self._ingest_knowledge_sources(
+                        user=user,
+                        source_ids=component.knowledge_source_ids,
+                        collection_name=collection_name,
+                        openai_api_key=openai_key,
+                    )
+
+                    # Generate RAG flow
+                    flow_data, _, _ = self.mapper.create_rag_flow_from_qa(
+                        who=component.qa_who,
+                        rules=component.qa_rules,
+                        collection_name=collection_name,
+                        openai_api_key=openai_key,
+                        llm_provider=llm_provider,
+                        llm_api_key=api_key,
+                        agent_display_name=component.name,
+                        selected_tools=component.selected_tools or [],
+                        number_of_results=RAG_NUMBER_OF_RESULTS,
+                    )
+                except Exception as e:
+                    # RAG ingestion failed, fall back to keyword search
+                    logger.warning(f"RAG ingestion failed, falling back to keyword search: {e}")
+                    use_rag = False
+                    rag_failed = True
+
+        if not use_rag:
+            # Use standard agent_base template with keyword-based knowledge search
+            if rag_failed:
+                logger.info("Using keyword-based knowledge search (RAG fallback)")
+            else:
+                logger.info("Using standard agent template without RAG")
+
+            knowledge_content = None
+            if component.knowledge_source_ids:
+                knowledge_service = KnowledgeService(self.session)
+                knowledge_content = await knowledge_service.load_combined_content(
+                    source_ids=component.knowledge_source_ids,
+                    user_id=user.id,
+                )
+                if knowledge_content:
+                    logger.info(f"Loaded {len(knowledge_content)} chars of knowledge content for workflow")
+
+            # Generate flow from component's Q&A with user's LLM settings
+            # Pass the agent's name to display in the canvas instead of generic "Agent"
+            # Include selected_tools to inject tool nodes into the flow
+            flow_data, _, _ = self.mapper.create_flow_from_qa(
+                who=component.qa_who,
+                rules=component.qa_rules,
+                tricks=component.qa_tricks,
+                selected_tools=component.selected_tools or [],  # Pass stored tool IDs
+                template_name="agent_base",
+                llm_provider=llm_provider,
+                api_key=api_key,
+                agent_display_name=component.name,
+                knowledge_content=knowledge_content,  # Pass knowledge content for keyword search
+            )
 
         workflow_name = data.name or f"{component.name} Workflow"
         project_id = str(data.project_id) if data.project_id else component.project_id
@@ -544,3 +716,128 @@ class WorkflowService:
 
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def sync_from_langflow(self, workflow: Workflow) -> Workflow:
+        """
+        Sync workflow's flow_data from Langflow.
+
+        Use this when the user may have edited the flow in the Langflow canvas
+        and you want to ensure our DB has the latest version.
+        """
+        try:
+            langflow_flow = await self.langflow.get_flow(workflow.langflow_flow_id)
+            flow_data = langflow_flow.get("data", {})
+
+            # Update our cached flow_data
+            workflow.flow_data = {"data": flow_data}
+            await self.session.flush()
+            await self.session.refresh(workflow)
+
+            logger.info(f"Synced flow_data from Langflow for workflow {workflow.id}")
+            return workflow
+
+        except Exception as e:
+            logger.error(f"Failed to sync from Langflow: {e}")
+            raise WorkflowServiceError(f"Failed to sync from Langflow: {e}")
+
+    async def check_langflow_sync(self, workflow: Workflow) -> dict:
+        """
+        Check if workflow is in sync with Langflow.
+
+        Returns:
+            dict with sync status and details
+        """
+        try:
+            langflow_flow = await self.langflow.get_flow(workflow.langflow_flow_id)
+            exists_in_langflow = True
+            langflow_name = langflow_flow.get("name", "")
+        except Exception:
+            exists_in_langflow = False
+            langflow_name = None
+
+        return {
+            "workflow_id": str(workflow.id),
+            "langflow_flow_id": workflow.langflow_flow_id,
+            "exists_in_langflow": exists_in_langflow,
+            "langflow_name": langflow_name,
+            "our_name": workflow.name,
+            "has_flow_data": workflow.flow_data is not None,
+        }
+
+    async def get_sync_status(self, user_id: uuid.UUID = None) -> dict:
+        """
+        Get sync status between our DB and Langflow.
+
+        Returns counts of workflows, orphaned flows, and missing flows.
+        """
+        # Get all workflows (optionally filtered by user)
+        stmt = select(Workflow).where(Workflow.is_active == True)
+        if user_id:
+            stmt = stmt.where(Workflow.user_id == str(user_id))
+
+        result = await self.session.execute(stmt)
+        workflows = list(result.scalars().all())
+
+        our_flow_ids = {w.langflow_flow_id for w in workflows if w.langflow_flow_id}
+
+        # Get all flows from Langflow
+        langflow_flow_ids = set()
+        try:
+            # Note: This requires listing all flows - we'll check individual ones
+            for workflow in workflows:
+                try:
+                    await self.langflow.get_flow(workflow.langflow_flow_id)
+                    langflow_flow_ids.add(workflow.langflow_flow_id)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Failed to check Langflow flows: {e}")
+
+        missing_in_langflow = our_flow_ids - langflow_flow_ids
+
+        return {
+            "total_workflows": len(workflows),
+            "synced_with_langflow": len(langflow_flow_ids),
+            "missing_in_langflow": list(missing_in_langflow),
+            "missing_count": len(missing_in_langflow),
+        }
+
+    async def repair_missing_flow(self, workflow: Workflow, user: User) -> Workflow:
+        """
+        Repair a workflow that's missing its Langflow flow.
+
+        Creates a new flow in Langflow and updates the workflow's langflow_flow_id.
+        """
+        # Get user's LLM settings
+        settings_service = SettingsService(self.session)
+        user_settings = await settings_service.get_or_create(user)
+        llm_provider = user_settings.default_llm_provider or "openai"
+        api_key = settings_service.get_api_key(user_settings, llm_provider)
+
+        if not api_key:
+            raise WorkflowServiceError(f"No API key configured for {llm_provider}")
+
+        # Use existing flow_data or create minimal flow
+        flow_data = workflow.flow_data or {"data": {"nodes": [], "edges": []}}
+
+        # Inject current LLM settings
+        flow_data = self.mapper.inject_llm_config(flow_data, llm_provider, api_key)
+
+        try:
+            new_flow_id = await self.langflow.create_flow(
+                name=f"{workflow.name} - {user.id}",
+                data=flow_data.get("data", {}),
+                description=f"Repaired workflow: {workflow.description or workflow.name}",
+            )
+
+            workflow.langflow_flow_id = new_flow_id
+            workflow.flow_data = flow_data
+            await self.session.flush()
+            await self.session.refresh(workflow)
+
+            logger.info(f"Repaired workflow {workflow.id} with new flow {new_flow_id}")
+            return workflow
+
+        except Exception as e:
+            logger.error(f"Failed to repair workflow: {e}")
+            raise WorkflowServiceError(f"Failed to repair workflow: {e}")

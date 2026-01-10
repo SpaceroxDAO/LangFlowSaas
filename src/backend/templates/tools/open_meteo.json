@@ -1,0 +1,185 @@
+{
+  "id_prefix": "OpenMeteoWeatherComponent",
+  "component_type": "OpenMeteoWeatherComponent",
+  "display_name": "Weather (Open-Meteo)",
+  "description": "Get current weather conditions for any location using Open-Meteo free API (no API key required)",
+  "icon": "Cloud",
+  "node": {
+    "data": {
+      "id": "OpenMeteoWeatherComponent-wxyz1",
+      "node": {
+        "base_classes": [
+          "Data"
+        ],
+        "beta": false,
+        "category": "tools",
+        "conditional_paths": [],
+        "custom_fields": {},
+        "description": "Get current weather conditions for any location using Open-Meteo free API (no API key required)",
+        "display_name": "Weather (Open-Meteo)",
+        "documentation": "https://open-meteo.com/en/docs",
+        "edited": false,
+        "field_order": [
+          "location",
+          "latitude",
+          "longitude"
+        ],
+        "frozen": false,
+        "icon": "Cloud",
+        "key": "OpenMeteoWeatherComponent",
+        "legacy": false,
+        "metadata": {},
+        "minimized": false,
+        "output_types": [],
+        "outputs": [
+          {
+            "allows_loop": false,
+            "cache": true,
+            "display_name": "Toolset",
+            "group_outputs": false,
+            "hidden": false,
+            "loop_types": null,
+            "method": "to_toolkit",
+            "name": "component_as_tool",
+            "options": null,
+            "required_inputs": null,
+            "selected": "Tool",
+            "tool_mode": true,
+            "types": [
+              "Tool"
+            ],
+            "value": "__UNDEFINED__"
+          }
+        ],
+        "pinned": false,
+        "template": {
+          "_type": "Component",
+          "code": {
+            "advanced": true,
+            "dynamic": true,
+            "fileTypes": [],
+            "file_path": "",
+            "info": "",
+            "list": false,
+            "load_from_db": false,
+            "multiline": true,
+            "name": "code",
+            "password": false,
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "type": "code",
+            "value": "import httpx\nimport json\nfrom typing import Optional\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput, FloatInput\nfrom langflow.io import Output\nfrom langflow.schema.data import Data\n\n\n# Simple geocoding using Open-Meteo's geocoding API\nGEOCODING_URL = \"https://geocoding-api.open-meteo.com/v1/search\"\nWEATHER_URL = \"https://api.open-meteo.com/v1/forecast\"\n\nWEATHER_CODES = {\n    0: \"Clear sky\",\n    1: \"Mainly clear\",\n    2: \"Partly cloudy\",\n    3: \"Overcast\",\n    45: \"Foggy\",\n    48: \"Depositing rime fog\",\n    51: \"Light drizzle\",\n    53: \"Moderate drizzle\",\n    55: \"Dense drizzle\",\n    61: \"Slight rain\",\n    63: \"Moderate rain\",\n    65: \"Heavy rain\",\n    71: \"Slight snow\",\n    73: \"Moderate snow\",\n    75: \"Heavy snow\",\n    80: \"Slight rain showers\",\n    81: \"Moderate rain showers\",\n    82: \"Violent rain showers\",\n    95: \"Thunderstorm\",\n    96: \"Thunderstorm with slight hail\",\n    99: \"Thunderstorm with heavy hail\",\n}\n\n\nclass OpenMeteoWeatherComponent(Component):\n    \"\"\"Get current weather using Open-Meteo free API.\"\"\"\n\n    display_name = \"Weather (Open-Meteo)\"\n    description = \"Get current weather conditions for any location using Open-Meteo free API (no API key required)\"\n    documentation = \"https://open-meteo.com/en/docs\"\n    icon = \"Cloud\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"location\",\n            display_name=\"Location\",\n            info=\"City name or location to get weather for (e.g., 'London', 'New York', 'Tokyo')\",\n            tool_mode=True,\n            required=True,\n        ),\n        FloatInput(\n            name=\"latitude\",\n            display_name=\"Latitude (Optional)\",\n            info=\"Latitude coordinate (overrides location search if provided along with longitude)\",\n            advanced=True,\n            required=False,\n        ),\n        FloatInput(\n            name=\"longitude\",\n            display_name=\"Longitude (Optional)\",\n            info=\"Longitude coordinate (overrides location search if provided along with latitude)\",\n            advanced=True,\n            required=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Weather Data\", name=\"weather_data\", type_=Data, method=\"get_weather\"),\n    ]\n\n    def _geocode_location(self, location: str) -> tuple[float, float, str]:\n        \"\"\"Convert location name to coordinates using Open-Meteo geocoding.\"\"\"\n        with httpx.Client(timeout=10.0) as client:\n            response = client.get(\n                GEOCODING_URL,\n                params={\"name\": location, \"count\": 1, \"language\": \"en\", \"format\": \"json\"}\n            )\n            response.raise_for_status()\n            data = response.json()\n            \n            if not data.get(\"results\"):\n                raise ValueError(f\"Location '{location}' not found\")\n            \n            result = data[\"results\"][0]\n            return (\n                result[\"latitude\"],\n                result[\"longitude\"],\n                f\"{result['name']}, {result.get('country', '')}\"\n            )\n\n    def get_weather(self) -> Data:\n        \"\"\"Fetch current weather conditions.\"\"\"\n        try:\n            # Get coordinates\n            if hasattr(self, 'latitude') and hasattr(self, 'longitude') and self.latitude and self.longitude:\n                lat, lon = self.latitude, self.longitude\n                location_name = f\"{lat}, {lon}\"\n            else:\n                lat, lon, location_name = self._geocode_location(self.location)\n\n            # Fetch weather\n            with httpx.Client(timeout=10.0) as client:\n                response = client.get(\n                    WEATHER_URL,\n                    params={\n                        \"latitude\": lat,\n                        \"longitude\": lon,\n                        \"current\": \"temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m\",\n                        \"temperature_unit\": \"celsius\",\n                        \"wind_speed_unit\": \"kmh\",\n                        \"timezone\": \"auto\"\n                    }\n                )\n                response.raise_for_status()\n                data = response.json()\n\n            current = data.get(\"current\", {})\n            weather_code = current.get(\"weather_code\", 0)\n            weather_desc = WEATHER_CODES.get(weather_code, \"Unknown\")\n            \n            result = {\n                \"location\": location_name,\n                \"temperature_celsius\": current.get(\"temperature_2m\"),\n                \"humidity_percent\": current.get(\"relative_humidity_2m\"),\n                \"weather_condition\": weather_desc,\n                \"wind_speed_kmh\": current.get(\"wind_speed_10m\"),\n                \"wind_direction_degrees\": current.get(\"wind_direction_10m\"),\n            }\n            \n            summary = f\"Weather in {location_name}: {weather_desc}, {result['temperature_celsius']}°C, Humidity: {result['humidity_percent']}%, Wind: {result['wind_speed_kmh']} km/h\"\n            \n            self.status = summary\n            return Data(text=summary, data=result)\n\n        except httpx.HTTPError as e:\n            error_msg = f\"Weather API error: {str(e)}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n        except ValueError as e:\n            error_msg = str(e)\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n        except Exception as e:\n            error_msg = f\"Unexpected error: {str(e)}\"\n            self.status = error_msg\n            return Data(text=error_msg, data={\"error\": str(e)})\n"
+          },
+          "location": {
+            "_input_type": "MessageTextInput",
+            "advanced": false,
+            "display_name": "Location",
+            "dynamic": false,
+            "info": "City name or location to get weather for (e.g., 'London', 'New York', 'Tokyo')",
+            "input_types": [
+              "Message"
+            ],
+            "list": false,
+            "load_from_db": false,
+            "name": "location",
+            "placeholder": "",
+            "required": true,
+            "show": true,
+            "title_case": false,
+            "tool_mode": true,
+            "trace_as_input": true,
+            "type": "str",
+            "value": ""
+          },
+          "latitude": {
+            "_input_type": "FloatInput",
+            "advanced": true,
+            "display_name": "Latitude (Optional)",
+            "dynamic": false,
+            "info": "Latitude coordinate (overrides location search if provided along with longitude)",
+            "list": false,
+            "name": "latitude",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "float",
+            "value": null
+          },
+          "longitude": {
+            "_input_type": "FloatInput",
+            "advanced": true,
+            "display_name": "Longitude (Optional)",
+            "dynamic": false,
+            "info": "Longitude coordinate (overrides location search if provided along with latitude)",
+            "list": false,
+            "name": "longitude",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "float",
+            "value": null
+          },
+          "is_refresh": false,
+          "tools_metadata": {
+            "_input_type": "ToolsInput",
+            "advanced": false,
+            "display_name": "Actions",
+            "dynamic": false,
+            "info": "Modify tool names and descriptions to help agents understand when to use each tool.",
+            "is_list": true,
+            "name": "tools_metadata",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "tool_mode": false,
+            "type": "tools",
+            "value": [
+              {
+                "args": {
+                  "location": {
+                    "description": "City name or location to get weather for (e.g., 'London', 'New York', 'Tokyo')",
+                    "title": "Location",
+                    "type": "string"
+                  }
+                },
+                "description": "Get current weather conditions for any location using Open-Meteo free API (no API key required)",
+                "display_description": "Get current weather conditions for any location",
+                "display_name": "get_weather",
+                "name": "get_weather",
+                "status": true,
+                "tags": [
+                  "get_weather"
+                ]
+              }
+            ]
+          }
+        },
+        "tool_mode": true
+      },
+      "showNode": true,
+      "type": "OpenMeteoWeatherComponent"
+    },
+    "id": "OpenMeteoWeatherComponent-wxyz1",
+    "measured": {
+      "height": 218,
+      "width": 320
+    },
+    "position": {
+      "x": 100,
+      "y": 350
+    },
+    "selected": false,
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "component_as_tool",
+    "output_types": [
+      "Tool"
+    ]
+  }
+}

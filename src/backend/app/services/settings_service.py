@@ -1,14 +1,17 @@
 """
 Settings service for managing user settings and API keys.
 """
+import json
 import logging
 import uuid
 from typing import Optional, Dict, List
 from datetime import datetime
 
+from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings as app_settings
 from app.models.user import User
 from app.models.user_settings import UserSettings
 from app.schemas.settings import UserSettingsUpdate, ApiKeyResponse
@@ -26,6 +29,55 @@ class SettingsService:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    def _get_fernet(self) -> Optional[Fernet]:
+        """Get Fernet instance for encryption/decryption."""
+        if not app_settings.encryption_key:
+            logger.warning("ENCRYPTION_KEY not set - API keys will be stored in plaintext")
+            return None
+        try:
+            return Fernet(app_settings.encryption_key.encode())
+        except Exception as e:
+            logger.error(f"Invalid ENCRYPTION_KEY format: {e}")
+            return None
+
+    def _encrypt_api_key(self, api_key: str) -> str:
+        """Encrypt an API key for storage using Fernet."""
+        fernet = self._get_fernet()
+
+        if fernet:
+            # Encrypt and prefix with 'enc:' marker
+            encrypted = fernet.encrypt(api_key.encode())
+            return f"enc:{encrypted.decode()}"
+        else:
+            # Fallback to plaintext (development only)
+            return api_key
+
+    def _decrypt_api_key(self, encrypted: str) -> str:
+        """Decrypt an API key from storage using Fernet."""
+        if not encrypted:
+            return ""
+
+        # Check if data is encrypted (has 'enc:' prefix)
+        if encrypted.startswith("enc:"):
+            fernet = self._get_fernet()
+            if fernet:
+                try:
+                    encrypted_data = encrypted[4:]  # Remove 'enc:' prefix
+                    decrypted = fernet.decrypt(encrypted_data.encode())
+                    return decrypted.decode()
+                except InvalidToken:
+                    logger.error("Failed to decrypt API key - invalid token or key")
+                    return ""
+                except Exception as e:
+                    logger.error(f"Failed to decrypt API key: {e}")
+                    return ""
+            else:
+                logger.error("Cannot decrypt - ENCRYPTION_KEY not set")
+                return ""
+        else:
+            # Handle legacy unencrypted data
+            return encrypted
 
     async def get_or_create(self, user: User) -> UserSettings:
         """
@@ -93,8 +145,7 @@ class SettingsService:
         """
         Set an API key for a provider.
 
-        Note: In production, this should use proper encryption.
-        For now, we store keys directly (suitable for dev/demo).
+        The key is encrypted using Fernet if ENCRYPTION_KEY is configured.
 
         Args:
             settings: User settings
@@ -107,10 +158,10 @@ class SettingsService:
         if settings.api_keys_encrypted is None:
             settings.api_keys_encrypted = {}
 
-        # In production, encrypt the key here
-        # For now, store with a simple marker
+        # Encrypt the API key before storing
+        encrypted_key = self._encrypt_api_key(api_key)
         settings.api_keys_encrypted[provider] = {
-            "key": api_key,  # TODO: Encrypt in production
+            "key": encrypted_key,
             "updated_at": datetime.utcnow().isoformat(),
         }
 
@@ -142,14 +193,14 @@ class SettingsService:
 
     def get_api_key(self, settings: UserSettings, provider: str) -> Optional[str]:
         """
-        Get the actual API key for a provider.
+        Get the actual API key for a provider (decrypted).
 
         Args:
             settings: User settings
             provider: LLM provider name (e.g., 'openai', 'anthropic')
 
         Returns:
-            The API key string or None if not set
+            The decrypted API key string or None if not set
         """
         if not settings.api_keys_encrypted:
             return None
@@ -159,7 +210,10 @@ class SettingsService:
         key_data = settings.api_keys_encrypted.get(provider)
 
         if isinstance(key_data, dict):
-            return key_data.get("key")
+            encrypted_key = key_data.get("key")
+            if encrypted_key:
+                # Decrypt the key before returning
+                return self._decrypt_api_key(encrypted_key)
 
         return None
 

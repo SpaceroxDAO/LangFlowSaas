@@ -8,13 +8,14 @@ import { IdentityIcon, CoachingIcon, TricksIcon } from '@/components/icons'
 import { useTour, useShouldShowTour } from '@/providers/TourProvider'
 import { startCreateAgentTour } from '@/tours/createAgentTour'
 import { inferJobFromDescription } from '@/lib/avatarJobInference'
+import { KnowledgeSourcesModal } from '@/components/KnowledgeSourcesModal'
 
 // Available tools for Step 3
 const AVAILABLE_TOOLS = [
   {
     id: 'web_search',
     title: 'Web Search',
-    description: 'Search the internet for current information using DuckDuckGo.',
+    description: 'Search the internet for current information, news, and facts.',
     available: true,
   },
   {
@@ -24,18 +25,17 @@ const AVAILABLE_TOOLS = [
     available: true,
   },
   {
-    id: 'url_reader',
-    title: 'URL Reader',
-    description: 'Fetch and read content from web pages.',
+    id: 'weather',
+    title: 'Get Weather',
+    description: 'Get current weather conditions for any location worldwide.',
     available: true,
   },
   {
-    id: 'google_maps',
-    title: 'Google Maps',
-    description: 'Search for locations and places (requires SerpAPI key).',
+    id: 'knowledge_search',
+    title: 'Knowledge Search',
+    description: 'Search through your uploaded documents and knowledge base.',
     available: true,
-    requiresApiKey: true,
-    apiKeyUrl: 'https://serpapi.com/manage-api-key',
+    opensModal: true,
   },
 ]
 
@@ -45,6 +45,7 @@ interface FormData {
   who: string
   rules: string
   tools: string[]
+  knowledgeSourceIds: string[]
   avatarUrl: string | null
 }
 
@@ -62,6 +63,7 @@ type WizardAction =
   | { type: 'PREV_STEP' }
   | { type: 'UPDATE_FIELD'; field: keyof FormData; value: string | string[] | null }
   | { type: 'TOGGLE_TOOL'; toolId: string }
+  | { type: 'SET_KNOWLEDGE_SOURCES'; sourceIds: string[] }
   | { type: 'SET_ERROR'; field: string; message: string }
   | { type: 'CLEAR_ERROR'; field: string }
   | { type: 'SUBMIT_START' }
@@ -79,6 +81,7 @@ const initialState: WizardState = {
     who: '',
     rules: '',
     tools: [],
+    knowledgeSourceIds: [],
     avatarUrl: null,
   },
   errors: {},
@@ -100,12 +103,43 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
         errors: { ...state.errors, [action.field]: undefined },
       }
     case 'TOGGLE_TOOL': {
+      // Knowledge search tool is handled specially via modal
+      if (action.toolId === 'knowledge_search') {
+        // Toggle is handled by modal, just toggle the tool in list
+        const tools = state.formData.tools.includes(action.toolId)
+          ? state.formData.tools.filter((t) => t !== action.toolId)
+          : [...state.formData.tools, action.toolId]
+        // If removing knowledge_search, also clear the knowledge sources
+        const knowledgeSourceIds = tools.includes('knowledge_search')
+          ? state.formData.knowledgeSourceIds
+          : []
+        return {
+          ...state,
+          formData: { ...state.formData, tools, knowledgeSourceIds },
+        }
+      }
       const tools = state.formData.tools.includes(action.toolId)
         ? state.formData.tools.filter((t) => t !== action.toolId)
         : [...state.formData.tools, action.toolId]
       return {
         ...state,
         formData: { ...state.formData, tools },
+      }
+    }
+    case 'SET_KNOWLEDGE_SOURCES': {
+      // When knowledge sources are selected, ensure knowledge_search tool is enabled
+      const tools = action.sourceIds.length > 0 && !state.formData.tools.includes('knowledge_search')
+        ? [...state.formData.tools, 'knowledge_search']
+        : action.sourceIds.length === 0
+          ? state.formData.tools.filter(t => t !== 'knowledge_search')
+          : state.formData.tools
+      return {
+        ...state,
+        formData: {
+          ...state.formData,
+          tools,
+          knowledgeSourceIds: action.sourceIds,
+        },
       }
     }
     case 'SET_ERROR':
@@ -143,6 +177,7 @@ export function CreateAgentPage() {
   const { completeTour } = useTour()
   const shouldShowTour = useShouldShowTour('create-agent')
   const [tourStarted, setTourStarted] = useState(false)
+  const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
@@ -242,6 +277,7 @@ export function CreateAgentPage() {
         rules: formData.rules,
         tricks: formData.tools.join(', '), // Convert tools array to string
         selected_tools: formData.tools,
+        knowledge_source_ids: formData.knowledgeSourceIds,
         project_id: projectId || undefined,
         avatar_url: formData.avatarUrl || undefined,
       })
@@ -468,26 +504,36 @@ export function CreateAgentPage() {
         </WizardLayout>
       )}
 
-      {/* Step 3: Tricks */}
+      {/* Step 3: Actions */}
       {currentStep === 3 && (
         <WizardLayout
           step={3}
           totalSteps={3}
           theme="orange"
-          title="Step 3: Tricks"
-          description={`Finally, what specific "tricks" or capabilities does your agent need? Does it need to "fetch" information from the web? Does it need to see the world through Maps? Give your agent the tools required to execute its tasks.`}
+          title="Step 3: Actions"
+          description={`Finally, what actions does your agent need to perform? Does it need to search the web? Check the weather? Give your agent the actions required to execute its tasks.`}
           icon={<TricksIcon size={32} color="white" />}
         >
           <div className="space-y-6">
-            {/* Tool Selection Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-tour="agent-tools">
+            {/* Action Selection Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-tour="agent-actions">
               {AVAILABLE_TOOLS.map((tool) => (
                 <ToolCard
                   key={tool.id}
                   title={tool.title}
-                  description={tool.description}
+                  description={
+                    tool.id === 'knowledge_search' && formData.knowledgeSourceIds.length > 0
+                      ? `${formData.knowledgeSourceIds.length} source${formData.knowledgeSourceIds.length !== 1 ? 's' : ''} selected`
+                      : tool.description
+                  }
                   selected={formData.tools.includes(tool.id)}
-                  onToggle={() => dispatch({ type: 'TOGGLE_TOOL', toolId: tool.id })}
+                  onToggle={() => {
+                    if (tool.id === 'knowledge_search') {
+                      setIsKnowledgeModalOpen(true)
+                    } else {
+                      dispatch({ type: 'TOGGLE_TOOL', toolId: tool.id })
+                    }
+                  }}
                   requiresApiKey={tool.requiresApiKey}
                   apiKeyUrl={tool.apiKeyUrl}
                 />
@@ -536,6 +582,15 @@ export function CreateAgentPage() {
           </div>
         </WizardLayout>
       )}
+
+      {/* Knowledge Sources Modal */}
+      <KnowledgeSourcesModal
+        isOpen={isKnowledgeModalOpen}
+        onClose={() => setIsKnowledgeModalOpen(false)}
+        selectedSourceIds={formData.knowledgeSourceIds}
+        onSelectionChange={(sourceIds) => dispatch({ type: 'SET_KNOWLEDGE_SOURCES', sourceIds })}
+        projectId={projectId || undefined}
+      />
     </>
   )
 }
