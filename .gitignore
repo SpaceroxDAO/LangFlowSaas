@@ -72,3 +72,6 @@ playwright-report/
 # Generated avatars
 src/backend/static/avatars/*.png
 !src/backend/static/avatars/.gitkeep
+
+# Local stash backups
+.stash-backup/

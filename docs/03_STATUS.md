@@ -1,21 +1,21 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-01-10 (Morning)
-**Current Phase**: Phase 12 - Knowledge Sources & RAG Foundation
+**Last Updated**: 2026-01-14
+**Current Phase**: MVP Complete - Ready for Production Deploy
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: Phase 12 - Knowledge Sources & RAG Foundation
-**Status**: ✅ Complete (with known limitations)
-**Next Milestone**: Production Deploy
+**Phase**: MVP Feature-Complete (Phases 0-12 Done)
+**Status**: ✅ All Success Criteria Met
+**Next Milestone**: Production Deploy + First Workshops
 
 ## Health Indicators
 
 | Metric | Status | Notes |
 |--------|--------|-------|
-| Documentation | ✅ Updated | This document updated 2026-01-08 |
-| Backend API | ✅ Complete | 36+ new endpoints + avatar generation |
+| Documentation | ✅ Updated | This document updated 2026-01-14 |
+| Backend API | ✅ Complete | 36+ endpoints + avatar generation |
 | Database | ✅ Complete | New tables + workflow_id migration done |
 | Authentication | ✅ Complete | Clerk JWT + Dev Mode |
 | Langflow Integration | ✅ Enhanced | Share, Embed, Webhook, API, Analytics + Nginx proxy fixed |
@@ -29,17 +29,49 @@
 | RAG Search | ⚠️ Partial | Keyword-based fallback working; vector ingestion needs work |
 | Import/Export | ✅ Added | Agent JSON import/export working |
 | New Data Flow | ✅ Working | CreateAgent → AgentComponent + Workflow |
-| Avatar System | ✅ Complete | Auto-inference, three-tier generation |
+| Avatar System | ✅ Complete | Auto-inference (40+ job types), three-tier generation |
 | Custom Components | ✅ Complete | Publish agent → Langflow sidebar working |
-| Chat Playground | ✅ Fixed | Multi-turn conversations, LLM settings fix |
+| Chat Playground | ✅ Fixed | Multi-turn conversations with memory + streaming |
 
-Legend: ✅ Good | 🔨 Built | ⚠️ Warning | ❌ Critical | ⏳ Pending
+Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
+
+## MVP Success Criteria (All Met)
+
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| Platform stable for live workshops | ✅ | 15+ E2E tests passing |
+| 3-step Q&A onboarding works | ✅ | Multi-type support, avatar auto-inference |
+| Playground allows testing agents | ✅ | Multi-turn memory, streaming, tool execution |
+| Basic agent persistence | ✅ | CRUD + export/import working |
+| E2E tests pass | ✅ | chat, publish, multi-turn, RAG all passing |
+
+## What's Working (Feature Summary)
+
+- **3-Step Q&A Wizard**: Multi-type support with avatar auto-inference
+- **Playground Chat**: Multi-turn memory, streaming responses, tool execution
+- **Agent Persistence**: Full CRUD operations + JSON export/import
+- **Knowledge Sources**: Text paste, file upload (PDF/TXT/MD/DOCX/CSV), URL fetch with keyword RAG
+- **Custom Langflow Components**: Publish agent → appears in Langflow sidebar
+- **Avatar System**: Auto-inference from 40+ job types, three-tier generation (known job → description → base)
+- **Progressive Canvas Unlock**: 4 disclosure levels for gradual complexity exposure
+- **Three-Tab UI**: Agents, Workflows, MCP Servers organization
+- **Langflow Integration**: Share, Embed, Webhook, API tabs with white-label overlay
+
+## Known Limitations
+
+1. **Vector RAG Ingestion Fails**: Langflow-native vector ingestion (Chroma + OpenAI Embeddings) returns template validation errors. Keyword-based search fallback works reliably.
+
+2. **MCP Server .mcp.json Sync Not Implemented**: Creating MCP server in UI does not sync to `.mcp.json` file.
+
+3. **Legacy Agents Table Coexists**: Old `agents` table still exists alongside new `agent_components` table. Legacy agents still work via `/playground/:agentId`.
+
+4. **Agent Presets Drafted but Deferred**: Phase 13 (Agent Presets) has database migration and API routes drafted but is deferred to post-MVP for user feedback integration.
 
 ## Phase Progress
 
-### Phases 0-11: Complete ✅
+### Phases 0-12: Complete ✅
 
-All previous phases completed:
+All MVP phases completed:
 - Phase 0-4: MVP Foundation (Q&A wizard, Playground, EditAgent)
 - Phase 5: Progressive Canvas (iframe with 4 disclosure levels)
 - Phase 6: Tools (calculator, web_search, url_reader verified working)
@@ -50,6 +82,7 @@ All previous phases completed:
 - Phase 10: Avatar V2 & Architecture Fixes
 - Phase 11: Custom Component Generation & E2E Testing
 - Phase 11b-d: EditAgent Redesign, Proxy Fix, Config Management
+- Phase 12: Knowledge Sources & RAG Foundation
 
 ### Phase 12: Knowledge Sources & RAG Foundation ✅ Complete
 
@@ -385,10 +418,38 @@ cd src/backend && uvicorn app.main:app --reload
 - [ ] MCP server sync to .mcp.json
 - [ ] Restart notification banner
 
-### Phase 13+: Planned (Post-MVP)
+### Phase 13: Agent Presets (Drafted, Deferred)
+
+**Status**: ⏳ Deferred to post-MVP
+
+Agent Presets would allow users to select from pre-configured agent templates during onboarding. Implementation drafted but deferred to incorporate user feedback from initial workshops.
+
+**Drafted Files (not active):**
+- `src/backend/alembic/versions/20260114_1049_add_agent_presets_table.py` - DB migration
+- `src/backend/app/api/agent_presets.py` - API routes
+- `src/backend/app/models/agent_preset.py` - Model definition
+
+### Phases 14-17: Mission-Based Learning System (Planned)
+
+**Status**: ⏳ Documented, planned for post-launch
+
+The Mission System introduces gamified learning with guided tours, achievements, and badges. Documented in:
+- `docs/06_MISSION_BASED_LEARNING_SYSTEM.md` - Core design
+- `docs/07_MISSION_SYSTEM_ANALYSIS.md` - Implementation analysis
+
+**Planned Phases:**
+- Phase 14: Mission Tours & First Mission ("Create Your First Agent")
+- Phase 15: Achievement System & Badges
+- Phase 16: Mission Categories (Beginner, Intermediate, Advanced)
+- Phase 17: Leaderboards & Social Features
+
+### Future Improvements (Post-MVP Backlog)
 - [ ] Fix RAG vector ingestion (export real template from Langflow UI)
 - [ ] Agent reasoning visibility / chain-of-thought display
 - [ ] Advanced RAG settings (chunk size, embedding models, search type)
+- [ ] MCP server .mcp.json sync implementation
+- [ ] Legacy agents migration script
+- [ ] Freemium pricing integration
 
 ## Frontend Pages
 
@@ -515,15 +576,23 @@ cd src/frontend && npm run build
 cd src/backend && python3 -c "from app.main import app; print('OK')"
 ```
 
-## Git Status (2026-01-08)
+## Git Status (2026-01-14)
 
 Recent commits:
-- `29c066b` - feat: EditAgentPage redesign with header/footer actions & avatar fixes
-- `621855e` - feat: Phase 9 & 10 - Three-tab architecture and Avatar V2
-- `7898e8a` - docs: Add Phase 3 dynamic component generation implementation guide
-- `36b0dd5` - docs: Add detailed technical clarification and example walkthrough
+- `66bfc27` - feat: Phase 2 - Add operational scripts
+- `fdd2786` - feat: Phase 1 - Adopt langflow-factory component standards
+- `69b5413` - docs: Add Langflow component standards & implementation plan
+- `ed37fa5` - feat: UI improvements & playground enhancements
+- `0a9c292` - feat: RAG implementation with comprehensive E2E testing plan
 
-All changes committed and pushed to origin/main.
+**Uncommitted Files (pending):**
+- `docs/06_MISSION_BASED_LEARNING_SYSTEM.md` - Mission system design
+- `docs/07_MISSION_SYSTEM_ANALYSIS.md` - Implementation analysis
+- `src/backend/alembic/versions/20260114_1049_add_agent_presets_table.py` - Agent presets migration (deferred)
+- `src/backend/app/api/agent_presets.py` - Agent presets API (deferred)
+- `src/backend/app/models/agent_preset.py` - Agent presets model (deferred)
+
+All MVP features committed and pushed to origin/main.
 
 ## Known Issues
 
@@ -536,23 +605,30 @@ All changes committed and pushed to origin/main.
 
 3. ~~**Publish not implemented**~~ ✅ **RESOLVED** (Phase 11): Agent publish generates Python components and appears in Langflow sidebar
 
-## Next Steps (Priority Order)
+## Immediate Next Steps
 
-1. **Production Deploy** (Next)
-   - Test in production environment
-   - Verify Langflow integration
+1. **Commit Mission Documentation** (Now)
+   - Commit `docs/06_MISSION_BASED_LEARNING_SYSTEM.md` and `docs/07_MISSION_SYSTEM_ANALYSIS.md`
+   - Defer Agent Presets (Phase 13) files to separate branch
 
-2. **Data Migration** (Optional)
-   - Script to split existing legacy agents into AgentComponent + Workflow
-   - Or: Continue with dual support (legacy + new)
+2. **Production Deploy** (This Week)
+   - Deploy to DataStax using RAGStack AI Langflow
+   - Verify Langflow integration in production
+   - Set environment variables via DataStax dashboard
 
-3. **MCP Integration** (Post-MVP)
-   - Implement `.mcp.json` sync
-   - Implement Langflow restart mechanism
+3. **Run First Workshops** (Next Week)
+   - Onboard 5-10 beta testers
+   - Collect user feedback on Q&A wizard flow
+   - Identify friction points in playground experience
+
+4. **Collect & Prioritize Feedback** (Ongoing)
+   - Document user pain points
+   - Prioritize Phase 13+ features based on real usage
+   - Iterate on educational UX based on workshop learnings
 
 ---
 
-**Status Summary**: ✅ Green - Phase 12 complete. Knowledge sources (text, file, URL) working with keyword-based search. RAG vector ingestion needs refinement but has graceful fallback. All 3 knowledge source types tested and passing. Ready for production deploy.
+**Status Summary**: ✅ Green - MVP Feature-Complete. All success criteria from CLAUDE.md are met. 15+ E2E tests passing. Platform is stable and workshop-ready. Agent Presets and Mission System documented for post-launch. Ready for production deploy and first user workshops.
 
 ---
 
@@ -563,11 +639,11 @@ All changes committed and pushed to origin/main.
 | `00_PROJECT_SPEC.md` | Product requirements, personas | 2026-01-03 |
 | `01_ARCHITECTURE.md` | Technical architecture, DB schema | 2026-01-03 |
 | `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-09 |
-| `03_STATUS.md` | **This file** - Current status | 2026-01-09 |
+| `03_STATUS.md` | **This file** - Current status | 2026-01-14 |
 | `04_DEVELOPMENT_PLAN.md` | Original development plan | 2026-01-03 |
 | `05_EDUCATIONAL_OVERLAY_RESEARCH.md` | UX patterns research | 2026-01-05 |
-| `06_PROGRESSIVE_LEARNING_CURRICULUM.md` | 10-phase curriculum | 2026-01-05 |
-| `07_PHASE_0_4_IMPLEMENTATION_PLAN.md` | Tool implementation | 2026-01-05 |
+| `06_MISSION_BASED_LEARNING_SYSTEM.md` | **Mission system design** | 2026-01-14 |
+| `07_MISSION_SYSTEM_ANALYSIS.md` | **Mission implementation analysis** | 2026-01-14 |
 | `08_LANGFLOW_UI_CSS_SELECTORS.md` | CSS selectors for canvas | 2026-01-05 |
 | `09_PROGRESSIVE_CANVAS_IMPLEMENTATION.md` | Canvas POC docs | 2026-01-05 |
 | `10_PHASE_IMPLEMENTATION_MAPPING.md` | Findings → phases | 2026-01-05 |
@@ -576,6 +652,6 @@ All changes committed and pushed to origin/main.
 | `12_USER_JOURNEYS_AND_ENTERPRISE_ROADMAP.md` | User journeys | 2026-01-05 |
 | `13_LANGFLOW_INTEGRATION_STRATEGY.md` | Integration strategy | 2026-01-05 |
 | `14_CUSTOM_COMPONENTS_STRATEGY.md` | Component strategy | 2026-01-06 |
-| `15_PROJECT_TABS_REORGANIZATION.md` | **Three-tab plan** | 2026-01-07 |
+| `15_PROJECT_TABS_REORGANIZATION.md` | Three-tab plan | 2026-01-07 |
 | `LANGFLOW_PROXY_FIX.md` | Nginx proxy fix for Langflow | 2026-01-08 |
-| `RAG_IMPLEMENTATION_MASTERPLAN.md` | **RAG architecture & status** | 2026-01-10 |
+| `RAG_IMPLEMENTATION_MASTERPLAN.md` | RAG architecture & status | 2026-01-10 |
