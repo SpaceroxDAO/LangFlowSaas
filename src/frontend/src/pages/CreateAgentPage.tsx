@@ -9,6 +9,61 @@ import { useTour, useShouldShowTour } from '@/providers/TourProvider'
 import { startStep1Tour, startStep2Tour, startStep3Tour } from '@/tours'
 import { inferJobFromDescription } from '@/lib/avatarJobInference'
 import { KnowledgeSourcesModal } from '@/components/KnowledgeSourcesModal'
+import {
+  Headphones,
+  FileText,
+  TrendingUp,
+  Code,
+  PenTool,
+  BarChart,
+  Calendar,
+  Search,
+  Bot,
+  Star,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
+
+// Icon mapping for presets
+const presetIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Headphones,
+  FileText,
+  TrendingUp,
+  Code,
+  PenTool,
+  BarChart,
+  Calendar,
+  Search,
+  Bot,
+  Star,
+}
+
+// Gradient mapping for preset cards
+const gradientMap: Record<string, string> = {
+  'blue-cyan': 'from-blue-500 to-cyan-500',
+  'orange-red': 'from-orange-500 to-red-500',
+  'green-teal': 'from-green-500 to-teal-500',
+  'slate-gray': 'from-slate-500 to-gray-600',
+  'pink-rose': 'from-pink-500 to-rose-500',
+  'purple-indigo': 'from-purple-500 to-indigo-500',
+  'amber-orange': 'from-amber-500 to-orange-500',
+  'cyan-blue': 'from-cyan-500 to-blue-500',
+  'purple-pink': 'from-purple-500 to-pink-500',
+}
+
+// Featured preset type
+interface FeaturedPreset {
+  id: string
+  name: string
+  description: string | null
+  icon: string
+  gradient: string
+  category: string
+  who?: string
+  rules?: string | null
+  tools?: string[] | null
+}
 
 // Available tools for Step 3
 const AVAILABLE_TOOLS = [
@@ -72,6 +127,7 @@ type WizardAction =
   | { type: 'AVATAR_GENERATE_START' }
   | { type: 'AVATAR_GENERATE_SUCCESS'; avatarUrl: string }
   | { type: 'AVATAR_GENERATE_ERROR'; message: string }
+  | { type: 'LOAD_PRESET'; preset: { name: string; who: string; rules: string | null; tools: string[] | null } }
 
 // Default values for first-time users (Charlie the dog example)
 const DEFAULT_AGENT_NAME = 'Charlie'
@@ -184,6 +240,18 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       }
     case 'AVATAR_GENERATE_ERROR':
       return { ...state, isGeneratingAvatar: false, submitError: action.message }
+    case 'LOAD_PRESET':
+      return {
+        ...state,
+        formData: {
+          ...state.formData,
+          name: action.preset.name,
+          who: action.preset.who,
+          rules: action.preset.rules || '',
+          tools: action.preset.tools || [],
+        },
+        errors: {},
+      }
     default:
       return state
   }
@@ -204,10 +272,30 @@ export function CreateAgentPage() {
   const [step2TourStarted, setStep2TourStarted] = useState(false)
   const [step3TourStarted, setStep3TourStarted] = useState(false)
   const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false)
+  const [presets, setPresets] = useState<FeaturedPreset[]>([])
+  const [presetsLoading, setPresetsLoading] = useState(true)
+  const [presetsExpanded, setPresetsExpanded] = useState(true)
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
   }, [getToken])
+
+  // Fetch featured presets on mount
+  useEffect(() => {
+    async function fetchPresets() {
+      try {
+        const response = await api.listAgentPresets(undefined, true)
+        // Get full preset data including who, rules, tools
+        setPresets(response.presets as FeaturedPreset[])
+      } catch (err) {
+        console.error('Failed to load presets:', err)
+      } finally {
+        setPresetsLoading(false)
+      }
+    }
+    fetchPresets()
+  }, [])
 
   // Start tour for first-time users on each step
   useEffect(() => {
@@ -330,6 +418,22 @@ export function CreateAgentPage() {
     dispatch({ type: 'PREV_STEP' })
   }, [])
 
+  // Handle preset selection
+  const handleSelectPreset = useCallback((preset: FeaturedPreset) => {
+    setSelectedPresetId(preset.id)
+    dispatch({
+      type: 'LOAD_PRESET',
+      preset: {
+        name: preset.name,
+        who: preset.who || '',
+        rules: preset.rules ?? null,
+        tools: preset.tools ?? null,
+      },
+    })
+    // Collapse the preset section after selection
+    setPresetsExpanded(false)
+  }, [])
+
   const handleSubmit = useCallback(async () => {
     dispatch({ type: 'SUBMIT_START' })
 
@@ -383,6 +487,94 @@ export function CreateAgentPage() {
           icon={<IdentityIcon size={32} color="white" />}
         >
           <div className="space-y-6">
+            {/* Preset Selection Section */}
+            {!presetsLoading && presets.length > 0 && (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setPresetsExpanded(!presetsExpanded)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-violet-500" />
+                    <span className="font-medium text-gray-900">Start from a template</span>
+                    <span className="text-sm text-gray-500">(optional)</span>
+                  </div>
+                  {presetsExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                {presetsExpanded && (
+                  <div className="p-4 bg-white">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Choose a template to pre-fill the form, or start from scratch below.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {presets.map((preset) => {
+                        const IconComponent = presetIconMap[preset.icon] || Bot
+                        const gradientClass = gradientMap[preset.gradient] || 'from-violet-500 to-purple-500'
+                        const isSelected = selectedPresetId === preset.id
+
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => handleSelectPreset(preset)}
+                            className={`relative flex items-start gap-3 p-3 rounded-lg border-2 transition-all text-left ${
+                              isSelected
+                                ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200'
+                                : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
+                              <IconComponent className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 text-sm truncate">
+                                {preset.name}
+                              </div>
+                              <div className="text-xs text-gray-500 line-clamp-2">
+                                {preset.description}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="absolute top-2 right-2 w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {selectedPresetId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPresetId(null)
+                          dispatch({
+                            type: 'LOAD_PRESET',
+                            preset: {
+                              name: DEFAULT_AGENT_NAME,
+                              who: DEFAULT_AGENT_WHO,
+                              rules: DEFAULT_AGENT_RULES,
+                              tools: [],
+                            },
+                          })
+                        }}
+                        className="mt-3 text-sm text-gray-500 hover:text-gray-700 underline"
+                      >
+                        Clear selection and start from scratch
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Name Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

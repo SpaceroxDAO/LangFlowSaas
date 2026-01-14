@@ -15,6 +15,7 @@ from app.api.langflow import router as langflow_router
 from app.api.files import router as files_router
 from app.api.knowledge_sources import router as knowledge_sources_router
 from app.api.chat_files import router as chat_files_router
+from app.api.agent_presets import router as agent_presets_router
 
 __all__ = [
     "health_router",
@@ -31,4 +32,5 @@ __all__ = [
     "files_router",
     "knowledge_sources_router",
     "chat_files_router",
+    "agent_presets_router",
 ]

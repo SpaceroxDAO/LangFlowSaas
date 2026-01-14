@@ -138,6 +138,10 @@ class MCPServerService:
         await self.session.refresh(server)
 
         logger.info(f"Created MCP server {server.id} for user {user.id}")
+
+        # Auto-sync to .mcp.json
+        await self.sync_to_config()
+
         return server
 
     async def create_from_template(
@@ -182,6 +186,10 @@ class MCPServerService:
         await self.session.refresh(server)
 
         logger.info(f"Created MCP server from template {data.template_name}")
+
+        # Auto-sync to .mcp.json
+        await self.sync_to_config()
+
         return server
 
     async def update(
@@ -210,6 +218,9 @@ class MCPServerService:
         await self.session.flush()
         await self.session.refresh(server)
 
+        # Auto-sync to .mcp.json
+        await self.sync_to_config()
+
         return server
 
     async def delete(self, server: MCPServer) -> bool:
@@ -217,8 +228,11 @@ class MCPServerService:
         await self.session.delete(server)
         await self.session.flush()
 
-        # Note: .mcp.json sync will happen on next restart
         logger.info(f"Deleted MCP server {server.id}")
+
+        # Auto-sync to .mcp.json (removes deleted server from config)
+        await self.sync_to_config()
+
         return True
 
     async def enable(self, server: MCPServer) -> MCPServer:
@@ -227,6 +241,10 @@ class MCPServerService:
         server.needs_sync = True
         await self.session.flush()
         await self.session.refresh(server)
+
+        # Auto-sync to .mcp.json
+        await self.sync_to_config()
+
         return server
 
     async def disable(self, server: MCPServer) -> MCPServer:
@@ -235,6 +253,10 @@ class MCPServerService:
         server.needs_sync = True
         await self.session.flush()
         await self.session.refresh(server)
+
+        # Auto-sync to .mcp.json
+        await self.sync_to_config()
+
         return server
 
     async def check_health(self, server: MCPServer) -> MCPServerHealthResponse:

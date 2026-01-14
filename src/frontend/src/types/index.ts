@@ -665,3 +665,50 @@ export interface KnowledgeSourceListResponse {
   page: number
   page_size: number
 }
+
+// =============================================================================
+// Agent Preset Types (Template Gallery)
+// =============================================================================
+
+export interface AgentPreset {
+  id: string
+  name: string
+  description: string | null
+  icon: string
+  category: string
+  who: string
+  rules: string | null
+  tools: string[] | null
+  system_prompt: string | null
+  model_provider: string | null
+  model_name: string | null
+  temperature: string | null
+  gradient: string
+  tags: string[]
+  is_featured: boolean
+  created_at: string | null
+}
+
+export interface AgentPresetCategory {
+  id: string
+  name: string
+  icon: string
+  count?: number
+}
+
+export interface AgentPresetsResponse {
+  presets: AgentPreset[]
+  categories: AgentPresetCategory[]
+  total: number
+}
+
+export interface FeaturedPresetsResponse {
+  presets: Array<{
+    id: string
+    name: string
+    description: string | null
+    icon: string
+    gradient: string
+    category: string
+  }>
+}

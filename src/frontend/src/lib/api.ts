@@ -927,6 +927,66 @@ class ApiClient {
   async deleteKnowledgeSource(id: string): Promise<void> {
     return this.request(`/api/v1/knowledge-sources/${id}`, { method: 'DELETE' })
   }
+
+  // ===========================================================================
+  // Agent Presets (Template Gallery)
+  // ===========================================================================
+
+  async listAgentPresets(
+    category?: string,
+    featuredOnly: boolean = false
+  ): Promise<{
+    presets: Array<{
+      id: string
+      name: string
+      description: string | null
+      icon: string
+      category: string
+      who: string
+      rules: string | null
+      tools: string[] | null
+      gradient: string
+      tags: string[]
+      is_featured: boolean
+    }>
+    categories: Array<{ id: string; name: string; icon: string }>
+    total: number
+  }> {
+    const params = new URLSearchParams()
+    if (category) params.append('category', category)
+    if (featuredOnly) params.append('featured_only', 'true')
+    const queryString = params.toString()
+    return this.request(`/api/v1/agent-presets${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getAgentPreset(id: string): Promise<{
+    id: string
+    name: string
+    description: string | null
+    icon: string
+    category: string
+    who: string
+    rules: string | null
+    tools: string[] | null
+    gradient: string
+    tags: string[]
+    is_featured: boolean
+  }> {
+    return this.request(`/api/v1/agent-presets/${id}`)
+  }
+
+  async getFeaturedPresets(): Promise<{
+    presets: Array<{
+      id: string
+      name: string
+      description: string | null
+      icon: string
+      gradient: string
+      category: string
+    }>
+  }> {
+    return this.request('/api/v1/agent-presets/featured/list')
+  }
 }
 
 export const api = new ApiClient()

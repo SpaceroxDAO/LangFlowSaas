@@ -13,6 +13,7 @@ from app.models.workflow import Workflow
 from app.models.mcp_server import MCPServer
 from app.models.user_file import UserFile
 from app.models.knowledge_source import KnowledgeSource
+from app.models.agent_preset import AgentPreset
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "MCPServer",
     "UserFile",
     "KnowledgeSource",
+    "AgentPreset",
 ]
