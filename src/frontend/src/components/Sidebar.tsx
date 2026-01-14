@@ -278,26 +278,29 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       const text = await file.text()
       const data = JSON.parse(text)
 
-      // Import the agent(s) from the file
-      if (data.agent) {
-        // Wrapped format: { agent: {...} }
-        await api.importAgent(data)
+      // Import the agent component(s) from the file
+      if (data.agent_component) {
+        // Wrapped format: { agent_component: {...} }
+        await api.importAgentComponent(data)
         queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
         queryClient.invalidateQueries({ queryKey: ['projects'] })
+        queryClient.invalidateQueries({ queryKey: ['agent-components'] })
         alert('Agent imported successfully!')
-      } else if (data.agents && Array.isArray(data.agents)) {
-        // Multiple agents (project export): { agents: [...] }
-        for (const agent of data.agents) {
-          await api.importAgent({ agent })
+      } else if (data.agent_components && Array.isArray(data.agent_components)) {
+        // Multiple agent components (project export): { agent_components: [...] }
+        for (const component of data.agent_components) {
+          await api.importAgentComponent({ agent_component: component })
         }
         queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
         queryClient.invalidateQueries({ queryKey: ['projects'] })
-        alert(`${data.agents.length} agent(s) imported successfully!`)
+        queryClient.invalidateQueries({ queryKey: ['agent-components'] })
+        alert(`${data.agent_components.length} agent(s) imported successfully!`)
       } else if (data.name && (data.system_prompt || data.qa_who)) {
         // Direct export format: { name: "...", system_prompt: "...", ... }
-        await api.importAgent(data)
+        await api.importAgentComponent({ agent_component: data })
         queryClient.invalidateQueries({ queryKey: ['projects-with-agents'] })
         queryClient.invalidateQueries({ queryKey: ['projects'] })
+        queryClient.invalidateQueries({ queryKey: ['agent-components'] })
         alert('Agent imported successfully!')
       } else {
         alert('Invalid import file format. Please use an exported agent JSON file.')
@@ -364,8 +367,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           ))}
         </div>
 
-        {/* Bottom - My Files only */}
-        <div className="mt-auto">
+        {/* Bottom icons */}
+        <div className="mt-auto space-y-1">
+          {/* My Files */}
           <Link
             to="/dashboard/files"
             className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
@@ -386,24 +390,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <div className="w-52 h-full bg-white border-r border-gray-200 flex flex-col">
-      {/* Hidden file input for import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleFileImport}
-        className="hidden"
-      />
-
       {/* Header */}
       <div className="px-3 py-3 flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Projects</span>
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-1.5 text-xs font-semibold text-gray-900 uppercase tracking-wide hover:text-gray-600 transition-colors"
+          title="Collapse sidebar"
+        >
+          <svg
+            className="w-3 h-3 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+          </svg>
+          Projects
+        </button>
         <div className="flex items-center gap-1">
-          {/* Upload/Import button */}
-          <button
-            onClick={handleImportClick}
-            disabled={isImporting}
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+          {/* Upload/Import button - using label for better browser compatibility */}
+          <label
+            htmlFor="sidebar-import-input"
+            className={`p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer ${isImporting ? 'opacity-50 pointer-events-none' : ''}`}
             title="Import agent"
           >
             {isImporting ? (
@@ -413,7 +421,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
             )}
-          </button>
+            <input
+              id="sidebar-import-input"
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileImport}
+              className="sr-only"
+            />
+          </label>
           {/* Add project button */}
           <button
             onClick={() => setShowNewProjectInput(true)}
@@ -480,7 +496,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* Bottom Section */}
-      <div className="border-t border-gray-100 px-2 py-2">
+      <div className="border-t border-gray-100 px-2 py-2 space-y-1">
         {/* My Files */}
         <Link
           to="/dashboard/files"

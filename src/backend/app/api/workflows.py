@@ -1,10 +1,12 @@
 """
 Workflow management endpoints.
 """
+import asyncio
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sse_starlette.sse import EventSourceResponse
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
@@ -18,7 +20,8 @@ from app.schemas.workflow import (
     WorkflowListResponse,
     WorkflowExportResponse,
 )
-from app.schemas.message import ChatRequest, ChatResponse
+from app.schemas.message import ChatRequest, ChatResponse, MessageUpdate, MessageFeedback
+from app.schemas.streaming import StreamEvent, StreamEventType
 from app.services.user_service import UserService
 from app.services.workflow_service import WorkflowService, WorkflowServiceError
 
@@ -52,8 +55,8 @@ async def get_workflow_templates():
         {"id": "sales", "name": "Sales & Marketing", "icon": "trending-up", "group": "Use Cases"},
         {"id": "dev", "name": "Developer Tools", "icon": "code", "group": "Use Cases"},
         {"id": "automation", "name": "Automation", "icon": "refresh-cw", "group": "Use Cases"},
-        # Custom
-        {"id": "my-agents", "name": "My Agents", "icon": "user", "group": "Custom"},
+        # Advanced (community templates from langflow-templates)
+        {"id": "advanced", "name": "Advanced", "icon": "zap", "group": "Advanced"},
     ]
 
     # Add Get Started showcase templates (one for each methodology)
@@ -168,6 +171,18 @@ async def get_workflow_templates():
             "tags": ["AGENTS", "ADVANCED"],
             "gradient": "indigo-purple",
             "icon": "git-branch",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "founder-flow",
+            "name": "FounderFlow",
+            "description": "Multi-agent startup builder with CEO, PM, Designer & Engineer agents.",
+            "category": "agents",
+            "tags": ["AGENTS", "MULTI-AGENT", "STARTUP"],
+            "gradient": "amber-orange",
+            "icon": "zap",
             "is_blank": False,
             "is_builtin": True,
             "data": None,
@@ -407,6 +422,103 @@ async def get_workflow_templates():
             "is_builtin": True,
             "data": None,
         },
+        # === ADVANCED TEMPLATES (from langflow-templates community repo) ===
+        {
+            "id": "adv-tool-based-rag",
+            "name": "Tool-Based RAG",
+            "description": "Advanced RAG with tool-calling capabilities for dynamic information retrieval.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "RAG", "TOOLS"],
+            "gradient": "violet-purple",
+            "icon": "search",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-vectorless-rag",
+            "name": "Vectorless RAG",
+            "description": "RAG implementation without vector databases using alternative retrieval methods.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "RAG"],
+            "gradient": "teal-green",
+            "icon": "layers",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-ingestion-router",
+            "name": "Ingestion Router",
+            "description": "Smart document ingestion with intelligent routing based on content type.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "DOCUMENTS"],
+            "gradient": "cyan-blue",
+            "icon": "git-branch",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-multi-source-retrieval",
+            "name": "Multi-Source Retrieval",
+            "description": "Retrieve and combine information from multiple data sources.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "RAG", "DATA"],
+            "gradient": "indigo-purple",
+            "icon": "database",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-agentic-process",
+            "name": "Agentic Process Automation",
+            "description": "Complex multi-step process automation with autonomous agents.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "AUTOMATION"],
+            "gradient": "amber-orange",
+            "icon": "refresh-cw",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-document-intelligence",
+            "name": "Document Intelligence",
+            "description": "Advanced document understanding with classification, extraction, and summarization.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "DOCUMENTS"],
+            "gradient": "rose-pink",
+            "icon": "file-text",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-semantic-memory",
+            "name": "Semantic Memory",
+            "description": "Long-term semantic memory system for persistent agent knowledge.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "MEMORY"],
+            "gradient": "purple-indigo",
+            "icon": "brain",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
+        {
+            "id": "adv-multi-agent-system",
+            "name": "Multi-Agent System",
+            "description": "Coordinated multi-agent workflows with specialized roles and collaboration.",
+            "category": "advanced",
+            "tags": ["ADVANCED", "AGENTS"],
+            "gradient": "fuchsia-pink",
+            "icon": "bot",
+            "is_blank": False,
+            "is_builtin": True,
+            "data": None,
+        },
     ]
     templates.extend(builtin_templates)
 
@@ -455,7 +567,11 @@ async def get_workflow_templates():
 
         for i, starter in enumerate(starter_templates):
             # Extract name from the flow data
-            name = starter.get("name") or f"Template {i + 1}"
+            name = starter.get("name")
+
+            # Skip templates without a proper name - these are corrupted/incomplete
+            if not name:
+                continue
 
             # Get metadata or use defaults
             metadata = template_metadata.get(name, {
@@ -808,6 +924,78 @@ async def chat_with_workflow(
         )
 
 
+@router.post(
+    "/{workflow_id}/chat/stream",
+    summary="Chat with workflow (streaming)",
+    description="Send a message to a workflow and receive streaming response with agent events.",
+)
+async def chat_with_workflow_stream(
+    workflow_id: uuid.UUID,
+    chat_request: ChatRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """
+    Stream chat response with agent visibility.
+
+    Returns Server-Sent Events (SSE) stream with:
+    - text_delta: Incremental text chunks
+    - thinking_start/delta/end: Agent reasoning
+    - tool_call_start/end: Tool invocations
+    - content_block_*: Structured content
+    - done: Stream complete
+    """
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    async def event_generator():
+        """Generate SSE events from the streaming chat."""
+        try:
+            async for event in service.chat_stream(
+                workflow=workflow,
+                user=user,
+                message=chat_request.message,
+                conversation_id=chat_request.conversation_id,
+            ):
+                # Convert StreamEvent to SSE format
+                yield {
+                    "event": event.event.value,
+                    "data": event.model_dump_json(),
+                }
+
+                # Stop after done event
+                if event.event == StreamEventType.DONE:
+                    break
+
+        except asyncio.CancelledError:
+            # Client disconnected, cleanup gracefully
+            pass
+        except Exception as e:
+            # Send error event on unexpected errors
+            from app.schemas.streaming import error_event
+            err = error_event(
+                code="STREAM_ERROR",
+                message=str(e),
+            )
+            yield {
+                "event": err.event.value,
+                "data": err.model_dump_json(),
+            }
+
+    return EventSourceResponse(
+        event_generator(),
+        media_type="text/event-stream",
+    )
+
+
 @router.get(
     "/{workflow_id}/conversations",
     summary="List workflow conversations",
@@ -923,6 +1111,349 @@ async def get_conversation_messages(
             status_code=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch messages: {e.message}",
         )
+
+
+@router.patch(
+    "/{workflow_id}/conversations/{conversation_id}/messages/{message_id}",
+    summary="Edit a message",
+    description="Edit the content of a user message.",
+)
+async def update_message(
+    workflow_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+    update_data: MessageUpdate,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Edit a user message. Stores original content and marks as edited."""
+    from app.schemas.message import MessageUpdate, MessageResponse
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+    from sqlalchemy import select
+    from datetime import datetime
+
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    # Verify workflow ownership
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    # Verify conversation ownership
+    result = await session.execute(
+        select(Conversation).where(
+            Conversation.id == str(conversation_id),
+            Conversation.workflow_id == str(workflow_id),
+            Conversation.user_id == str(user.id),
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    # Get the message
+    result = await session.execute(
+        select(Message).where(
+            Message.id == str(message_id),
+            Message.conversation_id == str(conversation_id),
+        )
+    )
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found.",
+        )
+
+    # Only allow editing user messages
+    if message.role != "user":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only user messages can be edited.",
+        )
+
+    # Store original content if first edit
+    if not message.is_edited:
+        message.original_content = message.content
+
+    # Update the message
+    message.content = update_data.content
+    message.is_edited = True
+    message.edited_at = datetime.utcnow()
+
+    await session.commit()
+    await session.refresh(message)
+
+    return MessageResponse.model_validate(message)
+
+
+@router.delete(
+    "/{workflow_id}/conversations/{conversation_id}/messages/{message_id}",
+    summary="Delete a message",
+    description="Delete a message from a conversation.",
+)
+async def delete_message(
+    workflow_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Delete a message from a conversation."""
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+    from sqlalchemy import select
+
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    # Verify workflow ownership
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    # Verify conversation ownership
+    result = await session.execute(
+        select(Conversation).where(
+            Conversation.id == str(conversation_id),
+            Conversation.workflow_id == str(workflow_id),
+            Conversation.user_id == str(user.id),
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    # Get the message
+    result = await session.execute(
+        select(Message).where(
+            Message.id == str(message_id),
+            Message.conversation_id == str(conversation_id),
+        )
+    )
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found.",
+        )
+
+    await session.delete(message)
+    await session.commit()
+
+    return {"success": True, "message": "Message deleted."}
+
+
+@router.delete(
+    "/{workflow_id}/conversations/{conversation_id}",
+    summary="Delete a conversation",
+    description="Delete a conversation and all its messages.",
+)
+async def delete_conversation(
+    workflow_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Delete a conversation and all its messages."""
+    from app.models.conversation import Conversation
+    from sqlalchemy import select
+
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    # Verify workflow ownership
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    # Get the conversation
+    result = await session.execute(
+        select(Conversation).where(
+            Conversation.id == str(conversation_id),
+            Conversation.workflow_id == str(workflow_id),
+            Conversation.user_id == str(user.id),
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    await session.delete(conversation)
+    await session.commit()
+
+    return {"success": True, "message": "Conversation deleted."}
+
+
+@router.post(
+    "/{workflow_id}/conversations/{conversation_id}/messages/{message_id}/feedback",
+    summary="Submit feedback on a message",
+    description="Submit thumbs up/down feedback on an assistant message.",
+)
+async def submit_message_feedback(
+    workflow_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+    feedback_data: MessageFeedback,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Submit positive or negative feedback on an assistant message."""
+    from app.schemas.message import MessageFeedback, MessageResponse
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+    from sqlalchemy import select
+    from datetime import datetime
+
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    # Verify workflow ownership
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    # Verify conversation ownership
+    result = await session.execute(
+        select(Conversation).where(
+            Conversation.id == str(conversation_id),
+            Conversation.workflow_id == str(workflow_id),
+            Conversation.user_id == str(user.id),
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    # Get the message
+    result = await session.execute(
+        select(Message).where(
+            Message.id == str(message_id),
+            Message.conversation_id == str(conversation_id),
+        )
+    )
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found.",
+        )
+
+    # Only allow feedback on assistant messages
+    if message.role != "assistant":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Feedback can only be submitted on assistant messages.",
+        )
+
+    # Toggle feedback if same value, otherwise set new value
+    if message.feedback == feedback_data.feedback:
+        # Same feedback clicked again - remove it
+        message.feedback = None
+        message.feedback_at = None
+    else:
+        # Set new feedback
+        message.feedback = feedback_data.feedback
+        message.feedback_at = datetime.utcnow()
+
+    await session.commit()
+    await session.refresh(message)
+
+    return MessageResponse.model_validate(message)
+
+
+@router.delete(
+    "/{workflow_id}/conversations/{conversation_id}/messages/{message_id}/feedback",
+    summary="Remove feedback from a message",
+    description="Remove previously submitted feedback from a message.",
+)
+async def remove_message_feedback(
+    workflow_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Remove feedback from an assistant message."""
+    from app.schemas.message import MessageResponse
+    from app.models.message import Message
+    from app.models.conversation import Conversation
+    from sqlalchemy import select
+
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    # Verify workflow ownership
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    # Verify conversation ownership
+    result = await session.execute(
+        select(Conversation).where(
+            Conversation.id == str(conversation_id),
+            Conversation.workflow_id == str(workflow_id),
+            Conversation.user_id == str(user.id),
+        )
+    )
+    conversation = result.scalar_one_or_none()
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    # Get the message
+    result = await session.execute(
+        select(Message).where(
+            Message.id == str(message_id),
+            Message.conversation_id == str(conversation_id),
+        )
+    )
+    message = result.scalar_one_or_none()
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found.",
+        )
+
+    # Remove feedback
+    message.feedback = None
+    message.feedback_at = None
+
+    await session.commit()
+    await session.refresh(message)
+
+    return MessageResponse.model_validate(message)
 
 
 @router.get(

@@ -52,6 +52,18 @@ class KnowledgeSourceCreateFromText(BaseModel):
     )
 
 
+class KnowledgeSourceCreateFromUserFile(BaseModel):
+    """Schema for creating a knowledge source from an existing user file."""
+    file_id: uuid.UUID = Field(
+        ...,
+        description="ID of the user file to convert to knowledge source",
+    )
+    project_id: Optional[uuid.UUID] = Field(
+        None,
+        description="Project to associate with (optional)",
+    )
+
+
 class KnowledgeSourceResponse(BaseModel):
     """Schema for knowledge source responses."""
     model_config = ConfigDict(from_attributes=True)

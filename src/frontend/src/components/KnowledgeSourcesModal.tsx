@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
-import type { KnowledgeSource } from '@/types'
+import type { KnowledgeSource, UserFile } from '@/types'
 
 interface KnowledgeSourcesModalProps {
   isOpen: boolean
@@ -14,7 +14,7 @@ interface KnowledgeSourcesModalProps {
   projectId?: string
 }
 
-type TabType = 'browse' | 'upload' | 'url' | 'text'
+type TabType = 'browse' | 'myfiles' | 'upload' | 'url' | 'text'
 
 export function KnowledgeSourcesModal({
   isOpen,
@@ -42,6 +42,46 @@ export function KnowledgeSourcesModal({
   const [textName, setTextName] = useState('')
   const [isAddingText, setIsAddingText] = useState(false)
 
+  // My Files state
+  const [userFiles, setUserFiles] = useState<UserFile[]>([])
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false)
+  const [isConvertingFile, setIsConvertingFile] = useState<string | null>(null)
+
+  // Load user files
+  const loadUserFiles = useCallback(async () => {
+    setIsLoadingFiles(true)
+    try {
+      const response = await api.listFiles()
+      setUserFiles(response.files || [])
+    } catch (err) {
+      console.error('Failed to load user files:', err)
+    } finally {
+      setIsLoadingFiles(false)
+    }
+  }, [])
+
+  // Convert user file to knowledge source
+  const handleConvertUserFile = async (file: UserFile) => {
+    setIsConvertingFile(file.id)
+    setError(null)
+    try {
+      const newSource = await api.createKnowledgeSourceFromUserFile({
+        file_id: file.id,
+        project_id: projectId,
+      })
+      setSources(prev => [newSource, ...prev])
+      // Auto-select newly converted source
+      if (!selectedSourceIds.includes(newSource.id)) {
+        onSelectionChange([...selectedSourceIds, newSource.id])
+      }
+      setActiveTab('browse')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to use file')
+    } finally {
+      setIsConvertingFile(null)
+    }
+  }
+
   // Load knowledge sources
   const loadSources = useCallback(async () => {
     setIsLoading(true)
@@ -61,6 +101,13 @@ export function KnowledgeSourcesModal({
       loadSources()
     }
   }, [isOpen, loadSources])
+
+  // Load user files when My Files tab is active
+  useEffect(() => {
+    if (isOpen && activeTab === 'myfiles') {
+      loadUserFiles()
+    }
+  }, [isOpen, activeTab, loadUserFiles])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -227,10 +274,10 @@ export function KnowledgeSourcesModal({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 px-6">
+        <div className="flex border-b border-gray-100 px-6 overflow-x-auto">
           <button
             onClick={() => setActiveTab('browse')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
               activeTab === 'browse'
                 ? 'border-amber-500 text-amber-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -239,8 +286,18 @@ export function KnowledgeSourcesModal({
             Browse ({sources.length})
           </button>
           <button
+            onClick={() => setActiveTab('myfiles')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
+              activeTab === 'myfiles'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            My Files
+          </button>
+          <button
             onClick={() => setActiveTab('upload')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
               activeTab === 'upload'
                 ? 'border-amber-500 text-amber-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -371,6 +428,101 @@ export function KnowledgeSourcesModal({
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* My Files Tab */}
+          {activeTab === 'myfiles' && (
+            <div>
+              {isLoadingFiles ? (
+                <div className="flex items-center justify-center py-12">
+                  <svg className="animate-spin w-8 h-8 text-amber-500" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </div>
+              ) : userFiles.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No files in My Files</h3>
+                  <p className="text-gray-500 mb-4">Upload files to your "My Files" section first, then use them here.</p>
+                  <a
+                    href="/dashboard/files"
+                    className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors inline-block"
+                  >
+                    Go to My Files
+                  </a>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500 mb-4">
+                    Select files from your uploads to use as knowledge sources.
+                  </p>
+                  {userFiles.map(file => {
+                    // Check if this file is already in sources (by matching filename and size)
+                    const alreadyAdded = sources.some(s =>
+                      s.original_filename === file.name && s.file_size === file.size
+                    )
+
+                    return (
+                      <div
+                        key={file.id}
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                          alreadyAdded
+                            ? 'border-green-200 bg-green-50'
+                            : 'border-gray-200 hover:border-amber-300'
+                        }`}
+                      >
+                        {/* Icon */}
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-gray-500">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{formatFileSize(file.size)}</span>
+                            <span>·</span>
+                            <span>{new Date(file.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Action button */}
+                        {alreadyAdded ? (
+                          <span className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-lg">
+                            Added
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleConvertUserFile(file)}
+                            disabled={isConvertingFile === file.id}
+                            className="px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isConvertingFile === file.id ? (
+                              <>
+                                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Adding...
+                              </>
+                            ) : (
+                              'Use'
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>

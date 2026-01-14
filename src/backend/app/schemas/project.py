@@ -74,8 +74,10 @@ class ProjectResponse(BaseModel):
     sort_order: int
     created_at: datetime
     updated_at: datetime
-    # Computed field - agent count
+    # Computed fields - counts
     agent_count: int = 0
+    workflow_count: int = 0
+    mcp_server_count: int = 0
 
 
 class ProjectWithAgentsResponse(BaseModel):

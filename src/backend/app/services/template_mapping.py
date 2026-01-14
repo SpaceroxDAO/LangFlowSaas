@@ -22,6 +22,86 @@ class TemplateMappingError(Exception):
     pass
 
 
+# =============================================================================
+# LAYOUT CONFIGURATION - Hierarchical Column Layout
+# =============================================================================
+# Nodes are arranged in columns left-to-right following data flow:
+# ChatInput → Tools → Agent → ChatOutput
+#
+# This creates a clean, professional layout that's easy to understand.
+# =============================================================================
+
+class LayoutConfig:
+    """
+    Configuration for node positioning in the workflow canvas.
+
+    Layout follows a left-to-right data flow pattern:
+
+    Column 1        Column 2        Column 3        Column 4
+    (Input)         (Tools)         (Agent)         (Output)
+    ─────────────────────────────────────────────────────────
+                    ┌─────────┐
+    ┌──────────┐    │ Tool 1  │     ┌─────────────┐
+    │ChatInput │    ├─────────┤     │             │  ┌───────────┐
+    └──────────┘    │ Tool 2  │────▶│   Agent     │─▶│ChatOutput │
+                    ├─────────┤     │             │  └───────────┘
+                    │ Tool 3  │     └─────────────┘
+                    └─────────┘
+    """
+
+    # Column X positions (left-to-right)
+    CHAT_INPUT_X = 200
+    TOOLS_COLUMN_X = 550
+    AGENT_X = 1050
+    CHAT_OUTPUT_X = 1500
+
+    # Vertical center point for the canvas
+    CENTER_Y = 450
+
+    # Tool node dimensions (approximate)
+    TOOL_HEIGHT = 220
+    TOOL_SPACING = 40  # Vertical gap between tools
+
+    # Y positions for fixed nodes
+    # ChatInput/ChatOutput are short (48px), positioned to align with Agent ports
+    CHAT_INPUT_Y = 550   # Aligns with Agent's input port area
+    CHAT_OUTPUT_Y = 480  # Aligns with Agent's output port area
+
+    # Agent Y position - Agent is tall (~594px), positioned to center around tools
+    AGENT_Y = 180
+
+    @classmethod
+    def calculate_tool_positions(cls, num_tools: int) -> list:
+        """
+        Calculate Y positions for tools to center them vertically.
+
+        Tools are stacked in a single column, centered around CENTER_Y.
+
+        Args:
+            num_tools: Number of tools to position
+
+        Returns:
+            List of (x, y) tuples for each tool position
+        """
+        if num_tools == 0:
+            return []
+
+        # Calculate total height of all tools
+        total_height = (num_tools * cls.TOOL_HEIGHT) + ((num_tools - 1) * cls.TOOL_SPACING)
+
+        # Starting Y position to center the stack
+        start_y = cls.CENTER_Y - (total_height / 2)
+
+        positions = []
+        current_y = start_y
+
+        for _ in range(num_tools):
+            positions.append((cls.TOOLS_COLUMN_X, current_y))
+            current_y += cls.TOOL_HEIGHT + cls.TOOL_SPACING
+
+        return positions
+
+
 # Mapping of tool IDs to their template file names
 TOOL_MAPPING = {
     # Primary tools
@@ -304,7 +384,10 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
         knowledge_content: str = None,
     ) -> Tuple[Dict[str, Any], str]:
         """
-        Inject tool components into the flow.
+        Inject tool components into the flow with hierarchical column layout.
+
+        Tools are positioned in a dedicated column (Column 2) between ChatInput
+        and Agent, centered vertically for a clean, professional appearance.
 
         Args:
             flow_data: The flow template data
@@ -318,8 +401,12 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
         if not selected_tools:
             return flow_data, ""
 
+        # Filter to valid tools and calculate positions
+        valid_tools = [tid for tid in selected_tools if self.load_tool_template(tid)]
+        tool_positions = LayoutConfig.calculate_tool_positions(len(valid_tools))
+
         tools_description_parts = []
-        y_offset = 350  # Starting Y position for tools (below Agent)
+        tool_index = 0
 
         for tool_id in selected_tools:
             tool_template = self.load_tool_template(tool_id)
@@ -337,9 +424,10 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
             node["id"] = node_id
             node["data"]["id"] = node_id
 
-            # Update position (stack tools vertically to the left of Agent)
-            node["position"] = {"x": 100, "y": y_offset}
-            y_offset += 150  # Space between tools
+            # Use hierarchical column layout positioning
+            x, y = tool_positions[tool_index]
+            node["position"] = {"x": x, "y": y}
+            tool_index += 1
 
             # Handle knowledge_search tool specially - inject knowledge content
             if tool_id == "knowledge_search" and knowledge_content:

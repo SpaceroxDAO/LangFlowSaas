@@ -18,6 +18,7 @@ from app.schemas.knowledge_source import (
     KnowledgeSourceListResponse,
     KnowledgeSourceCreateFromURL,
     KnowledgeSourceCreateFromText,
+    KnowledgeSourceCreateFromUserFile,
     KnowledgeSourceProcessResponse,
     SUPPORTED_EXTENSIONS,
     MAX_FILE_SIZE,
@@ -184,6 +185,32 @@ async def add_text(
         return KnowledgeSourceResponse.model_validate(source)
     except KnowledgeServiceError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/from-user-file", response_model=KnowledgeSourceResponse, status_code=201)
+async def create_from_user_file(
+    data: KnowledgeSourceCreateFromUserFile,
+    clerk_user: CurrentUser,
+    session: AsyncSessionDep,
+):
+    """
+    Create a knowledge source from an existing user file (from My Files).
+
+    This allows users to use files they've already uploaded to "My Files"
+    as knowledge sources for RAG retrieval.
+    """
+    user = await get_user_from_clerk(clerk_user, session)
+    service = KnowledgeService(session)
+    try:
+        source = await service.create_from_user_file(
+            user=user,
+            file_id=data.file_id,
+            project_id=data.project_id,
+        )
+        await session.commit()
+        return KnowledgeSourceResponse.model_validate(source)
+    except KnowledgeServiceError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/{source_id}", status_code=204)

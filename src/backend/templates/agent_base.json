@@ -277,8 +277,8 @@
           "width": 192
         },
         "position": {
-          "x": 1235.4222740043401,
-          "y": 897.5992294662233
+          "x": 200,
+          "y": 550
         },
         "selected": false,
         "type": "genericNode"
@@ -560,8 +560,8 @@
           "width": 192
         },
         "position": {
-          "x": 2145,
-          "y": 660
+          "x": 1500,
+          "y": 480
         },
         "selected": false,
         "type": "genericNode"
@@ -1266,8 +1266,8 @@
           "width": 320
         },
         "position": {
-          "x": 1641.6239626366948,
-          "y": 301.10345101561927
+          "x": 1050,
+          "y": 180
         },
         "selected": false,
         "type": "genericNode"

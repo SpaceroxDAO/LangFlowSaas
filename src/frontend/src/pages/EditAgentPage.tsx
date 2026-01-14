@@ -3,7 +3,7 @@
  * Matches the design mockup with sections for Identity, Instructions, and Tools
  */
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
@@ -76,6 +76,7 @@ export function EditAgentPage() {
   const { agentId } = useParams<{ agentId: string }>()
   const { getToken } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -103,6 +104,8 @@ export function EditAgentPage() {
   const [_hasRestartedAfterPublish, setHasRestartedAfterPublish] = useState(false)
   const [_langflowFlowId, setLangflowFlowId] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false)
+  const [existingWorkflowId, setExistingWorkflowId] = useState<string | null>(null)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
@@ -140,10 +143,13 @@ export function EditAgentPage() {
         // Get workflows and find the one containing this agent
         const workflowsData = await api.listWorkflows()
         const workflow = workflowsData.workflows.find(
-          (w: { agent_component_ids?: string[] }) => w.agent_component_ids?.includes(agentId)
+          (w: { agent_component_ids?: string[]; id: string }) => w.agent_component_ids?.includes(agentId)
         )
-        if (workflow?.langflow_flow_id) {
-          setLangflowFlowId(workflow.langflow_flow_id)
+        if (workflow) {
+          setExistingWorkflowId(workflow.id)
+          if (workflow.langflow_flow_id) {
+            setLangflowFlowId(workflow.langflow_flow_id)
+          }
         }
       } catch (err) {
         console.error('Failed to fetch workflow:', err)
@@ -332,6 +338,26 @@ export function EditAgentPage() {
       // Invalidate cache
       queryClient.invalidateQueries({ queryKey: ['agent-components'] })
 
+      // Also regenerate the workflow if one exists (to sync tool changes)
+      if (existingWorkflowId) {
+        try {
+          // Delete and recreate workflow with updated tools
+          await api.deleteWorkflow(existingWorkflowId)
+          const workflow = await api.createWorkflowFromAgent({
+            agent_component_id: agentId,
+            name: name,
+            description: `Workflow for ${name}`,
+          })
+          setExistingWorkflowId(workflow.id)
+          if (workflow.langflow_flow_id) {
+            setLangflowFlowId(workflow.langflow_flow_id)
+          }
+        } catch (workflowErr) {
+          console.warn('Failed to regenerate workflow:', workflowErr)
+          // Don't fail the whole publish if workflow update fails
+        }
+      }
+
       if (result.needs_restart) {
         setNeedsRestart(true)
         setShowRestartModal(true)
@@ -391,6 +417,46 @@ export function EditAgentPage() {
 
   const handleRestartLater = () => {
     setShowRestartModal(false)
+  }
+
+  const handleCreateWorkflow = async () => {
+    if (!agentId) return
+
+    setIsCreatingWorkflow(true)
+    setSaveError(null)
+
+    try {
+      // First, delete existing workflow if any
+      if (existingWorkflowId) {
+        try {
+          await api.deleteWorkflow(existingWorkflowId)
+          console.log('Deleted existing workflow:', existingWorkflowId)
+        } catch (err) {
+          console.warn('Failed to delete existing workflow (may already be deleted):', err)
+        }
+      }
+
+      // Create new workflow with current agent configuration
+      const workflow = await api.createWorkflowFromAgent({
+        agent_component_id: agentId,
+        name: name,
+        description: `Workflow for ${name}`,
+      })
+
+      // Update state with new workflow
+      setExistingWorkflowId(workflow.id)
+      if (workflow.langflow_flow_id) {
+        setLangflowFlowId(workflow.langflow_flow_id)
+      }
+
+      // Navigate to canvas
+      navigate(`/canvas/${agentId}`)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create workflow'
+      setSaveError(errorMessage)
+    } finally {
+      setIsCreatingWorkflow(false)
+    }
   }
 
   // Determine if Create New Workflow button should be enabled
@@ -721,21 +787,47 @@ export function EditAgentPage() {
               )}
             </button>
 
-            {/* Create New Workflow Button */}
-            <Link
-              to={canCreateWorkflow ? `/canvas/${agentId}` : '#'}
-              className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-colors shadow-sm ${
-                canCreateWorkflow
-                  ? 'text-white bg-emerald-500 hover:bg-emerald-600'
-                  : 'text-gray-400 bg-gray-100 cursor-not-allowed pointer-events-none'
-              }`}
-              title={!canCreateWorkflow ? 'Publish and restart Langflow first to enable this' : 'Open in Flow Editor'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-              </svg>
-              Create New Workflow
-            </Link>
+            {/* View/Create Workflow Button */}
+            {existingWorkflowId ? (
+              <button
+                onClick={() => navigate(`/canvas/${agentId}`)}
+                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-colors shadow-sm text-white bg-emerald-500 hover:bg-emerald-600"
+                title="View workflow in AI Canvas"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                View Workflow
+              </button>
+            ) : (
+              <button
+                onClick={handleCreateWorkflow}
+                disabled={!canCreateWorkflow || isCreatingWorkflow}
+                className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-colors shadow-sm ${
+                  canCreateWorkflow && !isCreatingWorkflow
+                    ? 'text-white bg-emerald-500 hover:bg-emerald-600'
+                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                }`}
+                title={!canCreateWorkflow ? 'Publish first to enable this' : 'Create workflow to test your agent'}
+              >
+                {isCreatingWorkflow ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Workflow
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

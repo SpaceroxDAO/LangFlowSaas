@@ -56,6 +56,8 @@ import type {
   KnowledgeSourceCreateFromURL,
   KnowledgeSourceCreateFromText,
   KnowledgeSourceListResponse,
+  // Streaming types
+  StreamEvent,
 } from '@/types'
 
 // Check dev mode from environment
@@ -480,6 +482,105 @@ class ApiClient {
     })
   }
 
+  /**
+   * Stream chat with a workflow using Server-Sent Events.
+   *
+   * @param workflowId - The workflow ID
+   * @param data - Chat request with message and optional conversation_id
+   * @param onEvent - Callback for each stream event
+   * @param signal - Optional AbortSignal for cancellation
+   */
+  async chatWithWorkflowStream(
+    workflowId: string,
+    data: ChatRequest,
+    onEvent: (event: StreamEvent) => void,
+    signal?: AbortSignal
+  ): Promise<void> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    // Only add auth header in production mode
+    if (!isDevMode && this.getToken) {
+      const token = await this.getToken()
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/v1/workflows/${workflowId}/chat/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+      signal,
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Stream failed: ${error}`)
+    }
+
+    if (!response.body) {
+      throw new Error('No response body')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete SSE messages from buffer
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          // Skip empty lines and event type lines
+          if (!line.trim() || line.startsWith('event:')) {
+            continue
+          }
+
+          // Process data lines
+          if (line.startsWith('data:')) {
+            const dataStr = line.slice(5).trim()
+            if (!dataStr) continue
+
+            try {
+              const eventData = JSON.parse(dataStr)
+
+              // Convert to StreamEvent format
+              const streamEvent: StreamEvent = {
+                event: eventData.event,
+                data: eventData.data || {},
+                index: eventData.index,
+                timestamp: eventData.timestamp,
+              }
+
+              onEvent(streamEvent)
+
+              // Check for done event
+              if (streamEvent.event === 'done') {
+                return
+              }
+            } catch (e) {
+              console.warn('Failed to parse SSE data:', dataStr, e)
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
+
   async listWorkflowConversations(workflowId: string): Promise<WorkflowConversationsResponse> {
     return this.request(`/api/v1/workflows/${workflowId}/conversations`)
   }
@@ -490,11 +591,106 @@ class ApiClient {
       role: 'user' | 'assistant'
       content: string
       timestamp: string
+      is_edited?: boolean
+      edited_at?: string
+      original_content?: string
+      feedback?: 'positive' | 'negative' | null
+      feedback_at?: string
     }>
     conversation_id: string
     total: number
   }> {
     return this.request(`/api/v1/workflows/${workflowId}/conversations/${conversationId}/messages`)
+  }
+
+  /**
+   * Update a message (edit content)
+   */
+  async updateMessage(
+    workflowId: string,
+    conversationId: string,
+    messageId: string,
+    content: string
+  ): Promise<{
+    id: string
+    content: string
+    is_edited: boolean
+    edited_at: string
+  }> {
+    return this.request(
+      `/api/v1/workflows/${workflowId}/conversations/${conversationId}/messages/${messageId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ content }),
+      }
+    )
+  }
+
+  /**
+   * Delete a message
+   */
+  async deleteMessage(
+    workflowId: string,
+    conversationId: string,
+    messageId: string
+  ): Promise<{ success: boolean; message: string }> {
+    return this.request(
+      `/api/v1/workflows/${workflowId}/conversations/${conversationId}/messages/${messageId}`,
+      { method: 'DELETE' }
+    )
+  }
+
+  /**
+   * Delete a conversation and all its messages
+   */
+  async deleteConversation(
+    workflowId: string,
+    conversationId: string
+  ): Promise<{ success: boolean; message: string }> {
+    return this.request(
+      `/api/v1/workflows/${workflowId}/conversations/${conversationId}`,
+      { method: 'DELETE' }
+    )
+  }
+
+  /**
+   * Submit feedback on an assistant message (thumbs up/down)
+   */
+  async submitMessageFeedback(
+    workflowId: string,
+    conversationId: string,
+    messageId: string,
+    feedback: 'positive' | 'negative'
+  ): Promise<{
+    id: string
+    feedback: 'positive' | 'negative' | null
+    feedback_at: string | null
+  }> {
+    return this.request(
+      `/api/v1/workflows/${workflowId}/conversations/${conversationId}/messages/${messageId}/feedback`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ feedback }),
+      }
+    )
+  }
+
+  /**
+   * Remove feedback from a message
+   */
+  async removeMessageFeedback(
+    workflowId: string,
+    conversationId: string,
+    messageId: string
+  ): Promise<{
+    id: string
+    feedback: null
+    feedback_at: null
+  }> {
+    return this.request(
+      `/api/v1/workflows/${workflowId}/conversations/${conversationId}/messages/${messageId}/feedback`,
+      { method: 'DELETE' }
+    )
   }
 
   // ===========================================================================
@@ -716,6 +912,13 @@ class ApiClient {
 
   async addKnowledgeSourceFromText(data: KnowledgeSourceCreateFromText): Promise<KnowledgeSource> {
     return this.request<KnowledgeSource>('/api/v1/knowledge-sources/text', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createKnowledgeSourceFromUserFile(data: { file_id: string; project_id?: string }): Promise<KnowledgeSource> {
+    return this.request<KnowledgeSource>('/api/v1/knowledge-sources/from-user-file', {
       method: 'POST',
       body: JSON.stringify(data),
     })

@@ -27,6 +27,7 @@ from app.api import (
     langflow_router,
     files_router,
     knowledge_sources_router,
+    chat_files_router,
 )
 
 
@@ -95,6 +96,7 @@ app.include_router(avatars_router, prefix="/api/v1")
 app.include_router(langflow_router, prefix="/api/v1")
 app.include_router(files_router, prefix="/api/v1")
 app.include_router(knowledge_sources_router, prefix="/api/v1")
+app.include_router(chat_files_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
 # Path(__file__).parent = /app/app (where main.py is located)

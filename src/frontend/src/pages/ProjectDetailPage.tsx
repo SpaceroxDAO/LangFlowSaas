@@ -573,7 +573,7 @@ function AgentRow({
   return (
     <div className="flex items-center gap-4 py-3 hover:bg-gray-50 transition-colors group">
       {/* Avatar with Gradient Background */}
-      <div className={`w-10 h-10 rounded-full ${agent.avatar_url ? 'bg-violet-100' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+      <div className={`w-8 h-8 rounded-full ${agent.avatar_url ? 'bg-violet-100' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
         {agent.avatar_url ? (
           <img
             src={agent.avatar_url}
@@ -581,7 +581,7 @@ function AgentRow({
             className="w-full h-full object-contain scale-150"
           />
         ) : (
-          <Dog className="w-5 h-5 text-white" />
+          <Dog className="w-4 h-4 text-white" />
         )}
       </div>
 
@@ -679,7 +679,7 @@ function AgentCard({
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all group">
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-12 h-12 rounded-full ${agent.avatar_url ? 'bg-violet-100' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+        <div className={`w-10 h-10 rounded-full ${agent.avatar_url ? 'bg-violet-100' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
           {agent.avatar_url ? (
             <img
               src={agent.avatar_url}
@@ -687,7 +687,7 @@ function AgentCard({
               className="w-full h-full object-contain scale-150"
             />
           ) : (
-            <Dog className="w-6 h-6 text-white" />
+            <Dog className="w-5 h-5 text-white" />
           )}
         </div>
         <div className="relative">

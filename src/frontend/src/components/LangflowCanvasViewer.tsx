@@ -117,19 +117,6 @@ export function LangflowCanvasViewer({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Educational overlay for Level 1 */}
-      {currentLevel === 1 && (
-        <div className="relative">
-          <div className="absolute inset-0 z-10 pointer-events-none">
-            <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-lg max-w-xs">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium text-violet-600">Peek Mode:</span> You're viewing {agentName}'s brain in read-only mode. See how messages flow through the components!
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Loading state */}
       {isLoading && (
         <div className="flex-1 flex items-center justify-center bg-gray-50">

@@ -327,9 +327,12 @@ async def import_agent_component(
     service = AgentComponentService(session)
 
     try:
+        # Handle both wrapped and unwrapped formats
+        component_data = import_data.get("agent_component", import_data)
+
         component = await service.import_component(
             user=user,
-            import_data=import_data,
+            import_data=component_data,
             project_id=project_id,
         )
         return component

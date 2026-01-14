@@ -191,3 +191,136 @@ export const TOOL_IDS = {
 } as const
 
 export type ToolId = typeof TOOL_IDS[keyof typeof TOOL_IDS]
+
+/**
+ * Phase 2 Selectors: Publish, Workflow, Tool Visibility
+ */
+export const phase2Selectors = {
+  // ========================================
+  // Publish Feature
+  // ========================================
+  publish: {
+    publishButton: 'button:has-text("Publish")',
+    publishUpdatesButton: 'button:has-text("Publish Updates")',
+    unpublishButton: 'button:has-text("Unpublish")',
+    publishedBadge: 'text=Published',
+    publishedStatus: '.text-green-600:has-text("Published")',
+    restartRequiredMessage: 'text=Restart required',
+
+    // Publish modal
+    publishModal: '[role="dialog"]:has-text("Agent Published")',
+    restartNowButton: 'button:has-text("Restart Now")',
+    restartLaterButton: 'button:has-text("Restart Later")',
+    publishSuccessMessage: 'text=Agent Published Successfully',
+  },
+
+  // ========================================
+  // Create New Workflow
+  // ========================================
+  workflow: {
+    createNewWorkflowButton: 'button:has-text("Create New Workflow"), a:has-text("Create New Workflow")',
+    createNewWorkflowLink: 'a:has-text("Create New Workflow")',
+
+    // Canvas page
+    canvasIframe: 'iframe',
+    canvasHeader: 'h1:has-text("Brain")',
+    backToPlayground: 'a:has-text("Playground"), a:has-text("Back to Chat")',
+    openInLangflow: 'a:has-text("Open Full Editor")',
+
+    // Workflow nodes (in canvas)
+    agentNode: '[data-testid="agent-node"]',
+    toolNode: '[data-testid="tool-node"]',
+    ragNode: '[data-testid="rag-node"], [data-testid="retriever-node"]',
+  },
+
+  // ========================================
+  // Tool Call Visibility / Agent Thinking
+  // ========================================
+  toolCalls: {
+    // Tool call panel in chat messages
+    toolCallSection: '.tool-call, [data-testid="tool-call"]',
+    toolCallExpander: 'button:has-text("Show tool calls"), button:has-text("View details")',
+
+    // Individual tool call display
+    toolCallName: '.tool-call-name, [data-testid="tool-name"]',
+    toolCallInput: '.tool-call-input, [data-testid="tool-input"]',
+    toolCallResult: '.tool-call-result, [data-testid="tool-result"]',
+    toolCallError: '.tool-call-error, [data-testid="tool-error"]',
+    toolCallTiming: '.tool-call-timing, [data-testid="tool-timing"]',
+
+    // Specific tool indicators
+    calculatorTool: 'text=Calculator',
+    webSearchTool: 'text=Web Search',
+    weatherTool: 'text=Weather',
+    knowledgeSearchTool: 'text=Knowledge Search',
+
+    // Thinking indicator
+    thinkingIndicator: '.animate-pulse, text=Thinking',
+    toolExecutingIndicator: 'text=Executing',
+  },
+
+  // ========================================
+  // Advanced Settings
+  // ========================================
+  advancedSettings: {
+    advancedSettingsButton: 'button:has-text("Advanced Settings")',
+    settingsPanel: '[data-testid="advanced-settings"]',
+    temperatureSlider: 'input[type="range"]:near(:text("Temperature"))',
+    maxTokensInput: 'input:near(:text("Max Tokens"))',
+    modelSelector: 'select:near(:text("Model"))',
+  },
+
+  // ========================================
+  // Save Draft
+  // ========================================
+  saveDraft: {
+    saveDraftButton: 'button:has-text("Save Draft")',
+    draftSavedMessage: 'text=Draft saved',
+    unsavedChangesIndicator: 'text=Unsaved changes',
+  },
+
+  // ========================================
+  // Tool Combination Test Helpers
+  // ========================================
+  toolTestQueries: {
+    calculatorOnly: 'What is 156 * 87?',
+    webSearchOnly: 'What is the latest news about artificial intelligence?',
+    weatherOnly: 'What is the weather in Tokyo?',
+    knowledgeOnly: 'What is the vacation policy?',
+    calculatorPlusKnowledge: 'If vacation is 15 days and I use 3, how many left?',
+    allTools: 'Based on the dress code in the handbook, what should I wear if it is 72°F outside and I need to calculate 15% tip on my lunch?',
+  },
+}
+
+/**
+ * Tool combination configurations for matrix testing
+ */
+export const TOOL_COMBINATIONS = {
+  // No tools
+  none: [],
+
+  // Single tools
+  calculatorOnly: ['calculator'],
+  webSearchOnly: ['web_search'],
+  weatherOnly: ['weather'],
+  knowledgeOnly: ['knowledge_search'],
+
+  // Two tool combos
+  calcPlusWeb: ['calculator', 'web_search'],
+  calcPlusWeather: ['calculator', 'weather'],
+  calcPlusKnowledge: ['calculator', 'knowledge_search'],
+  webPlusWeather: ['web_search', 'weather'],
+  webPlusKnowledge: ['web_search', 'knowledge_search'],
+  weatherPlusKnowledge: ['weather', 'knowledge_search'],
+
+  // Three tool combos
+  calcWebWeather: ['calculator', 'web_search', 'weather'],
+  calcWebKnowledge: ['calculator', 'web_search', 'knowledge_search'],
+  calcWeatherKnowledge: ['calculator', 'weather', 'knowledge_search'],
+  webWeatherKnowledge: ['web_search', 'weather', 'knowledge_search'],
+
+  // All tools
+  allTools: ['calculator', 'web_search', 'weather', 'knowledge_search'],
+} as const
+
+export type ToolCombination = keyof typeof TOOL_COMBINATIONS

@@ -3,9 +3,16 @@ Message and chat schemas for request/response validation.
 """
 import uuid
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from enum import Enum
+from typing import Optional, Dict, Any, List, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class FeedbackType(str, Enum):
+    """Feedback type for assistant messages."""
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
 
 
 class MessageBase(BaseModel):
@@ -22,6 +29,20 @@ class MessageCreate(MessageBase):
     message_metadata: Optional[Dict[str, Any]] = None
 
 
+class MessageUpdate(BaseModel):
+    """Schema for updating a message (editing)."""
+
+    content: str = Field(..., min_length=1, description="Updated message content")
+
+
+class MessageFeedback(BaseModel):
+    """Schema for submitting feedback on a message."""
+
+    feedback: Literal["positive", "negative"] = Field(
+        ..., description="Feedback type: positive (thumbs up) or negative (thumbs down)"
+    )
+
+
 class MessageResponse(BaseModel):
     """Schema for message responses."""
 
@@ -33,6 +54,13 @@ class MessageResponse(BaseModel):
     content: str
     message_metadata: Optional[Dict[str, Any]]
     created_at: datetime
+    # Edit tracking
+    is_edited: bool = False
+    edited_at: Optional[datetime] = None
+    original_content: Optional[str] = None
+    # Feedback
+    feedback: Optional[str] = None
+    feedback_at: Optional[datetime] = None
 
 
 class ChatRequest(BaseModel):

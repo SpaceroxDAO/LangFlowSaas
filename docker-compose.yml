@@ -42,6 +42,7 @@ services:
       - VITE_LANGFLOW_HOST=/langflow
     networks:
       - teachcharlie-network
+    restart: unless-stopped
     # No port exposed - accessed via nginx
 
   # PostgreSQL Database
@@ -64,6 +65,7 @@ services:
       retries: 5
     networks:
       - teachcharlie-network
+    restart: unless-stopped
 
   # Langflow AI Agent Engine
   langflow:
@@ -118,6 +120,7 @@ services:
       start_period: 30s
     networks:
       - teachcharlie-network
+    restart: unless-stopped
 
   # Custom FastAPI Backend
   backend:
@@ -168,6 +171,7 @@ services:
         condition: service_healthy
     networks:
       - teachcharlie-network
+    restart: unless-stopped
     # Development: hot reload
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 

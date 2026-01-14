@@ -539,3 +539,395 @@ P2/P3 tests are nice-to-have for production hardening.
 4. Add test data to `src/frontend/e2e/helpers/test-data.ts`
 5. Run tests with `npx playwright test tests/rag-comprehensive.spec.ts`
 6. Use ralph-loop for iterative fixing until all pass
+
+---
+
+# PHASE 2: Publish, Workflow, and Tool Combination Testing
+
+**Added**: 2026-01-10
+**Purpose**: Comprehensive testing of Publish features, Workflow creation, Tool visibility, and all tool combinations
+
+---
+
+## 9. Publish Feature Tests
+
+### 9.1 Initial Publish (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| PB-001 | Publish new agent | 1. Create agent<br>2. Navigate to Edit<br>3. Click "Publish" | "Published" badge appears |
+| PB-002 | Publish status persists | Publish → Refresh page | "Published" badge still visible |
+| PB-003 | Restart Langflow prompt | Click Publish | Modal asks about Langflow restart |
+| PB-004 | Restart Later option | Click "Restart Later" | Modal closes, status shows "Restart required" |
+| PB-005 | Restart Now option | Click "Restart Now" | Langflow restarts, component available |
+| PB-006 | Unpublish agent | Click "Unpublish" button | Status reverts to unpublished |
+| PB-007 | Publish without tools | Create agent with no tools → Publish | Agent publishes successfully |
+| PB-008 | Publish with all tools | Create agent with all 4 tools → Publish | Agent publishes with all tools |
+
+### 9.2 Publish Updates (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| PB-009 | Update name → Publish Updates | Change name → Click "Publish Updates" | New name reflected |
+| PB-010 | Update persona → Publish Updates | Change persona → Publish Updates | New persona used |
+| PB-011 | Update instructions → Publish Updates | Change instructions → Publish Updates | New instructions active |
+| PB-012 | Add tool → Publish Updates | Add Calculator → Publish Updates | Tool available in workflow |
+| PB-013 | Remove tool → Publish Updates | Remove Web Search → Publish Updates | Tool no longer available |
+| PB-014 | Add knowledge sources → Publish Updates | Add 2 sources → Publish Updates | New sources in RAG |
+| PB-015 | Remove knowledge sources → Publish Updates | Remove sources → Publish Updates | Sources no longer used |
+| PB-016 | Multiple changes → Publish Updates | Change name + tools + sources → Publish | All changes applied |
+| PB-017 | Publish Updates persists | Make changes → Publish Updates → Refresh | Changes still present |
+| PB-018 | Cancel changes before publish | Make changes → Navigate away → Return | Changes not persisted (draft only) |
+
+---
+
+## 10. Create New Workflow Tests
+
+### 10.1 Workflow Creation (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| WF-001 | Create New Workflow button | Click "Create New Workflow" on Edit page | Navigates to /canvas/{workflowId} |
+| WF-002 | Workflow appears in Langflow | Create workflow → Open Langflow | Workflow visible in Langflow |
+| WF-003 | Workflow has correct nodes | View workflow in canvas | Agent node + tool nodes present |
+| WF-004 | Workflow has RAG nodes | Create with Knowledge Search | RAG retriever nodes visible |
+| WF-005 | Navigate to Playground from Workflow | Canvas → Click "Playground" | Redirects to /playground/workflow/{id} |
+| WF-006 | Chat works in new workflow | Create workflow → Playground → Send message | Response received |
+| WF-007 | Tools work in new workflow | Create workflow with Calculator → Test math | Calculator executes |
+| WF-008 | RAG works in new workflow | Create workflow with knowledge → Ask question | Knowledge retrieved |
+
+### 10.2 Workflow-Playground Integration (P1)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| WF-009 | Multiple workflows same agent | Create 2 workflows → Test each | Both work independently |
+| WF-010 | Delete workflow | Delete workflow → Check agent | Agent still exists |
+| WF-011 | Workflow reflects tool changes | Edit agent tools → Create new workflow | New workflow has updated tools |
+| WF-012 | Workflow reflects knowledge changes | Edit knowledge → Create new workflow | New workflow has updated knowledge |
+
+---
+
+## 11. Agent Thinking / Tool Calls Visibility
+
+### 11.1 Tool Call Panel (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| TC-101 | Tool panel opens | Ask question requiring tool → Check response | Tool call section visible |
+| TC-102 | Calculator tool visible | "What is 15 * 23?" | Shows "Calculator" tool call |
+| TC-103 | Calculator input visible | Same query | Shows input: "15 * 23" |
+| TC-104 | Calculator result visible | Same query | Shows result: "345" |
+| TC-105 | Web Search tool visible | "What's the latest news about AI?" | Shows "Web Search" tool call |
+| TC-106 | Web Search query visible | Same query | Shows search query sent |
+| TC-107 | Weather tool visible | "What's the weather in New York?" | Shows "Weather" tool call |
+| TC-108 | Weather location visible | Same query | Shows location: "New York" |
+| TC-109 | Knowledge Search tool visible | "What's the vacation policy?" | Shows "Knowledge Search" tool call |
+| TC-110 | Knowledge query visible | Same query | Shows search query |
+| TC-111 | Knowledge results visible | Same query | Shows retrieved chunks |
+
+### 11.2 Multi-Tool Visibility (P1)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| TC-112 | Two tools in one query | "Calculate 10% of the salary mentioned in handbook" | Both Knowledge + Calculator shown |
+| TC-113 | Tool call order visible | Same query | Shows order of execution |
+| TC-114 | All tools in complex query | Query requiring all 4 tools | All 4 tool calls visible |
+| TC-115 | Tool errors visible | Query with tool that fails | Error status shown |
+| TC-116 | Tool timing visible | Any tool query | Execution time shown (if available) |
+
+---
+
+## 12. Complete Tool Combination Matrix
+
+### 12.1 No Tools (P1)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| CM-001 | Agent with no tools | Create agent → Deselect all tools | Agent created successfully |
+| CM-002 | Chat without tools | Ask "What is 2+2?" | Uses LLM knowledge only, no tool calls |
+| CM-003 | Publish without tools | Publish agent with no tools | Publishes successfully |
+| CM-004 | Workflow without tools | Create workflow for no-tool agent | Workflow has no tool nodes |
+
+### 12.2 Single Tool Configurations (P0)
+
+| Test ID | Tool Config | Test Query | Expected Result |
+|---------|-------------|------------|-----------------|
+| CM-010 | Calculator only | "What is 156 * 87?" | Calculator called, returns 13572 |
+| CM-011 | Calculator only - no match | "What's the weather?" | No tool call, LLM responds |
+| CM-020 | Web Search only | "Latest SpaceX launch news" | Web Search called |
+| CM-021 | Web Search only - no match | "What is 5+5?" | No tool call, LLM responds |
+| CM-030 | Weather only | "Weather in Tokyo" | Weather tool called |
+| CM-031 | Weather only - no match | "Calculate 100/5" | No tool call, LLM responds |
+| CM-040 | Knowledge Search only | "What is vacation policy?" | Knowledge Search called |
+| CM-041 | Knowledge Search only - no match | "What's 2+2?" | No tool call, uses knowledge or LLM |
+
+### 12.3 Two Tool Combinations (P1)
+
+| Test ID | Tool Config | Test Query | Expected Tools |
+|---------|-------------|------------|----------------|
+| CM-100 | Calculator + Web Search | "Calculate 15% tax on the latest iPhone price" | Web Search → Calculator |
+| CM-101 | Calculator + Weather | "If temp is 72°F, what is that in Celsius?" | Weather + Calculator |
+| CM-102 | Calculator + Knowledge | "Calculate 10% of my salary from handbook" | Knowledge + Calculator |
+| CM-110 | Web Search + Weather | "Will it rain where SpaceX is launching?" | Web Search + Weather |
+| CM-111 | Web Search + Knowledge | "Compare our policy to industry standards" | Knowledge + Web Search |
+| CM-120 | Weather + Knowledge | "Based on dress code, what should I wear today?" | Knowledge + Weather |
+
+### 12.4 Three Tool Combinations (P1)
+
+| Test ID | Tool Config | Test Query | Expected Tools |
+|---------|-------------|------------|----------------|
+| CM-200 | Calc + Web + Weather | "Cost of heating if temp drops 20°F in NYC" | All three |
+| CM-201 | Calc + Web + Knowledge | "Calculate overtime based on handbook + min wage" | All three |
+| CM-202 | Calc + Weather + Knowledge | "Days off if it snows per policy" | All three |
+| CM-210 | Web + Weather + Knowledge | "Should I WFH today based on weather + policy?" | All three |
+
+### 12.5 All Tools Combination (P0)
+
+| Test ID | Scenario | Test Query | Expected Result |
+|---------|----------|------------|-----------------|
+| CM-300 | All 4 tools active | Complex multi-part question | All relevant tools called |
+| CM-301 | All tools - simple query | "What is 5+5?" | Only Calculator called |
+| CM-302 | All tools - knowledge query | "What is sick leave policy?" | Only Knowledge called |
+| CM-303 | All tools - weather query | "Weather in London" | Only Weather called |
+| CM-304 | All tools - web query | "Latest tech news" | Only Web Search called |
+
+---
+
+## 13. Tool Add/Remove Cycle Tests
+
+### 13.1 Add Tool After Publish (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| AR-001 | Add Calculator post-publish | Publish → Add Calculator → Publish Updates → Test | Calculator works |
+| AR-002 | Add Web Search post-publish | Publish → Add Web Search → Publish Updates → Test | Web Search works |
+| AR-003 | Add Weather post-publish | Publish → Add Weather → Publish Updates → Test | Weather works |
+| AR-004 | Add Knowledge post-publish | Publish → Add Knowledge + sources → Publish Updates → Test | Knowledge works |
+| AR-005 | Add multiple tools post-publish | Publish → Add 2 tools → Publish Updates → Test | Both tools work |
+| AR-006 | Add all tools post-publish | Publish with none → Add all 4 → Publish Updates → Test | All 4 work |
+
+### 13.2 Remove Tool After Publish (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| AR-010 | Remove Calculator post-publish | Publish with Calc → Remove → Publish Updates → Test | Calculator NOT available |
+| AR-011 | Remove Web Search post-publish | Publish with Web → Remove → Publish Updates → Test | Web Search NOT available |
+| AR-012 | Remove Weather post-publish | Publish with Weather → Remove → Publish Updates → Test | Weather NOT available |
+| AR-013 | Remove Knowledge post-publish | Publish with Knowledge → Remove → Publish Updates → Test | Knowledge NOT available |
+| AR-014 | Remove multiple tools | Publish with 3 → Remove 2 → Publish Updates → Test | Only 1 tool remains |
+| AR-015 | Remove all tools | Publish with 4 → Remove all → Publish Updates → Test | No tools available |
+
+### 13.3 Tool Swap Tests (P1)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| AR-020 | Replace Calculator with Weather | Remove Calc → Add Weather → Publish | Weather works, Calc doesn't |
+| AR-021 | Replace Knowledge with Web | Remove Knowledge → Add Web → Publish | Web works, Knowledge doesn't |
+| AR-022 | Swap all tools | Remove all → Add different set → Publish | New set works |
+| AR-023 | Add-remove-readd same tool | Add Calc → Remove → Readd → Publish | Calculator works again |
+
+---
+
+## 14. RAG Source Modification Tests
+
+### 14.1 Add Sources After Publish (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| RS-001 | Add file source post-publish | Publish → Add TXT file → Publish Updates → Test | New content retrievable |
+| RS-002 | Add URL source post-publish | Publish → Add URL → Publish Updates → Test | URL content in RAG |
+| RS-003 | Add text source post-publish | Publish → Add pasted text → Publish Updates → Test | Pasted content in RAG |
+| RS-004 | Add multiple sources post-publish | Publish → Add 3 sources → Publish Updates → Test | All sources searchable |
+
+### 14.2 Remove Sources After Publish (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| RS-010 | Remove source post-publish | Publish with source → Remove → Publish Updates → Test | Source content NOT in RAG |
+| RS-011 | Remove all sources | Publish with 3 sources → Remove all → Publish Updates → Test | No knowledge retrieval |
+| RS-012 | Remove then re-add source | Remove source → Publish → Re-add → Publish | Source works again |
+
+### 14.3 Source Swap Tests (P1)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| RS-020 | Replace handbook with catalog | Remove handbook → Add catalog → Publish | Catalog content used |
+| RS-021 | Complete source replacement | Remove all → Add different sources → Publish | Only new sources used |
+| RS-022 | Conflicting information | Add source with conflicting info → Test | Most recent source prioritized |
+
+---
+
+## 15. Edit → Publish → Test Full Cycle
+
+### 15.1 Complete Cycle Tests (P0)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| CY-001 | Name change cycle | Edit name → Publish Updates → Chat → Verify new name | Name updated in chat header |
+| CY-002 | Tool change cycle | Add tool → Publish Updates → Test tool → Works | Tool functions correctly |
+| CY-003 | Knowledge change cycle | Add source → Publish Updates → Query source → Retrieved | Content retrieved |
+| CY-004 | Multiple change cycle | Change name + tools + sources → Publish → Test all | All changes reflected |
+| CY-005 | Rapid edit-publish cycle | Edit → Publish → Edit → Publish (5x) | All changes apply correctly |
+
+### 15.2 Rollback Tests (P2)
+
+| Test ID | Scenario | Steps | Expected Result |
+|---------|----------|-------|-----------------|
+| CY-010 | Unpublish after changes | Make changes → Publish → Unpublish | Agent unpublished |
+| CY-011 | Re-publish after unpublish | Unpublish → Publish again | Agent works again |
+| CY-012 | Edit without publish | Make changes → Don't publish → Test old workflow | Old config still works |
+
+---
+
+## Phase 2 Quick Reference: Test Count Summary
+
+| Category | P0 | P1 | P2 | Total |
+|----------|----|----|----|----|
+| Publish Feature Tests | 10 | 8 | 0 | 18 |
+| Create New Workflow Tests | 8 | 4 | 0 | 12 |
+| Tool Call Visibility | 11 | 5 | 0 | 16 |
+| Tool Combination Matrix | 12 | 18 | 0 | 30 |
+| Tool Add/Remove Cycle | 12 | 4 | 0 | 16 |
+| RAG Source Modification | 8 | 4 | 0 | 12 |
+| Full Cycle Tests | 5 | 0 | 3 | 8 |
+| **PHASE 2 TOTAL** | **66** | **43** | **3** | **112** |
+
+---
+
+## Phase 2 Ralph-Loop Prompt
+
+Use this prompt to run comprehensive Phase 2 testing:
+
+```
+/ralph-loop "You are tasked with PHASE 2 comprehensive E2E testing of Publish, Workflow, and Tool Combination features in Teach Charlie AI.
+
+## Context
+Read these files first:
+- /Users/adamcognigy/LangflowSaaS/docs/RAG_E2E_TESTING_PLAN.md (Phase 2 sections 9-15)
+- /Users/adamcognigy/LangflowSaaS/src/frontend/e2e/helpers/selectors.ts
+
+## Pre-requisites
+- Existing agent from Phase 1: RAG Test Agent (ID: 96b96e23-ddb9-4019-844b-861818732651)
+- Or create new agent at http://localhost:3001/create
+
+## Testing Phases (Complete in Order)
+
+### Phase 2.1: Publish Feature Testing
+1. Navigate to Edit page for test agent
+2. Click 'Publish' button
+3. Verify 'Published' status appears
+4. Handle Langflow restart modal
+5. Test 'Unpublish' button
+6. Test 'Publish Updates' after making changes
+
+### Phase 2.2: Create New Workflow
+1. On Edit page, click 'Create New Workflow'
+2. Verify navigation to /canvas/{workflowId}
+3. Check workflow nodes are correct
+4. Navigate to Playground from workflow
+5. Test chat functionality
+6. Verify tools work in new workflow
+
+### Phase 2.3: Tool Call Visibility
+1. In Playground, send query requiring tool
+2. Verify tool call section appears in response
+3. Check tool name, input, and result visible
+4. Test each tool type:
+   - Calculator: 'What is 156 * 87?'
+   - Knowledge: 'What is the vacation policy?'
+   - (Web Search and Weather if enabled)
+5. Test multi-tool query visibility
+
+### Phase 2.4: Tool Combination Matrix
+Test ALL 15 tool combinations:
+1. No tools (agent responds with LLM only)
+2. Single tools (4 configs):
+   - Calculator only
+   - Web Search only
+   - Weather only
+   - Knowledge Search only
+3. Two tool combos (6 configs)
+4. Three tool combos (4 configs)
+5. All 4 tools
+
+For EACH combination:
+- Edit agent to set tools
+- Save/Publish
+- Navigate to Playground
+- Send appropriate test query
+- Verify correct tool(s) called
+- Document results
+
+### Phase 2.5: Tool Add/Remove After Publish
+1. Start with published agent (no tools)
+2. Add Calculator → Publish Updates → Test
+3. Add Knowledge → Publish Updates → Test
+4. Remove Calculator → Publish Updates → Verify not available
+5. Add all tools → Publish Updates → Test each
+6. Remove all tools → Publish Updates → Verify none work
+
+### Phase 2.6: RAG Source Modifications
+1. Start with agent + 1 knowledge source
+2. Ask question about that source (should work)
+3. Add new source → Publish Updates → Query new source
+4. Remove original source → Publish Updates
+5. Query original content (should NOT retrieve)
+6. Query new content (should retrieve)
+
+### Phase 2.7: Full Edit-Publish-Test Cycles
+1. Make change → Publish Updates → Test → Repeat 5x
+2. Test name changes reflect in UI
+3. Test instruction changes affect responses
+4. Test rapid edit-publish doesn't break
+
+## Protocol
+1. Use browser_navigate for page navigation
+2. Use browser_snapshot after EVERY navigation/click
+3. Use browser_click, browser_type for interactions
+4. Use browser_wait_for for async operations
+5. Take screenshots on failures
+6. Read source code when things fail
+7. FIX THE ACTUAL BUG if found
+8. Re-test after fixing
+
+## Critical Rules
+- NO skipping tests
+- NO workarounds - fix real bugs
+- Document ALL tool combinations tested
+- Run flaky tests 2-3 times to confirm stability
+- Track which combinations pass/fail
+
+## Progress Tracking
+After each phase, document:
+- Tests passed with details
+- Tests failed and fixes applied
+- Tool combination matrix completion status
+- Any flakiness observed
+
+## Completion Criteria
+Output <promise>COMPLETE</promise> when:
+1. ALL 7 sub-phases pass
+2. Complete tool combination matrix tested (15 combos)
+3. Publish/Unpublish/Publish Updates all work
+4. Tool call visibility verified for all tool types
+5. RAG source add/remove verified
+6. No flaky tests (verified by 2-3 runs)
+7. All bugs fixed and documented
+
+## If Stuck
+After 50 iterations without progress:
+1. Document blocking issue
+2. List attempted fixes
+3. Output <promise>BLOCKED: [reason]</promise>
+" --max-iterations 150 --completion-promise "COMPLETE"
+```
+
+---
+
+## Combined Phase 1 + 2 Test Totals
+
+| Phase | P0 | P1 | P2 | P3 | Total |
+|-------|----|----|----|----|-------|
+| Phase 1 (RAG Core) | 26 | 61 | 43 | 11 | 141 |
+| Phase 2 (Publish + Tools) | 66 | 43 | 3 | 0 | 112 |
+| **GRAND TOTAL** | **92** | **104** | **46** | **11** | **253** |

@@ -19,12 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge_source import KnowledgeSource
 from app.models.user import User
+from app.models.user_file import UserFile
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Storage configuration
-KNOWLEDGE_STORAGE_DIR = Path(settings.upload_dir if hasattr(settings, 'upload_dir') else "uploads") / "knowledge"
+# Storage configuration - use same base as file_service
+UPLOADS_DIR = Path(__file__).parent.parent / "uploads"
+KNOWLEDGE_STORAGE_DIR = UPLOADS_DIR / "knowledge"
 
 
 class KnowledgeServiceError(Exception):
@@ -302,6 +304,71 @@ class KnowledgeService:
 
         logger.info(f"Created knowledge source {source.id} from text")
         return source
+
+    async def create_from_user_file(
+        self,
+        user: User,
+        file_id: uuid.UUID,
+        project_id: Optional[uuid.UUID] = None,
+    ) -> KnowledgeSource:
+        """
+        Create a knowledge source from an existing user file.
+
+        Args:
+            user: The user creating the knowledge source
+            file_id: ID of the user file to convert
+            project_id: Optional project to associate with
+
+        Returns:
+            Created KnowledgeSource
+        """
+        user_id_str = str(user.id)
+
+        # Get the user file
+        stmt = select(UserFile).where(
+            UserFile.id == str(file_id),
+            UserFile.user_id == user_id_str,
+        )
+        result = await self.session.execute(stmt)
+        user_file = result.scalar_one_or_none()
+
+        if not user_file:
+            raise KnowledgeServiceError("File not found or access denied")
+
+        # Check if this file is already a knowledge source
+        existing_stmt = select(KnowledgeSource).where(
+            KnowledgeSource.user_id == user_id_str,
+            KnowledgeSource.original_filename == user_file.original_filename,
+            KnowledgeSource.file_size == user_file.size,
+            KnowledgeSource.is_active == True,
+        )
+        existing_result = await self.session.execute(existing_stmt)
+        existing_source = existing_result.scalar_one_or_none()
+
+        if existing_source:
+            logger.info(f"File {user_file.original_filename} already exists as knowledge source {existing_source.id}")
+            return existing_source
+
+        # Read file content
+        file_full_path = UPLOADS_DIR / user_file.storage_path
+        if not file_full_path.exists():
+            raise KnowledgeServiceError(f"File not found on disk: {user_file.storage_path}")
+
+        try:
+            with open(file_full_path, "rb") as f:
+                file_content = f.read()
+        except IOError as e:
+            logger.error(f"Failed to read file {file_full_path}: {e}")
+            raise KnowledgeServiceError(f"Failed to read file: {e}")
+
+        # Create knowledge source using existing method
+        return await self.create_from_file(
+            user=user,
+            file_content=file_content,
+            filename=user_file.original_filename,
+            mime_type=user_file.content_type or "application/octet-stream",
+            project_id=project_id,
+        )
 
     async def delete(self, source: KnowledgeSource) -> bool:
         """

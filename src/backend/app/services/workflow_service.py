@@ -3,10 +3,18 @@ Workflow service for managing Langflow flows.
 """
 import logging
 import uuid
-from typing import List, Optional, Tuple
+from typing import AsyncGenerator, List, Optional, Tuple
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.schemas.streaming import (
+    StreamEvent,
+    StreamEventType,
+    session_start_event,
+    error_event,
+    done_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +237,7 @@ class WorkflowService:
         """Create a new workflow."""
         if not await self.langflow.health_check():
             raise WorkflowServiceError(
-                "Langflow isn't responding. Please try again in a moment."
+                "AI Canvas isn't responding. Please try again in a moment."
             )
 
         # Determine project
@@ -300,7 +308,7 @@ class WorkflowService:
         Creates: ChatInput -> Agent -> ChatOutput
         """
         if not await self.langflow.health_check():
-            raise WorkflowServiceError("Langflow isn't responding.")
+            raise WorkflowServiceError("AI Canvas isn't responding.")
 
         # Get user's LLM settings
         settings_service = SettingsService(self.session)
@@ -462,7 +470,7 @@ class WorkflowService:
     ) -> Workflow:
         """Create a workflow from a predefined template."""
         if not await self.langflow.health_check():
-            raise WorkflowServiceError("Langflow isn't responding.")
+            raise WorkflowServiceError("AI Canvas isn't responding.")
 
         # Get user's LLM settings
         settings_service = SettingsService(self.session)
@@ -577,7 +585,7 @@ class WorkflowService:
     ) -> Workflow:
         """Create a duplicate of a workflow."""
         if not await self.langflow.health_check():
-            raise WorkflowServiceError("Langflow isn't responding.")
+            raise WorkflowServiceError("AI Canvas isn't responding.")
 
         name = new_name or f"{workflow.name} (Copy)"
 
@@ -691,6 +699,147 @@ class WorkflowService:
         await self.session.refresh(assistant_message)
 
         return response_text, conversation.id, assistant_message.id
+
+    async def chat_stream(
+        self,
+        workflow: Workflow,
+        user: User,
+        message: str,
+        conversation_id: uuid.UUID = None,
+    ) -> AsyncGenerator[StreamEvent, None]:
+        """
+        Send a message to a workflow and stream the response.
+
+        Yields StreamEvent objects for real-time response with agent visibility.
+
+        Args:
+            workflow: The workflow to chat with
+            user: The authenticated user
+            message: User's message
+            conversation_id: Optional existing conversation ID
+
+        Yields:
+            StreamEvent objects (text chunks, tool calls, thinking, etc.)
+        """
+        # Get or create conversation
+        if conversation_id:
+            conv_id_str = str(conversation_id)
+            user_id_str = str(user.id)
+            workflow_id_str = str(workflow.id)
+            stmt = select(Conversation).where(
+                Conversation.id == conv_id_str,
+                Conversation.user_id == user_id_str,
+                Conversation.workflow_id == workflow_id_str,
+            )
+            result = await self.session.execute(stmt)
+            conversation = result.scalar_one_or_none()
+
+            if not conversation:
+                yield error_event(
+                    code="NOT_FOUND",
+                    message="Conversation not found",
+                )
+                return
+        else:
+            conversation = Conversation(
+                user_id=str(user.id),
+                workflow_id=str(workflow.id),
+                langflow_session_id=str(uuid.uuid4()),
+                title=message[:100] if message else "New conversation",
+            )
+            self.session.add(conversation)
+            await self.session.flush()
+
+        # Save user message
+        user_message = Message(
+            conversation_id=str(conversation.id),
+            role="user",
+            content=message,
+        )
+        self.session.add(user_message)
+        await self.session.flush()
+
+        # CRITICAL: Commit before streaming so conversation exists for follow-up messages
+        await self.session.commit()
+
+        # Generate a message ID for the assistant response
+        assistant_message_id = str(uuid.uuid4())
+
+        # Yield session start with conversation/message IDs
+        yield session_start_event(
+            session_id=conversation.langflow_session_id,
+            conversation_id=str(conversation.id),
+            message_id=assistant_message_id,
+        )
+
+        # Stream response from Langflow
+        accumulated_text = ""
+        response_metadata = {}
+
+        try:
+            async for event in self.langflow.run_flow_stream_enhanced(
+                flow_id=workflow.langflow_flow_id,
+                message=message,
+                session_id=conversation.langflow_session_id,
+            ):
+                # Skip the session_start from langflow client (we sent our own)
+                if event.event == StreamEventType.SESSION_START:
+                    continue
+
+                # Accumulate text for saving
+                if event.event == StreamEventType.TEXT_DELTA:
+                    accumulated_text += event.data.get("text", "")
+                elif event.event == StreamEventType.TEXT_COMPLETE:
+                    accumulated_text = event.data.get("text", accumulated_text)
+
+                # Track tool calls and thinking for metadata
+                if event.event in (
+                    StreamEventType.TOOL_CALL_START,
+                    StreamEventType.TOOL_CALL_END,
+                    StreamEventType.THINKING_START,
+                    StreamEventType.THINKING_END,
+                ):
+                    if "events" not in response_metadata:
+                        response_metadata["events"] = []
+                    response_metadata["events"].append({
+                        "type": event.event.value,
+                        "data": event.data,
+                        "timestamp": event.timestamp.isoformat() if event.timestamp else None,
+                    })
+
+                # Yield the event to the client
+                yield event
+
+                # Check for done event
+                if event.event == StreamEventType.DONE:
+                    break
+
+        except Exception as e:
+            logger.error(f"Streaming error: {e}")
+            yield error_event(
+                code="STREAM_ERROR",
+                message="An error occurred during streaming",
+                details={"error": str(e)},
+            )
+            accumulated_text = "Something went wrong. Please try again."
+
+        # Save assistant message with accumulated text
+        if accumulated_text:
+            assistant_message = Message(
+                id=assistant_message_id,
+                conversation_id=str(conversation.id),
+                role="assistant",
+                content=accumulated_text,
+                message_metadata=response_metadata if response_metadata else None,
+            )
+            self.session.add(assistant_message)
+            await self.session.flush()
+
+        # Final done event with IDs
+        yield done_event(
+            conversation_id=str(conversation.id),
+            message_id=assistant_message_id,
+        )
 
     async def export(self, workflow: Workflow) -> dict:
         """Export workflow as JSON."""

@@ -1,0 +1,38 @@
+TechCorp Product Catalog 2026
+
+== Premium Widget Pro ==
+Price: $299.99
+SKU: WGT-PRO-2026
+Features:
+- Ultra-fast processing (10x faster than competitors)
+- 5-year warranty included
+- Free shipping on all orders
+- Available in 3 colors: Silver, Black, Rose Gold
+
+== Basic Widget Lite ==
+Price: $99.99
+SKU: WGT-LITE-2026
+Features:
+- Standard processing speed
+- 1-year warranty
+- Shipping: $9.99 flat rate
+- Available in 2 colors: White, Gray
+
+== Enterprise Widget Max ==
+Price: $599.99
+SKU: WGT-MAX-2026
+Features:
+- Enterprise-grade performance
+- Lifetime warranty
+- Priority support 24/7
+- Custom color options available
+- Volume discounts for orders over 100 units
+
+Return Policy:
+All products can be returned within 30 days of purchase for a full refund.
+Products must be in original packaging and unused condition.
+
+Customer Support:
+Phone: 1-800-TECHCORP
+Email: support@techcorp.example
+Hours: Monday-Friday 8am-8pm EST

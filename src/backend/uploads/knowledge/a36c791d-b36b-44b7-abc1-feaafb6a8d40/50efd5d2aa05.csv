@@ -1,0 +1,16 @@
+Date,Product,Category,Quantity,Unit Price,Total,Region,Salesperson
+2026-01-02,Premium Paper Clips,Office Supplies,50,8.99,449.50,Northeast,John Smith
+2026-01-02,Wireless Mouse Pro,Technology,25,49.99,1249.75,Northeast,John Smith
+2026-01-03,Ergonomic Office Chair,Furniture,10,449.99,4499.90,West,Sarah Johnson
+2026-01-03,Standing Desk Converter,Furniture,8,299.99,2399.92,West,Sarah Johnson
+2026-01-04,USB-C Hub 7-in-1,Technology,100,59.99,5999.00,Southeast,Mike Brown
+2026-01-04,Noise-Canceling Headphones,Technology,30,199.99,5999.70,Southeast,Mike Brown
+2026-01-05,Deluxe Stapler,Office Supplies,200,24.99,4998.00,Midwest,Emily Davis
+2026-01-05,Ergonomic Pen Set,Office Supplies,150,15.99,2398.50,Midwest,Emily Davis
+2026-01-06,Monitor Stand with Drawers,Furniture,45,79.99,3599.55,Northeast,John Smith
+2026-01-07,Wireless Mouse Pro,Technology,60,49.99,2999.40,West,Sarah Johnson
+2026-01-08,Premium Paper Clips,Office Supplies,75,8.99,674.25,Southeast,Mike Brown
+2026-01-08,Ergonomic Office Chair,Furniture,5,449.99,2249.95,Midwest,Emily Davis
+2026-01-09,Standing Desk Converter,Furniture,12,299.99,3599.88,Northeast,John Smith
+2026-01-09,USB-C Hub 7-in-1,Technology,80,59.99,4799.20,West,Sarah Johnson
+2026-01-10,Noise-Canceling Headphones,Technology,20,199.99,3999.80,Southeast,Mike Brown

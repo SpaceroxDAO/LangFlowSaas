@@ -6,7 +6,7 @@ import { WizardLayout } from '@/components/WizardLayout'
 import { ToolCard } from '@/components/ToolCard'
 import { IdentityIcon, CoachingIcon, TricksIcon } from '@/components/icons'
 import { useTour, useShouldShowTour } from '@/providers/TourProvider'
-import { startCreateAgentTour } from '@/tours/createAgentTour'
+import { startStep1Tour, startStep2Tour, startStep3Tour } from '@/tours'
 import { inferJobFromDescription } from '@/lib/avatarJobInference'
 import { KnowledgeSourcesModal } from '@/components/KnowledgeSourcesModal'
 
@@ -33,7 +33,7 @@ const AVAILABLE_TOOLS = [
   {
     id: 'knowledge_search',
     title: 'Knowledge Search',
-    description: 'Search through your uploaded documents and knowledge base.',
+    description: 'Search your uploaded documents and files.',
     available: true,
     opensModal: true,
   },
@@ -73,13 +73,35 @@ type WizardAction =
   | { type: 'AVATAR_GENERATE_SUCCESS'; avatarUrl: string }
   | { type: 'AVATAR_GENERATE_ERROR'; message: string }
 
+// Default values for first-time users (Charlie the dog example)
+const DEFAULT_AGENT_NAME = 'Charlie'
+const DEFAULT_AGENT_WHO = `A friendly Golden Retriever who works as a customer support specialist. Charlie is helpful, patient, and always eager to solve problems. He has a warm personality and loves making customers happy.`
+const DEFAULT_AGENT_RULES = `You are Charlie, a friendly and enthusiastic Golden Retriever working in customer support.
+
+PERSONALITY:
+- Always be warm, helpful, and patient
+- Use a friendly, conversational tone
+- Show genuine enthusiasm for helping people
+- Occasionally mention treats, walks, or belly rubs to stay in character
+
+GUIDELINES:
+- Answer questions clearly and completely
+- If you don't know something, be honest and offer to help find the answer
+- Keep responses concise but thorough
+- End interactions on a positive note
+
+THINGS TO AVOID:
+- Never be rude or dismissive
+- Don't make up information you're not sure about
+- Avoid overly technical jargon unless the user asks for it`
+
 // Reducer
 const initialState: WizardState = {
   currentStep: 1,
   formData: {
-    name: '',
-    who: '',
-    rules: '',
+    name: DEFAULT_AGENT_NAME,
+    who: DEFAULT_AGENT_WHO,
+    rules: DEFAULT_AGENT_RULES,
     tools: [],
     knowledgeSourceIds: [],
     avatarUrl: null,
@@ -175,32 +197,74 @@ export function CreateAgentPage() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const { currentStep, formData, errors, isSubmitting, isGeneratingAvatar, submitError } = state
   const { completeTour } = useTour()
-  const shouldShowTour = useShouldShowTour('create-agent')
-  const [tourStarted, setTourStarted] = useState(false)
+  const shouldShowStep1Tour = useShouldShowTour('create-step-1')
+  const shouldShowStep2Tour = useShouldShowTour('create-step-2')
+  const shouldShowStep3Tour = useShouldShowTour('create-step-3')
+  const [step1TourStarted, setStep1TourStarted] = useState(false)
+  const [step2TourStarted, setStep2TourStarted] = useState(false)
+  const [step3TourStarted, setStep3TourStarted] = useState(false)
   const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
   }, [getToken])
 
-  // Start tour for first-time users on step 1
+  // Start tour for first-time users on each step
   useEffect(() => {
-    if (shouldShowTour && currentStep === 1 && !tourStarted) {
-      // Delay to let the UI render
+    // Step 1 tour
+    if (shouldShowStep1Tour && currentStep === 1 && !step1TourStarted) {
       const timer = setTimeout(() => {
-        setTourStarted(true)
-        startCreateAgentTour(() => {
-          completeTour('create-agent')
+        setStep1TourStarted(true)
+        startStep1Tour(() => {
+          completeTour('create-step-1')
         })
       }, 500)
       return () => clearTimeout(timer)
     }
-  }, [shouldShowTour, currentStep, tourStarted, completeTour])
+  }, [shouldShowStep1Tour, currentStep, step1TourStarted, completeTour])
 
-  // Manual tour trigger
-  const handleStartTour = useCallback(() => {
-    startCreateAgentTour(() => {
-      completeTour('create-agent')
+  useEffect(() => {
+    // Step 2 tour
+    if (shouldShowStep2Tour && currentStep === 2 && !step2TourStarted) {
+      const timer = setTimeout(() => {
+        setStep2TourStarted(true)
+        startStep2Tour(() => {
+          completeTour('create-step-2')
+        })
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [shouldShowStep2Tour, currentStep, step2TourStarted, completeTour])
+
+  useEffect(() => {
+    // Step 3 tour
+    if (shouldShowStep3Tour && currentStep === 3 && !step3TourStarted) {
+      const timer = setTimeout(() => {
+        setStep3TourStarted(true)
+        startStep3Tour(() => {
+          completeTour('create-step-3')
+        })
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [shouldShowStep3Tour, currentStep, step3TourStarted, completeTour])
+
+  // Manual tour triggers for each step
+  const handleStartStep1Tour = useCallback(() => {
+    startStep1Tour(() => {
+      completeTour('create-step-1')
+    })
+  }, [completeTour])
+
+  const handleStartStep2Tour = useCallback(() => {
+    startStep2Tour(() => {
+      completeTour('create-step-2')
+    })
+  }, [completeTour])
+
+  const handleStartStep3Tour = useCallback(() => {
+    startStep3Tour(() => {
+      completeTour('create-step-3')
     })
   }, [completeTour])
 
@@ -291,8 +355,8 @@ export function CreateAgentPage() {
       })
 
       dispatch({ type: 'SUBMIT_SUCCESS' })
-      // Navigate to the new workflow playground
-      navigate(`/playground/workflow/${workflow.id}`)
+      // Navigate to the new workflow playground with ?new=true to trigger tour
+      navigate(`/playground/workflow/${workflow.id}?new=true`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create agent. Please try again.'
       dispatch({ type: 'SUBMIT_ERROR', message: errorMessage })
@@ -410,7 +474,7 @@ export function CreateAgentPage() {
             {/* Actions */}
             <div className="flex justify-between pt-4 border-t border-gray-100">
               <button
-                onClick={handleStartTour}
+                onClick={handleStartStep1Tour}
                 className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
                 title="Take a guided tour"
               >
@@ -444,16 +508,6 @@ export function CreateAgentPage() {
           icon={<CoachingIcon size={32} color="white" />}
         >
           <div className="space-y-6">
-            {/* Tip Banner */}
-            <div className="bg-pink-50 border border-pink-100 rounded-xl px-4 py-3 flex items-start gap-3">
-              <div className="w-5 h-5 rounded-full bg-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-white text-xs font-bold">i</span>
-              </div>
-              <p className="text-sm text-pink-700">
-                <span className="font-medium">Tip:</span> We pre-filled this for Charlie. Read it to see how we teach him to be a dog!
-              </p>
-            </div>
-
             {/* Instructions Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -484,12 +538,24 @@ export function CreateAgentPage() {
 
             {/* Actions */}
             <div className="flex justify-between pt-4 border-t border-gray-100">
-              <button
-                onClick={handleBack}
-                className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Back
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBack}
+                  className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleStartStep2Tour}
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                  title="Take a guided tour"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Help
+                </button>
+              </div>
               <button
                 onClick={handleNext}
                 className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 ${buttonStyles[2]}`}
@@ -518,25 +584,33 @@ export function CreateAgentPage() {
             {/* Action Selection Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-tour="agent-actions">
               {AVAILABLE_TOOLS.map((tool) => (
-                <ToolCard
+                <div
                   key={tool.id}
-                  title={tool.title}
-                  description={
-                    tool.id === 'knowledge_search' && formData.knowledgeSourceIds.length > 0
-                      ? `${formData.knowledgeSourceIds.length} source${formData.knowledgeSourceIds.length !== 1 ? 's' : ''} selected`
-                      : tool.description
+                  data-tour={
+                    tool.id === 'web_search' ? 'tool-web-search' :
+                    tool.id === 'knowledge_search' ? 'tool-knowledge-search' :
+                    undefined
                   }
-                  selected={formData.tools.includes(tool.id)}
-                  onToggle={() => {
-                    if (tool.id === 'knowledge_search') {
-                      setIsKnowledgeModalOpen(true)
-                    } else {
-                      dispatch({ type: 'TOGGLE_TOOL', toolId: tool.id })
+                >
+                  <ToolCard
+                    title={tool.title}
+                    description={
+                      tool.id === 'knowledge_search' && formData.knowledgeSourceIds.length > 0
+                        ? `${formData.knowledgeSourceIds.length} source${formData.knowledgeSourceIds.length !== 1 ? 's' : ''} selected`
+                        : tool.description
                     }
-                  }}
-                  requiresApiKey={tool.requiresApiKey}
-                  apiKeyUrl={tool.apiKeyUrl}
-                />
+                    selected={formData.tools.includes(tool.id)}
+                    onToggle={() => {
+                      if (tool.id === 'knowledge_search') {
+                        setIsKnowledgeModalOpen(true)
+                      } else {
+                        dispatch({ type: 'TOGGLE_TOOL', toolId: tool.id })
+                      }
+                    }}
+                    requiresApiKey={tool.requiresApiKey}
+                    apiKeyUrl={tool.apiKeyUrl}
+                  />
+                </div>
               ))}
             </div>
 
@@ -549,16 +623,29 @@ export function CreateAgentPage() {
 
             {/* Actions */}
             <div className="flex justify-between pt-4 border-t border-gray-100">
-              <button
-                onClick={handleBack}
-                disabled={isSubmitting}
-                className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Back
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBack}
+                  disabled={isSubmitting}
+                  className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleStartStep3Tour}
+                  className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                  title="Take a guided tour"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Help
+                </button>
+              </div>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
+                data-tour="create-button"
                 className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 ${buttonStyles[3]}`}
               >
                 {isSubmitting ? (

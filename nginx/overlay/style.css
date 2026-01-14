@@ -66,6 +66,38 @@ svg[aria-label*="Langflow"] {
 }
 
 /* =====================================================
+   PLAYGROUND CHAT - Hide Langflow logo in empty state
+   ===================================================== */
+
+/* Hide the icon above "New chat" text in playground empty state */
+/* Target by the icon component class pattern */
+[role="dialog"] [class*="icon"],
+[role="dialog"] .iconComponent {
+    display: none !important;
+}
+
+/* Hide the chat widget Langflow branding icon */
+/* The icon is typically the first SVG in a centered flex container */
+[role="dialog"] .flex.flex-col.items-center > svg:first-child,
+[role="dialog"] .flex.flex-col.items-center > div:first-child > svg {
+    display: none !important;
+}
+
+/* Target by size - Langflow logo is typically large in empty state */
+[role="dialog"] svg[width="48"],
+[role="dialog"] svg[height="48"],
+[role="dialog"] svg.h-12,
+[role="dialog"] svg.w-12 {
+    display: none !important;
+}
+
+/* Hide any element containing the Langflow logo class */
+[class*="langflow-logo"],
+[class*="LangflowLogo"] {
+    display: none !important;
+}
+
+/* =====================================================
    PROJECTS SIDEBAR - Currently VISIBLE
    Uncomment below to hide the left project navigation
    ===================================================== */

@@ -11,6 +11,9 @@ from sqlalchemy.orm import selectinload
 
 from app.models.project import Project
 from app.models.agent import Agent
+from app.models.agent_component import AgentComponent
+from app.models.workflow import Workflow
+from app.models.mcp_server import MCPServer
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
@@ -80,14 +83,30 @@ class ProjectService:
         result = await self.session.execute(stmt)
         projects = list(result.scalars().all())
 
-        # Get agent counts for each project
+        # Get counts for each project
         for project in projects:
-            count_stmt = select(func.count()).select_from(Agent).where(
-                Agent.project_id == str(project.id),
-                Agent.is_active == True,
+            project_id_str = str(project.id)
+
+            # Count agents (AgentComponents)
+            agent_count_stmt = select(func.count()).select_from(AgentComponent).where(
+                AgentComponent.project_id == project_id_str,
             )
-            count_result = await self.session.execute(count_stmt)
-            project.agent_count = count_result.scalar_one()
+            agent_count_result = await self.session.execute(agent_count_stmt)
+            project.agent_count = agent_count_result.scalar_one()
+
+            # Count workflows
+            workflow_count_stmt = select(func.count()).select_from(Workflow).where(
+                Workflow.project_id == project_id_str,
+            )
+            workflow_count_result = await self.session.execute(workflow_count_stmt)
+            project.workflow_count = workflow_count_result.scalar_one()
+
+            # Count MCP servers
+            mcp_count_stmt = select(func.count()).select_from(MCPServer).where(
+                MCPServer.project_id == project_id_str,
+            )
+            mcp_count_result = await self.session.execute(mcp_count_stmt)
+            project.mcp_server_count = mcp_count_result.scalar_one()
 
         return projects
 

@@ -9,6 +9,8 @@ export interface Project {
   is_archived: boolean
   sort_order: number
   agent_count?: number
+  workflow_count?: number
+  mcp_server_count?: number
   created_at: string
   updated_at: string
 }
@@ -75,17 +77,110 @@ export interface AgentUpdate {
   is_active?: boolean
 }
 
+export interface ChatAttachment {
+  langflow_file_id: string
+  name: string
+  type: 'text' | 'image' | 'audio'
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
   status?: 'sending' | 'sent' | 'error'
+  // Extended fields for streaming and editing
+  isEdited?: boolean
+  editedAt?: string
+  feedback?: 'positive' | 'negative' | null
+  // File attachments
+  attachments?: ChatAttachment[]
 }
 
 export interface ChatRequest {
   message: string
   conversation_id?: string
+  attachments?: ChatAttachment[]
+}
+
+// =============================================================================
+// Streaming Types (SSE Events for Real-time Chat)
+// =============================================================================
+
+export type StreamEventType =
+  | 'text_delta'
+  | 'text_complete'
+  | 'thinking_start'
+  | 'thinking_delta'
+  | 'thinking_end'
+  | 'tool_call_start'
+  | 'tool_call_args'
+  | 'tool_call_end'
+  | 'content_block_start'
+  | 'content_block_delta'
+  | 'content_block_end'
+  | 'session_start'
+  | 'error'
+  | 'done'
+
+export type ToolCallStatus = 'pending' | 'running' | 'completed' | 'failed'
+
+export type ContentBlockType = 'code' | 'table' | 'image' | 'file' | 'json' | 'markdown'
+
+export interface StreamEvent {
+  event: StreamEventType
+  data: Record<string, unknown>
+  index?: number
+  timestamp?: string
+}
+
+export interface ToolCall {
+  id: string
+  name: string
+  input?: Record<string, unknown>
+  output?: string
+  status: ToolCallStatus
+  error?: string
+  startedAt?: Date
+  completedAt?: Date
+}
+
+export interface ThinkingBlock {
+  content: string
+  isComplete: boolean
+}
+
+export interface ContentBlock {
+  id: string
+  type: ContentBlockType
+  content: string
+  language?: string
+  title?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface StreamingMessage extends ChatMessage {
+  isStreaming: boolean
+  toolCalls?: ToolCall[]
+  thinking?: ThinkingBlock
+  contentBlocks?: ContentBlock[]
+}
+
+export interface SessionStartData {
+  session_id: string
+  conversation_id?: string
+  message_id?: string
+}
+
+export interface StreamDoneData {
+  conversation_id?: string
+  message_id?: string
+}
+
+export interface StreamErrorData {
+  code: string
+  message: string
+  details?: Record<string, unknown>
 }
 
 export interface ChatResponse {
