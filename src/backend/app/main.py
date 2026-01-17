@@ -15,7 +15,6 @@ from app.config import settings
 from app.database import create_tables
 from app.api import (
     health_router,
-    agents_router,
     chat_router,
     analytics_router,
     projects_router,
@@ -29,6 +28,10 @@ from app.api import (
     knowledge_sources_router,
     chat_files_router,
     agent_presets_router,
+    billing_router,
+    dashboard_router,
+    missions_router,
+    embed_router,
 )
 
 
@@ -77,12 +80,99 @@ async def sync_mcp_servers():
         logger.warning(f"MCP server sync failed (non-fatal): {e}")
 
 
+async def seed_default_missions():
+    """Seed default missions, adding or updating as needed."""
+    from app.database import async_session_maker
+    from app.models.mission import Mission, DEFAULT_MISSIONS
+    from sqlalchemy import select
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    async with async_session_maker() as session:
+        # Get existing missions
+        result = await session.execute(select(Mission))
+        existing_missions = {m.id: m for m in result.scalars().all()}
+
+        added_count = 0
+        updated_count = 0
+
+        for mission_data in DEFAULT_MISSIONS:
+            mission_id = mission_data.get("id")
+
+            if mission_id not in existing_missions:
+                # Add new mission
+                mission = Mission(**mission_data)
+                session.add(mission)
+                added_count += 1
+                logger.info(f"Adding new mission: {mission_id}")
+            else:
+                # Update existing mission with new fields (like ui_config, highlight, hints)
+                existing = existing_missions[mission_id]
+                needs_update = False
+
+                # Check for new fields that need updating
+                for field in ['ui_config', 'steps', 'component_pack']:
+                    new_value = mission_data.get(field)
+                    old_value = getattr(existing, field, None)
+                    # Update if values differ (including when new_value is None)
+                    if new_value != old_value:
+                        setattr(existing, field, new_value)
+                        needs_update = True
+                        logger.info(f"  Field '{field}' changed: {old_value} -> {new_value}")
+
+                if needs_update:
+                    updated_count += 1
+                    logger.info(f"Updated mission: {mission_id}")
+
+        if added_count > 0 or updated_count > 0:
+            await session.commit()
+            logger.info(f"Missions: {added_count} added, {updated_count} updated")
+        else:
+            logger.info("All default missions up to date")
+
+
+def init_sentry():
+    """Initialize Sentry error monitoring if configured."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    if not settings.sentry_dsn:
+        logger.info("Sentry DSN not configured, error monitoring disabled")
+        return
+
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.sentry_environment,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            integrations=[
+                FastApiIntegration(transaction_style="url"),
+                SqlalchemyIntegration(),
+            ],
+            # Don't send PII
+            send_default_pii=False,
+        )
+        logger.info(f"Sentry initialized for environment: {settings.sentry_environment}")
+    except ImportError:
+        logger.warning("sentry-sdk not installed, error monitoring disabled")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Sentry: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Application lifespan handler.
     Runs on startup and shutdown.
     """
+    # Initialize Sentry for error monitoring (before other startup tasks)
+    init_sentry()
+
     # Startup: Validate environment configuration
     settings.validate_startup()
 
@@ -99,6 +189,9 @@ async def lifespan(app: FastAPI):
 
     # Seed default presets if needed
     await seed_default_presets()
+
+    # Seed default missions if needed
+    await seed_default_missions()
 
     # Sync MCP servers to .mcp.json on startup
     await sync_mcp_servers()
@@ -134,7 +227,6 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(health_router)
-app.include_router(agents_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")
@@ -150,6 +242,10 @@ app.include_router(files_router, prefix="/api/v1")
 app.include_router(knowledge_sources_router, prefix="/api/v1")
 app.include_router(chat_files_router, prefix="/api/v1")
 app.include_router(agent_presets_router, prefix="/api/v1")
+app.include_router(billing_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(missions_router, prefix="/api/v1")
+app.include_router(embed_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
 # Path(__file__).parent = /app/app (where main.py is located)

@@ -408,7 +408,7 @@ export function EditAgentPage() {
         setSaveError(result.message)
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to restart Langflow'
+      const errorMessage = err instanceof Error ? err.message : 'Failed to restart AI Canvas'
       setSaveError(errorMessage)
     } finally {
       setIsRestarting(false)
@@ -719,7 +719,7 @@ export function EditAgentPage() {
                 Published
               </span>
               <span className="text-sm text-gray-600">
-                {needsRestart ? 'Restart required to apply changes' : 'Available as a custom component in Langflow'}
+                {needsRestart ? 'Restart required to apply changes' : 'Available as a custom component in AI Canvas'}
               </span>
             </div>
             {isPublished && (

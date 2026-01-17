@@ -15,7 +15,7 @@ from app.config import settings
 from app.database import Base
 
 # Import all models to ensure they're registered with Base.metadata
-from app.models import User, Agent, Conversation, Message
+from app.models import User, Conversation, Message
 # Phase 9 models - three-tab architecture
 from app.models.project import Project
 from app.models.agent_component import AgentComponent

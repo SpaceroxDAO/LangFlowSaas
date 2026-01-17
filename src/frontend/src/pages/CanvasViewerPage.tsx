@@ -1,14 +1,17 @@
-import { useParams, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/providers/DevModeProvider'
 import { api } from '@/lib/api'
 import { LangflowCanvasViewer } from '@/components/LangflowCanvasViewer'
+import { MissionSidePanel } from '@/components/MissionSidePanel'
 import { useTour, useShouldShowTour } from '@/providers/TourProvider'
-import type { AgentComponent, Workflow } from '@/types'
+import type { AgentComponent, Workflow, MissionWithProgress, CanvasEvent } from '@/types'
 
 export function CanvasViewerPage() {
   // The ID can be either an agent component ID or a workflow ID
   const { agentId: id } = useParams<{ agentId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { getToken } = useAuth()
   const [agentComponent, setAgentComponent] = useState<AgentComponent | null>(null)
   const [workflow, setWorkflow] = useState<Workflow | null>(null)
@@ -17,6 +20,17 @@ export function CanvasViewerPage() {
   const [error, setError] = useState<string | null>(null)
   const { completeTour, currentDisclosureLevel, setDisclosureLevel } = useTour()
   const shouldShowTour = useShouldShowTour('canvas')
+
+  // Mission state
+  const missionId = searchParams.get('mission')
+  const [mission, setMission] = useState<MissionWithProgress | null>(null)
+  const [isMissionPanelOpen, setIsMissionPanelOpen] = useState(true)
+  const [isCompletingStep, setIsCompletingStep] = useState(false)
+  const [missionLoading, setMissionLoading] = useState(false)
+  const [nextMission, setNextMission] = useState<{ id: string; name: string } | null>(null)
+
+  // Iframe ref for mission postMessage communication
+  const [iframeRef, setIframeRef] = useState<React.RefObject<HTMLIFrameElement> | null>(null)
 
   useEffect(() => {
     api.setTokenGetter(getToken)
@@ -71,6 +85,183 @@ export function CanvasViewerPage() {
 
     fetchData()
   }, [id])
+
+  // Fetch mission data when missionId is present
+  useEffect(() => {
+    async function fetchMission() {
+      if (!missionId) {
+        setMission(null)
+        return
+      }
+
+      try {
+        setMissionLoading(true)
+        const missionData = await api.getMission(missionId)
+        setMission(missionData)
+        // Open the panel when mission is loaded
+        setIsMissionPanelOpen(true)
+      } catch (err) {
+        console.error('Failed to load mission:', err)
+        // Remove mission param if mission not found
+        searchParams.delete('mission')
+        setSearchParams(searchParams)
+      } finally {
+        setMissionLoading(false)
+      }
+    }
+
+    fetchMission()
+  }, [missionId, searchParams, setSearchParams])
+
+  // Find next available canvas-mode mission when current mission is completed
+  useEffect(() => {
+    async function findNextMission() {
+      if (!mission || mission.progress.status !== 'completed') {
+        setNextMission(null)
+        return
+      }
+
+      try {
+        // Fetch all missions to find the next canvas-mode one
+        const response = await api.listMissions()
+        const availableMissions = response.missions.filter(
+          m =>
+            m.progress.status !== 'completed' &&
+            m.mission.id !== mission.mission.id &&
+            m.mission.canvas_mode // Only show canvas-mode missions as next
+        )
+
+        if (availableMissions.length > 0) {
+          // Pick the first available mission (could improve sorting logic later)
+          const next = availableMissions[0]
+          setNextMission({ id: next.mission.id, name: next.mission.name })
+        } else {
+          setNextMission(null)
+        }
+      } catch (err) {
+        console.error('Failed to fetch next mission:', err)
+        setNextMission(null)
+      }
+    }
+
+    findNextMission()
+  }, [mission])
+
+  // Handle canvas events from iframe via postMessage (for mission step auto-validation)
+  useEffect(() => {
+    if (!missionId || !mission) return
+
+    const handleMessage = async (event: MessageEvent) => {
+      // Only process messages from Langflow overlay
+      if (event.data?.source !== 'langflow-overlay') return
+
+      const canvasEvent = event.data.event as CanvasEvent
+      console.log('Canvas event received:', canvasEvent)
+
+      try {
+        // Send event to backend for validation
+        const response = await api.sendCanvasEvent(missionId, canvasEvent)
+
+        // If step was auto-completed, refresh mission data
+        if (response.step_completed) {
+          const updatedMission = await api.getMission(missionId)
+          setMission(updatedMission)
+        }
+      } catch (err) {
+        console.error('Failed to process canvas event:', err)
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [missionId, mission])
+
+  // Handle manual step completion
+  const handleCompleteStep = useCallback(
+    async (stepId: number) => {
+      if (!missionId || isCompletingStep) return
+
+      try {
+        setIsCompletingStep(true)
+        await api.completeMissionStep(missionId, { step_id: stepId })
+
+        // Refresh mission data
+        const updatedMission = await api.getMission(missionId)
+        setMission(updatedMission)
+      } catch (err) {
+        console.error('Failed to complete step:', err)
+      } finally {
+        setIsCompletingStep(false)
+      }
+    },
+    [missionId, isCompletingStep]
+  )
+
+  // Handle uncompleting a step
+  const handleUncompleteStep = useCallback(
+    async (stepId: number) => {
+      if (!missionId || isCompletingStep) return
+
+      try {
+        setIsCompletingStep(true)
+        await api.uncompleteMissionStep(missionId, { step_id: stepId })
+
+        // Refresh mission data
+        const updatedMission = await api.getMission(missionId)
+        setMission(updatedMission)
+      } catch (err) {
+        console.error('Failed to uncomplete step:', err)
+      } finally {
+        setIsCompletingStep(false)
+      }
+    },
+    [missionId, isCompletingStep]
+  )
+
+  // Handle resetting mission progress
+  const handleResetMission = useCallback(async () => {
+    if (!missionId || isCompletingStep) return
+
+    try {
+      setIsCompletingStep(true)
+      await api.resetMissionProgress(missionId)
+
+      // Refresh mission data
+      const updatedMission = await api.getMission(missionId)
+      setMission(updatedMission)
+    } catch (err) {
+      console.error('Failed to reset mission:', err)
+    } finally {
+      setIsCompletingStep(false)
+    }
+  }, [missionId, isCompletingStep])
+
+  // Handle closing mission panel (remove mission param from URL)
+  const handleCloseMission = useCallback(() => {
+    searchParams.delete('mission')
+    setSearchParams(searchParams)
+    setMission(null)
+    setIsMissionPanelOpen(false)
+  }, [searchParams, setSearchParams])
+
+  // Handle starting the next mission
+  const handleStartNextMission = useCallback(async (nextMissionId: string) => {
+    try {
+      // Start the next mission and get canvas data
+      const result = await api.startMissionWithCanvas(nextMissionId)
+
+      if (result.workflow_id) {
+        // Navigate to canvas with the new mission
+        navigate(`/canvas/${result.workflow_id}?mission=${nextMissionId}`)
+      } else {
+        // Fallback to missions page
+        navigate('/dashboard/missions')
+      }
+    } catch (err) {
+      console.error('Failed to start next mission:', err)
+      navigate('/dashboard/missions')
+    }
+  }, [navigate])
 
   if (loading) {
     return (
@@ -130,18 +321,47 @@ export function CanvasViewerPage() {
     )
   }
 
+  // Build component filter from mission data
+  const componentFilter = mission?.mission.component_pack?.allowed_components?.join(',')
+
+  // Extract ui_config from mission for canvas visibility settings
+  const uiConfig = mission?.mission.ui_config as { hide_sidebar?: boolean; hide_minimap?: boolean; hide_toolbar?: boolean } | undefined
+
   return (
     <div className="h-full flex flex-col">
-      {/* Canvas Viewer - Header removed, full height */}
-      <div className="flex-1">
-        <LangflowCanvasViewer
-          flowId={workflow.langflow_flow_id}
-          agentName={displayName || workflow.name}
-          level={currentDisclosureLevel}
-          showTour={shouldShowTour}
-          onTourComplete={() => completeTour('canvas')}
-          onLevelChange={setDisclosureLevel}
-        />
+      {/* Canvas Viewer with Mission Panel */}
+      <div className="flex-1 flex">
+        {/* Main Canvas Area */}
+        <div className="flex-1 min-w-0">
+          <LangflowCanvasViewer
+            flowId={workflow.langflow_flow_id}
+            agentName={displayName || workflow.name}
+            level={currentDisclosureLevel}
+            showTour={shouldShowTour && !missionId}
+            onTourComplete={() => completeTour('canvas')}
+            onLevelChange={setDisclosureLevel}
+            componentFilter={componentFilter}
+            uiConfig={uiConfig}
+            onIframeRef={setIframeRef}
+          />
+        </div>
+
+        {/* Mission Side Panel */}
+        {mission && !missionLoading && (
+          <MissionSidePanel
+            mission={mission}
+            isOpen={isMissionPanelOpen}
+            onToggle={() => setIsMissionPanelOpen(!isMissionPanelOpen)}
+            onCompleteStep={handleCompleteStep}
+            onUncompleteStep={handleUncompleteStep}
+            onReset={handleResetMission}
+            onClose={handleCloseMission}
+            onStartNextMission={handleStartNextMission}
+            nextMission={nextMission}
+            isLoading={isCompletingStep}
+            iframeRef={iframeRef ?? undefined}
+          />
+        )}
       </div>
     </div>
   )

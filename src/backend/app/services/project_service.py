@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.project import Project
-from app.models.agent import Agent
 from app.models.agent_component import AgentComponent
 from app.models.workflow import Workflow
 from app.models.mcp_server import MCPServer
@@ -234,7 +233,7 @@ class ProjectService:
 
     async def delete(self, project: Project) -> None:
         """
-        Permanently delete a project. Agents are moved to default project.
+        Permanently delete a project. Agent components are moved to default project.
 
         Args:
             project: Project to delete
@@ -245,7 +244,7 @@ class ProjectService:
         if project.is_default:
             raise ProjectServiceError("Cannot delete the default project")
 
-        # Move agents to default project
+        # Move agent components to default project
         user_id_str = str(project.user_id)
         default_stmt = select(Project).where(
             Project.user_id == user_id_str,
@@ -256,8 +255,8 @@ class ProjectService:
 
         if default_project:
             update_stmt = (
-                update(Agent)
-                .where(Agent.project_id == str(project.id))
+                update(AgentComponent)
+                .where(AgentComponent.project_id == str(project.id))
                 .values(project_id=str(default_project.id))
             )
             await self.session.execute(update_stmt)
@@ -266,25 +265,25 @@ class ProjectService:
         await self.session.flush()
         logger.info(f"Deleted project {project.id}")
 
-    async def move_agent(
+    async def move_agent_component(
         self,
-        agent: Agent,
+        agent_component: AgentComponent,
         target_project: Project,
-    ) -> Agent:
+    ) -> AgentComponent:
         """
-        Move an agent to a different project.
+        Move an agent component to a different project.
 
         Args:
-            agent: Agent to move
+            agent_component: AgentComponent to move
             target_project: Target project
 
         Returns:
-            Updated agent
+            Updated agent component
         """
-        agent.project_id = str(target_project.id)
+        agent_component.project_id = str(target_project.id)
         await self.session.flush()
-        logger.info(f"Moved agent {agent.id} to project {target_project.id}")
-        return agent
+        logger.info(f"Moved agent component {agent_component.id} to project {target_project.id}")
+        return agent_component
 
     async def duplicate(
         self,
@@ -293,7 +292,7 @@ class ProjectService:
         user: User,
     ) -> Project:
         """
-        Duplicate a project (without agents).
+        Duplicate a project (without agent components).
 
         Args:
             project: Project to duplicate
@@ -311,42 +310,42 @@ class ProjectService:
         )
         return await self.create(user, data)
 
-    async def get_agents_in_project(
+    async def get_agent_components_in_project(
         self,
         project_id: uuid.UUID,
         user_id: uuid.UUID,
         active_only: bool = True,
-    ) -> Tuple[List[Agent], int]:
+    ) -> Tuple[List[AgentComponent], int]:
         """
-        Get all agents in a project.
+        Get all agent components in a project.
 
         Args:
             project_id: Project UUID
             user_id: User UUID for security check
-            active_only: Only return active agents
+            active_only: Only return active agent components
 
         Returns:
-            Tuple of (agents list, total count)
+            Tuple of (agent components list, total count)
         """
         project_id_str = str(project_id)
         user_id_str = str(user_id)
 
-        stmt = select(Agent).where(
-            Agent.project_id == project_id_str,
-            Agent.user_id == user_id_str,
+        stmt = select(AgentComponent).where(
+            AgentComponent.project_id == project_id_str,
+            AgentComponent.user_id == user_id_str,
         )
 
         if active_only:
-            stmt = stmt.where(Agent.is_active == True)
+            stmt = stmt.where(AgentComponent.is_active == True)
 
         # Count
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total_result = await self.session.execute(count_stmt)
         total = total_result.scalar_one()
 
-        # Get agents
-        stmt = stmt.order_by(Agent.created_at.desc())
+        # Get agent components
+        stmt = stmt.order_by(AgentComponent.created_at.desc())
         result = await self.session.execute(stmt)
-        agents = list(result.scalars().all())
+        agent_components = list(result.scalars().all())
 
-        return agents, total
+        return agent_components, total

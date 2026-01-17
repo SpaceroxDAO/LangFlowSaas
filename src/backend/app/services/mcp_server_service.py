@@ -50,16 +50,39 @@ class MCPServerService:
     async def get_by_id(
         self,
         server_id: uuid.UUID,
-        user_id: uuid.UUID = None,
+        user_id: uuid.UUID,
     ) -> Optional[MCPServer]:
-        """Get MCP server by ID, optionally filtered by user."""
+        """
+        Get MCP server by ID, filtered by user for security.
+
+        Args:
+            server_id: MCPServer UUID
+            user_id: User UUID to ensure ownership (REQUIRED for security)
+
+        Returns:
+            MCPServer if found and owned by user, None otherwise
+        """
+        server_id_str = str(server_id)
+        user_id_str = str(user_id)
+        stmt = select(MCPServer).where(
+            MCPServer.id == server_id_str,
+            MCPServer.user_id == user_id_str,
+        )
+
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def _unsafe_get_by_id(
+        self,
+        server_id: uuid.UUID,
+    ) -> Optional[MCPServer]:
+        """
+        Get MCP server by ID without user filtering.
+
+        WARNING: Only use for internal admin operations.
+        """
         server_id_str = str(server_id)
         stmt = select(MCPServer).where(MCPServer.id == server_id_str)
-
-        if user_id:
-            user_id_str = str(user_id)
-            stmt = stmt.where(MCPServer.user_id == user_id_str)
-
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

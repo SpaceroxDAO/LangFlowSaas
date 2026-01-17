@@ -1,19 +1,20 @@
 """
 Analytics endpoints - wraps Langflow's /monitor API.
 
-Provides agent usage analytics for the Teach Charlie dashboard.
+Updated 2026-01-15: Changed from legacy Agent to Workflow model.
+Provides workflow usage analytics from Langflow.
 """
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
 from app.models.user import User
 from app.services.user_service import UserService
-from app.services.agent_service import AgentService
+from app.services.workflow_service import WorkflowService
 from app.services.langflow_client import langflow_client, LangflowClientError
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 # Response models
 class MessageStats(BaseModel):
-    """Aggregated message statistics for an agent."""
+    """Aggregated message statistics for a workflow."""
     total_messages: int
     total_sessions: int
     messages_today: int
@@ -58,18 +59,18 @@ async def get_user_from_clerk(
 
 
 @router.get(
-    "/agents/{agent_id}/stats",
+    "/workflows/{workflow_id}/stats",
     response_model=MessageStats,
-    summary="Get agent analytics",
-    description="Get aggregated message statistics for an agent.",
+    summary="Get workflow analytics",
+    description="Get aggregated message statistics for a workflow from Langflow.",
 )
-async def get_agent_stats(
-    agent_id: uuid.UUID,
+async def get_workflow_stats(
+    workflow_id: uuid.UUID,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ):
     """
-    Get aggregated analytics for an agent.
+    Get aggregated analytics for a workflow.
 
     Returns:
     - Total messages processed
@@ -79,66 +80,66 @@ async def get_agent_stats(
     - Average messages per session
     """
     user = await get_user_from_clerk(clerk_user, session)
-    agent_service = AgentService(session)
+    workflow_service = WorkflowService(session)
 
-    # Verify agent belongs to user
-    agent = await agent_service.get_by_id(agent_id, user_id=user.id)
-    if not agent:
+    # Verify workflow belongs to user
+    workflow = await workflow_service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent not found.",
+            detail="Workflow not found.",
         )
 
-    if not agent.langflow_flow_id:
+    if not workflow.langflow_flow_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Agent does not have a Langflow flow.",
+            detail="Workflow does not have a Langflow flow.",
         )
 
     # Get stats from Langflow
-    stats = await langflow_client.get_message_stats(agent.langflow_flow_id)
+    stats = await langflow_client.get_message_stats(workflow.langflow_flow_id)
     return MessageStats(**stats)
 
 
 @router.get(
-    "/agents/{agent_id}/messages",
+    "/workflows/{workflow_id}/messages",
     response_model=MessagesResponse,
-    summary="Get agent messages",
-    description="Get recent messages for an agent.",
+    summary="Get workflow messages",
+    description="Get recent messages for a workflow from Langflow.",
 )
-async def get_agent_messages(
-    agent_id: uuid.UUID,
+async def get_workflow_messages(
+    workflow_id: uuid.UUID,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
     limit: int = 50,
     offset: int = 0,
 ):
     """
-    Get recent messages for an agent.
+    Get recent messages for a workflow.
 
     Supports pagination with limit and offset parameters.
     """
     user = await get_user_from_clerk(clerk_user, session)
-    agent_service = AgentService(session)
+    workflow_service = WorkflowService(session)
 
-    # Verify agent belongs to user
-    agent = await agent_service.get_by_id(agent_id, user_id=user.id)
-    if not agent:
+    # Verify workflow belongs to user
+    workflow = await workflow_service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent not found.",
+            detail="Workflow not found.",
         )
 
-    if not agent.langflow_flow_id:
+    if not workflow.langflow_flow_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Agent does not have a Langflow flow.",
+            detail="Workflow does not have a Langflow flow.",
         )
 
     try:
         # Get messages from Langflow
         messages_data = await langflow_client.get_messages(
-            flow_id=agent.langflow_flow_id,
+            flow_id=workflow.langflow_flow_id,
             limit=limit,
             offset=offset,
         )

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { driver } from 'driver.js';
 import type { DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -13,6 +13,13 @@ import { useTour } from '../providers/TourProvider';
 // Level 3: Full editing with some advanced features hidden - "Builder mode"
 // Level 4: Full Langflow access - "Expert mode"
 
+interface UIConfig {
+  hide_sidebar?: boolean;
+  hide_minimap?: boolean;
+  hide_toolbar?: boolean;
+  custom_actions_only?: boolean;
+}
+
 interface LangflowCanvasViewerProps {
   flowId: string;
   agentName?: string;
@@ -20,6 +27,9 @@ interface LangflowCanvasViewerProps {
   showTour?: boolean;
   onTourComplete?: () => void;
   onLevelChange?: (level: 1 | 2 | 3 | 4) => void;
+  componentFilter?: string; // Comma-separated list of allowed components for mission mode
+  uiConfig?: UIConfig; // UI visibility config for mission mode (hide_sidebar, etc.)
+  onIframeRef?: (ref: React.RefObject<HTMLIFrameElement>) => void; // Callback to expose iframe ref
 }
 
 // Educational labels for each level (kept for future complexity selector)
@@ -74,6 +84,9 @@ export function LangflowCanvasViewer({
   level = 1,
   showTour = false,
   onTourComplete,
+  componentFilter,
+  uiConfig,
+  onIframeRef,
   // onLevelChange, // Kept for future complexity selector
 }: LangflowCanvasViewerProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -81,12 +94,29 @@ export function LangflowCanvasViewer({
   const currentLevel = level; // Use prop directly until complexity selector is added
   const { completeTour } = useTour();
 
+  // Expose iframe ref to parent via callback
+  useEffect(() => {
+    if (onIframeRef) {
+      onIframeRef(iframeRef);
+    }
+  }, [onIframeRef]);
+
   // Langflow URL configuration:
   // ALWAYS use http://localhost:7861 (nginx) for CSS injection/white-label overlay
   // The nginx proxy handles CSS/JS injection to hide Langflow UI elements
   // Use docker-compose.dev.yml to run nginx + langflow for local dev
   const langflowUrl = import.meta.env.VITE_LANGFLOW_URL || 'http://localhost:7861';
-  const canvasUrl = `${langflowUrl}/flow/${flowId}`;
+
+  // Build URL params for mission mode (component filter + UI config)
+  const urlParams = new URLSearchParams();
+  if (componentFilter) {
+    urlParams.set('filter_components', componentFilter);
+  }
+  if (uiConfig) {
+    urlParams.set('ui_config', JSON.stringify(uiConfig));
+  }
+  const queryString = urlParams.toString();
+  const canvasUrl = `${langflowUrl}/flow/${flowId}${queryString ? `?${queryString}` : ''}`;
 
   // Handle iframe load
   const handleIframeLoad = useCallback(() => {

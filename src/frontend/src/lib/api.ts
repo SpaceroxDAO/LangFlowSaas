@@ -58,6 +58,26 @@ import type {
   KnowledgeSourceListResponse,
   // Streaming types
   StreamEvent,
+  // Billing types
+  Plan,
+  Subscription,
+  UsageStats,
+  CheckoutRequest,
+  CheckoutResponse,
+  PortalRequest,
+  PortalResponse,
+  // Dashboard types
+  DashboardStats,
+  DashboardTotals,
+  // Mission types
+  MissionListResponse,
+  MissionWithProgress,
+  MissionProgressResponse,
+  CompleteStepRequest,
+  // Canvas integration types
+  CanvasStartResponse,
+  CanvasEvent,
+  CanvasEventResponse,
 } from '@/types'
 
 // Check dev mode from environment
@@ -986,6 +1006,113 @@ class ApiClient {
     }>
   }> {
     return this.request('/api/v1/agent-presets/featured/list')
+  }
+
+  // ===========================================================================
+  // Billing (Subscriptions & Usage)
+  // ===========================================================================
+
+  async listPlans(): Promise<Plan[]> {
+    return this.request('/api/v1/billing/plans')
+  }
+
+  async getSubscription(): Promise<Subscription> {
+    return this.request('/api/v1/billing/subscription')
+  }
+
+  async getUsage(): Promise<UsageStats> {
+    return this.request('/api/v1/billing/usage')
+  }
+
+  async createCheckoutSession(data: CheckoutRequest): Promise<CheckoutResponse> {
+    return this.request<CheckoutResponse>('/api/v1/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createPortalSession(data: PortalRequest): Promise<PortalResponse> {
+    return this.request<PortalResponse>('/api/v1/billing/portal', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // ===========================================================================
+  // Dashboard Analytics
+  // ===========================================================================
+
+  async getDashboardStats(
+    days: number = 30,
+    startDate?: string,
+    endDate?: string
+  ): Promise<DashboardStats> {
+    const params = new URLSearchParams()
+    // Only include days if no custom date range is provided
+    if (startDate && endDate) {
+      params.set('start_date', startDate)
+      params.set('end_date', endDate)
+    } else {
+      params.set('days', days.toString())
+    }
+    return this.request(`/api/v1/dashboard/stats?${params.toString()}`)
+  }
+
+  async getDashboardTotals(): Promise<DashboardTotals> {
+    return this.request('/api/v1/dashboard/totals')
+  }
+
+  // ===========================================================================
+  // Missions (Guided Learning)
+  // ===========================================================================
+
+  async listMissions(category?: string): Promise<MissionListResponse> {
+    const params = category ? `?category=${encodeURIComponent(category)}` : ''
+    return this.request(`/api/v1/missions${params}`)
+  }
+
+  async getMission(missionId: string): Promise<MissionWithProgress> {
+    return this.request(`/api/v1/missions/${missionId}`)
+  }
+
+  async startMission(missionId: string): Promise<MissionProgressResponse> {
+    return this.request<MissionProgressResponse>(`/api/v1/missions/${missionId}/start`, {
+      method: 'POST',
+    })
+  }
+
+  async completeMissionStep(missionId: string, data: CompleteStepRequest): Promise<MissionProgressResponse> {
+    return this.request<MissionProgressResponse>(`/api/v1/missions/${missionId}/complete-step`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async resetMissionProgress(missionId: string): Promise<MissionProgressResponse> {
+    return this.request<MissionProgressResponse>(`/api/v1/missions/${missionId}/reset`, {
+      method: 'POST',
+    })
+  }
+
+  async uncompleteMissionStep(missionId: string, data: CompleteStepRequest): Promise<MissionProgressResponse> {
+    return this.request<MissionProgressResponse>(`/api/v1/missions/${missionId}/uncomplete-step`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Canvas integration
+  async startMissionWithCanvas(missionId: string): Promise<CanvasStartResponse> {
+    return this.request<CanvasStartResponse>(`/api/v1/missions/${missionId}/start-canvas`, {
+      method: 'POST',
+    })
+  }
+
+  async sendCanvasEvent(missionId: string, event: CanvasEvent): Promise<CanvasEventResponse> {
+    return this.request<CanvasEventResponse>(`/api/v1/missions/${missionId}/canvas-event`, {
+      method: 'POST',
+      body: JSON.stringify(event),
+    })
   }
 }
 

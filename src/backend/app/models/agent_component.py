@@ -153,6 +153,28 @@ class AgentComponent(BaseModel):
         comment="Whether this agent appears in Langflow sidebar",
     )
 
+    # Embed widget settings
+    is_embeddable: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Whether this agent can be embedded on external sites",
+    )
+
+    embed_config: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True,
+        default=None,
+        comment="Embed widget configuration: theme, allowed_domains, welcome_message, etc.",
+    )
+
+    embed_token: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="Unique token for embed authentication",
+    )
+
     # Agent status
     is_active: Mapped[bool] = mapped_column(
         Boolean,

@@ -161,7 +161,7 @@ class LangflowService:
                 logger.warning("Docker not available - cannot restart Langflow")
                 return {
                     "success": False,
-                    "message": "Docker is not available. Please restart Langflow manually.",
+                    "message": "Docker is not available. Please restart AI Canvas manually.",
                 }
 
             # Restart the Langflow container
@@ -178,7 +178,7 @@ class LangflowService:
                 logger.info(f"Langflow container restarted successfully")
                 return {
                     "success": True,
-                    "message": f"Langflow is restarting. This may take 30-60 seconds.",
+                    "message": f"AI Canvas is restarting. This may take 30-60 seconds.",
                 }
             else:
                 logger.error(f"Docker restart failed: {result.stderr}")
@@ -197,7 +197,7 @@ class LangflowService:
             logger.error("Docker command not found")
             return {
                 "success": False,
-                "message": "Docker command not found. Please restart Langflow manually.",
+                "message": "Docker command not found. Please restart AI Canvas manually.",
             }
         except Exception as e:
             logger.error(f"Unexpected error restarting Langflow: {e}")

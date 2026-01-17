@@ -1,5 +1,7 @@
 """
 Project model - organizes agents into folders/projects.
+
+Updated 2026-01-15: Removed legacy agents relationship.
 """
 import uuid
 from typing import TYPE_CHECKING, List, Optional
@@ -11,7 +13,6 @@ from app.database import BaseModel
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.agent import Agent
     from app.models.agent_component import AgentComponent
     from app.models.workflow import Workflow
     from app.models.mcp_server import MCPServer
@@ -85,20 +86,14 @@ class Project(BaseModel):
         comment="Manual ordering within user's projects",
     )
 
-    # Relationships - use lazy="select" to avoid N+1 query cascade
+    # Relationships
     user: Mapped["User"] = relationship(
         "User",
         back_populates="projects",
         lazy="select",
     )
 
-    agents: Mapped[List["Agent"]] = relationship(
-        "Agent",
-        back_populates="project",
-        lazy="select",
-    )
-
-    # Relationships for three-tab architecture
+    # Primary models for three-tab architecture
     agent_components: Mapped[List["AgentComponent"]] = relationship(
         "AgentComponent",
         back_populates="project",

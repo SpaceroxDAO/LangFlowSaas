@@ -19,7 +19,7 @@ from app.schemas.project import (
 from app.schemas.agent import AgentResponse
 from app.services.user_service import UserService
 from app.services.project_service import ProjectService, ProjectServiceError
-from app.services.agent_service import AgentService
+from app.services.agent_component_service import AgentComponentService
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -227,9 +227,8 @@ async def archive_project(
 
 @router.post(
     "/{project_id}/agents/{agent_id}/move",
-    response_model=AgentResponse,
-    summary="Move agent to project",
-    description="Move an agent to a different project.",
+    summary="Move agent component to project",
+    description="Move an agent component to a different project.",
 )
 async def move_agent_to_project(
     project_id: uuid.UUID,
@@ -237,10 +236,10 @@ async def move_agent_to_project(
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ):
-    """Move an agent to a different project."""
+    """Move an agent component to a different project."""
     user = await get_user_from_clerk(clerk_user, session)
     project_service = ProjectService(session)
-    agent_service = AgentService(session)
+    agent_component_service = AgentComponentService(session)
 
     # Verify target project exists and belongs to user
     target_project = await project_service.get_by_id(project_id, user_id=user.id)
@@ -250,17 +249,18 @@ async def move_agent_to_project(
             detail="Target project not found.",
         )
 
-    # Verify agent exists and belongs to user
-    agent = await agent_service.get_by_id(agent_id, user_id=user.id)
+    # Verify agent component exists and belongs to user
+    agent = await agent_component_service.get_by_id(agent_id, user_id=user.id)
     if not agent:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent not found.",
+            detail="Agent component not found.",
         )
 
-    # Move the agent
-    updated_agent = await project_service.move_agent(agent, target_project)
-    return updated_agent
+    # Move the agent component
+    agent.project_id = str(target_project.id)
+    await session.flush()
+    return {"id": str(agent.id), "project_id": str(agent.project_id), "name": agent.name}
 
 
 @router.post(

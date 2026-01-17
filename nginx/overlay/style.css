@@ -4,14 +4,8 @@
  * Purpose: Hide Langflow UI elements for WHITE-LABELING ONLY
  * Loaded via nginx sub_filter injection into <head>
  *
- * IMPORTANT: Do NOT hide functional UI elements like:
- * - Dialogs (Playground, Logs, Settings)
- * - Dropdowns and menus
- * - Tooltips
- * - Component configuration panels
- *
- * The connection error modal issue was fixed by correcting the
- * nginx /health_check proxy (see docs/LANGFLOW_PROXY_FIX.md)
+ * IMPORTANT: Be VERY conservative - only hide specific branding elements.
+ * Do NOT use broad selectors that could break functional UI.
  */
 
 /* =====================================================
@@ -23,16 +17,8 @@
     display: none !important;
 }
 
-/* Fallback: Hide by class if data-testid changes */
-header.langflow-header,
-.header-container,
-[class*="header-wrapper"] {
-    display: none !important;
-}
-
 /* =====================================================
    SOCIAL LINKS - Hide GitHub, Discord, Twitter badges
-   These may appear in header, footer, or sidebar
    ===================================================== */
 
 /* GitHub links */
@@ -58,48 +44,32 @@ a[href*="x.com/langflow"] {
    BRANDING ELEMENTS - Hide Langflow-specific branding
    ===================================================== */
 
-/* Logo images */
+/* Logo images with Langflow alt text */
 img[alt*="Langflow"],
 img[alt*="langflow"],
 svg[aria-label*="Langflow"] {
     display: none !important;
 }
 
-/* =====================================================
-   PLAYGROUND CHAT - Hide Langflow logo in empty state
-   ===================================================== */
-
-/* Hide the icon above "New chat" text in playground empty state */
-/* Target by the icon component class pattern */
-[role="dialog"] [class*="icon"],
-[role="dialog"] .iconComponent {
-    display: none !important;
-}
-
-/* Hide the chat widget Langflow branding icon */
-/* The icon is typically the first SVG in a centered flex container */
-[role="dialog"] .flex.flex-col.items-center > svg:first-child,
-[role="dialog"] .flex.flex-col.items-center > div:first-child > svg {
-    display: none !important;
-}
-
-/* Target by size - Langflow logo is typically large in empty state */
-[role="dialog"] svg[width="48"],
-[role="dialog"] svg[height="48"],
-[role="dialog"] svg.h-12,
-[role="dialog"] svg.w-12 {
-    display: none !important;
-}
-
-/* Hide any element containing the Langflow logo class */
+/* Hide any element with explicit langflow-logo class */
 [class*="langflow-logo"],
 [class*="LangflowLogo"] {
     display: none !important;
 }
 
 /* =====================================================
+   PLAYGROUND - Logo replacement handled by JavaScript
+   CSS just provides fallback hiding
+   ===================================================== */
+
+/* Hide large centered SVGs in dialogs (empty state logo) */
+[role="dialog"] svg[class*="lucide-workflow"],
+[role="dialog"] svg[class*="lucide-git-fork"] {
+    display: none !important;
+}
+
+/* =====================================================
    PROJECTS SIDEBAR - Currently VISIBLE
-   Uncomment below to hide the left project navigation
    ===================================================== */
 
 /* Main projects sidebar - COMMENTED OUT to keep visible
@@ -110,21 +80,65 @@ svg[aria-label*="Langflow"] {
 
 /* =====================================================
    FUNCTIONAL UI - DO NOT HIDE
-   These are listed here as documentation of what NOT to block
    ===================================================== */
 
 /*
  * KEEP VISIBLE:
  * - [role="dialog"] - Playground, Logs, Settings, etc.
  * - [role="alertdialog"] - Confirmation dialogs
+ * - All icons inside dialogs (upload, send, etc.)
  * - [data-radix-portal] - All modal portals
  * - [data-radix-popover-content] - Dropdowns, tooltips
- * - .fixed.inset-0.z-50 - Modal backdrops (needed for click-outside-to-close)
  */
 
 /* =====================================================
-   ADJUSTMENTS - Fix layout after hiding elements
+   WALK ME (Driver.js) - Mission highlight tooltips
    ===================================================== */
 
-/* Expand main content area when header is hidden */
-/* Langflow uses flex layout, so this should auto-adjust */
+/* Ensure close button is visible and styled */
+.driver-popover .driver-popover-close-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #f3f4f6;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #374151;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    transition: background-color 0.2s;
+}
+
+.driver-popover .driver-popover-close-btn:hover {
+    background: #e5e7eb;
+}
+
+/* Style the popover */
+.tc-walkme-popover {
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+    max-width: 320px !important;
+}
+
+.tc-walkme-popover .driver-popover-title {
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    color: #111827 !important;
+    padding-right: 32px !important;
+}
+
+.tc-walkme-popover .driver-popover-description {
+    color: #4b5563 !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+}
+
+/* Make overlay clickable */
+.driver-overlay {
+    cursor: pointer;
+}

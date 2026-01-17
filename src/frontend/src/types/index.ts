@@ -288,6 +288,15 @@ export interface AgentComponent {
   component_file_path?: string
   component_class_name?: string
   is_published: boolean
+  is_embeddable: boolean
+  embed_token?: string
+  embed_config?: {
+    theme?: string
+    primary_color?: string
+    welcome_message?: string
+    placeholder?: string
+    allowed_domains?: string[]
+  }
   is_active: boolean
   created_at: string
   updated_at: string
@@ -711,4 +720,271 @@ export interface FeaturedPresetsResponse {
     gradient: string
     category: string
   }>
+}
+
+// ===========================================================================
+// Billing Types
+// ===========================================================================
+
+export interface Plan {
+  id: string
+  name: string
+  price_monthly: number
+  price_display: string
+  description: string
+  features: string[]
+  limits: PlanLimits
+}
+
+export interface PlanLimits {
+  agents: number
+  messages_per_month: number
+  tokens_per_month: number
+  workflows: number
+  mcp_servers: number
+  projects: number
+  file_storage_mb: number
+}
+
+export interface Subscription {
+  plan_id: string
+  plan_name: string
+  status: 'active' | 'canceled' | 'past_due' | 'trialing'
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  is_paid: boolean
+}
+
+export interface UsageStats {
+  messages_sent: number
+  tokens_used: number
+  agents_count: number
+  workflows_count: number
+  limits: {
+    messages_per_month: number
+    tokens_per_month: number
+    agents: number
+    workflows: number
+  }
+  usage_percent: {
+    messages: number
+    tokens: number
+  }
+}
+
+export interface CheckoutRequest {
+  plan_id: string
+  success_url: string
+  cancel_url: string
+}
+
+export interface CheckoutResponse {
+  checkout_url: string
+}
+
+export interface PortalRequest {
+  return_url: string
+}
+
+export interface PortalResponse {
+  portal_url: string
+}
+
+// ===========================================================================
+// Dashboard Analytics Types
+// ===========================================================================
+
+export interface DailyMetric {
+  date: string
+  conversations: number
+  messages: number
+  tokens: number
+}
+
+export interface DashboardTotals {
+  agents: number
+  agent_components: number
+  workflows: number
+  conversations: number
+  messages_this_month: number
+  tokens_this_month: number
+}
+
+export interface RecentConversation {
+  id: string
+  title: string
+  agent_id: string | null
+  workflow_id: string | null
+  updated_at: string | null
+}
+
+export interface AgentStat {
+  id: string
+  name: string
+  conversations: number
+}
+
+export interface PeriodComparison {
+  messages_change: number
+  conversations_change: number
+  tokens_change: number
+  previous_period: {
+    start: string
+    end: string
+    messages: number
+    conversations: number
+    tokens: number
+  }
+  current_period: {
+    messages: number
+    conversations: number
+    tokens: number
+  }
+}
+
+export interface DashboardStats {
+  period: {
+    start: string
+    end: string
+    days: number
+  }
+  totals: DashboardTotals
+  daily: DailyMetric[]
+  recent_conversations: RecentConversation[]
+  agent_stats: AgentStat[]
+  comparison?: PeriodComparison
+}
+
+// ===========================================================================
+// Mission Types (Guided Learning)
+// ===========================================================================
+
+export interface StepHighlight {
+  element?: string
+  selector?: string
+  title?: string
+  description?: string
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'auto'
+  auto_trigger?: boolean
+  allow_click?: boolean
+}
+
+export interface MissionStep {
+  id: number
+  title: string
+  description: string
+  type: 'action' | 'info' | 'quiz'
+  phase?: string
+  highlight?: StepHighlight
+  hints?: string[]
+  show_me_text?: string
+  validation?: Record<string, unknown>
+}
+
+export interface ComponentPack {
+  allowed_components?: string[]
+  allowed_categories?: string[]
+  validation_rules?: {
+    require_chat_input?: boolean
+    require_chat_output?: boolean
+    max_nodes?: number
+  }
+}
+
+export interface UIConfig {
+  hide_sidebar?: boolean
+  hide_minimap?: boolean
+  hide_toolbar?: boolean
+  custom_actions_only?: boolean
+  show_only?: string[]
+}
+
+export interface Mission {
+  id: string
+  name: string
+  description: string | null
+  category: string
+  difficulty: string
+  estimated_minutes: number
+  icon: string | null
+  steps: MissionStep[]
+  prerequisites: string[] | null
+  outcomes: string[] | null
+  // Canvas integration fields
+  canvas_mode: boolean
+  template_id: string | null
+  component_pack: ComponentPack | null
+  ui_config: UIConfig | null
+}
+
+export interface MissionProgress {
+  status: 'not_started' | 'in_progress' | 'completed'
+  current_step: number
+  completed_steps: number[]
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface MissionWithProgress {
+  mission: Mission
+  progress: MissionProgress
+}
+
+export interface MissionCategory {
+  id: string
+  name: string
+  description: string
+}
+
+export interface MissionStats {
+  total_missions: number
+  completed: number
+  in_progress: number
+  not_started: number
+  completion_percent: number
+}
+
+export interface MissionListResponse {
+  missions: MissionWithProgress[]
+  categories: MissionCategory[]
+  stats: MissionStats
+}
+
+export interface MissionProgressResponse {
+  mission_id: string
+  status: 'not_started' | 'in_progress' | 'completed'
+  current_step: number
+  completed_steps: number[]
+  is_completed: boolean
+}
+
+export interface CompleteStepRequest {
+  step_id: number
+  artifacts?: Record<string, unknown>
+}
+
+// Canvas integration types
+export interface CanvasStartResponse {
+  mission_id: string
+  status: 'not_started' | 'in_progress' | 'completed'
+  current_step: number
+  completed_steps: number[]
+  is_completed: boolean
+  canvas_url: string | null
+  flow_id: string | null
+  workflow_id: string | null  // Our workflow ID for navigation
+  component_filter: string | null
+}
+
+export interface CanvasEvent {
+  event_type: 'node_added' | 'node_removed' | 'edge_created' | 'node_configured'
+  node_type?: string
+  node_id?: string
+  flow_state?: Record<string, unknown>
+}
+
+export interface CanvasEventResponse {
+  event_processed: boolean
+  step_completed: boolean
+  current_step: number
 }

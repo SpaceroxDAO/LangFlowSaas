@@ -34,6 +34,7 @@ from app.services.langflow_client import LangflowClient, langflow_client
 from app.services.template_mapping import TemplateMapper, template_mapper
 from app.services.settings_service import SettingsService
 from app.services.knowledge_service import KnowledgeService
+from app.services.billing_service import BillingService
 
 
 class WorkflowServiceError(Exception):
@@ -63,16 +64,39 @@ class WorkflowService:
     async def get_by_id(
         self,
         workflow_id: uuid.UUID,
-        user_id: uuid.UUID = None,
+        user_id: uuid.UUID,
     ) -> Optional[Workflow]:
-        """Get workflow by ID, optionally filtered by user."""
+        """
+        Get workflow by ID, filtered by user for security.
+
+        Args:
+            workflow_id: Workflow UUID
+            user_id: User UUID to ensure ownership (REQUIRED for security)
+
+        Returns:
+            Workflow if found and owned by user, None otherwise
+        """
+        workflow_id_str = str(workflow_id)
+        user_id_str = str(user_id)
+        stmt = select(Workflow).where(
+            Workflow.id == workflow_id_str,
+            Workflow.user_id == user_id_str,
+        )
+
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def _unsafe_get_by_id(
+        self,
+        workflow_id: uuid.UUID,
+    ) -> Optional[Workflow]:
+        """
+        Get workflow by ID without user filtering.
+
+        WARNING: Only use for internal admin operations.
+        """
         workflow_id_str = str(workflow_id)
         stmt = select(Workflow).where(Workflow.id == workflow_id_str)
-
-        if user_id:
-            user_id_str = str(user_id)
-            stmt = stmt.where(Workflow.user_id == user_id_str)
-
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -698,6 +722,29 @@ class WorkflowService:
         await self.session.flush()
         await self.session.refresh(assistant_message)
 
+        # Track usage for billing
+        try:
+            billing = BillingService(self.session)
+            # Track message count
+            await billing.track_usage(
+                user_id=str(user.id),
+                metric_type="messages_sent",
+                value=1,
+                extra_data={"workflow_id": str(workflow.id)},
+            )
+            # Estimate tokens (~4 chars per token for English)
+            estimated_tokens = (len(message) + len(response_text)) // 4
+            if estimated_tokens > 0:
+                await billing.track_usage(
+                    user_id=str(user.id),
+                    metric_type="llm_tokens",
+                    value=estimated_tokens,
+                    extra_data={"workflow_id": str(workflow.id)},
+                )
+        except Exception as e:
+            # Don't fail the chat if billing tracking fails
+            logger.warning(f"Failed to track usage for user {user.id}: {e}")
+
         return response_text, conversation.id, assistant_message.id
 
     async def chat_stream(
@@ -834,6 +881,29 @@ class WorkflowService:
             )
             self.session.add(assistant_message)
             await self.session.flush()
+
+            # Track usage for billing
+            try:
+                billing = BillingService(self.session)
+                # Track message count
+                await billing.track_usage(
+                    user_id=str(user.id),
+                    metric_type="messages_sent",
+                    value=1,
+                    extra_data={"workflow_id": str(workflow.id)},
+                )
+                # Estimate tokens (~4 chars per token for English)
+                estimated_tokens = (len(message) + len(accumulated_text)) // 4
+                if estimated_tokens > 0:
+                    await billing.track_usage(
+                        user_id=str(user.id),
+                        metric_type="llm_tokens",
+                        value=estimated_tokens,
+                        extra_data={"workflow_id": str(workflow.id)},
+                    )
+            except Exception as e:
+                # Don't fail the stream if billing tracking fails
+                logger.warning(f"Failed to track usage for user {user.id}: {e}")
 
         # Final done event with IDs
         yield done_event(

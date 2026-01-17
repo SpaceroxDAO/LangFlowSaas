@@ -20,6 +20,7 @@ from app.schemas.agent import AgentCreateFromQA, AgentUpdate
 from app.services.langflow_client import LangflowClient, langflow_client
 from app.services.template_mapping import TemplateMapper, template_mapper
 from app.services.settings_service import SettingsService
+from app.services.billing_service import BillingService
 
 
 class AgentServiceError(Exception):
@@ -44,26 +45,40 @@ class AgentService:
     async def get_by_id(
         self,
         agent_id: uuid.UUID,
-        user_id: uuid.UUID = None,
+        user_id: uuid.UUID,
     ) -> Optional[Agent]:
         """
-        Get agent by ID, optionally filtered by user.
+        Get agent by ID, filtered by user for security.
 
         Args:
             agent_id: Agent UUID
-            user_id: Optional user UUID to ensure ownership
+            user_id: User UUID to ensure ownership (REQUIRED for security)
 
         Returns:
-            Agent if found, None otherwise
+            Agent if found and owned by user, None otherwise
         """
         # Convert UUID to string for SQLite/PostgreSQL compatibility
         agent_id_str = str(agent_id)
+        user_id_str = str(user_id)
+        stmt = select(Agent).where(
+            Agent.id == agent_id_str,
+            Agent.user_id == user_id_str,
+        )
+
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def _unsafe_get_by_id(
+        self,
+        agent_id: uuid.UUID,
+    ) -> Optional[Agent]:
+        """
+        Get agent by ID without user filtering.
+
+        WARNING: Only use for internal admin operations.
+        """
+        agent_id_str = str(agent_id)
         stmt = select(Agent).where(Agent.id == agent_id_str)
-
-        if user_id:
-            user_id_str = str(user_id)
-            stmt = stmt.where(Agent.user_id == user_id_str)
-
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -569,6 +584,30 @@ class AgentService:
         self.session.add(assistant_message)
         await self.session.flush()
         await self.session.refresh(assistant_message)
+
+        # Track usage for billing
+        try:
+            billing = BillingService(self.session)
+            # Track message count
+            await billing.track_usage(
+                user_id=str(user.id),
+                metric_type="messages_sent",
+                value=1,
+                extra_data={"agent_id": str(agent.id)},
+            )
+            # Estimate tokens (~4 chars per token for English)
+            # Include both input and output in token count
+            estimated_tokens = (len(message) + len(response_text)) // 4
+            if estimated_tokens > 0:
+                await billing.track_usage(
+                    user_id=str(user.id),
+                    metric_type="llm_tokens",
+                    value=estimated_tokens,
+                    extra_data={"agent_id": str(agent.id)},
+                )
+        except Exception as e:
+            # Don't fail the chat if billing tracking fails
+            logger.warning(f"Failed to track usage for user {user.id}: {e}")
 
         return response_text, conversation.id, assistant_message.id
 

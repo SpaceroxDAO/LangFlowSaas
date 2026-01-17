@@ -14,6 +14,10 @@ import { FrameworkPage } from '@/pages/FrameworkPage'
 import { CanvasViewerPage } from '@/pages/CanvasViewerPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { FilesPage } from '@/pages/FilesPage'
+import { BillingPage } from '@/pages/BillingPage'
+import { AnalyticsDashboardPage } from '@/pages/AnalyticsDashboardPage'
+import { MissionsPage } from '@/pages/MissionsPage'
+import { MissionCanvasPage } from '@/pages/MissionCanvasPage'
 import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
 
 // Use dev mode or Clerk components based on environment
@@ -79,6 +83,45 @@ function App() {
               <AppShell>
                 <FilesPage />
               </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/billing"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <BillingPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/analytics"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <AnalyticsDashboardPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/missions"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <MissionsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        {/* Mission canvas page - full screen without AppShell */}
+        <Route
+          path="/mission/:missionId/canvas"
+          element={
+            <ProtectedRoute>
+              <MissionCanvasPage />
             </ProtectedRoute>
           }
         />

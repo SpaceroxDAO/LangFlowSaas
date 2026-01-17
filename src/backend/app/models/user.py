@@ -1,5 +1,7 @@
 """
 User model - stores Clerk user information.
+
+Updated 2026-01-15: Removed legacy agents relationship.
 """
 from typing import TYPE_CHECKING, List, Optional
 
@@ -9,7 +11,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.agent import Agent
     from app.models.conversation import Conversation
     from app.models.project import Project
     from app.models.user_settings import UserSettings
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from app.models.workflow import Workflow
     from app.models.mcp_server import MCPServer
     from app.models.user_file import UserFile
+    from app.models.subscription import Subscription
 
 
 class User(BaseModel):
@@ -62,15 +64,7 @@ class User(BaseModel):
         nullable=False,
     )
 
-    # Relationships - use lazy="select" (default) to avoid N+1 query cascade
-    # Load these explicitly when needed using selectinload() in queries
-    agents: Mapped[List["Agent"]] = relationship(
-        "Agent",
-        back_populates="user",
-        lazy="select",
-        cascade="all, delete-orphan",
-    )
-
+    # Relationships
     conversations: Mapped[List["Conversation"]] = relationship(
         "Conversation",
         back_populates="user",
@@ -93,7 +87,7 @@ class User(BaseModel):
         cascade="all, delete-orphan",
     )
 
-    # Relationships for three-tab architecture
+    # Primary models for three-tab architecture
     agent_components: Mapped[List["AgentComponent"]] = relationship(
         "AgentComponent",
         back_populates="user",
@@ -119,6 +113,15 @@ class User(BaseModel):
         "UserFile",
         back_populates="user",
         lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    # Billing relationship (one subscription per user)
+    subscription: Mapped[Optional["Subscription"]] = relationship(
+        "Subscription",
+        back_populates="user",
+        lazy="select",
+        uselist=False,
         cascade="all, delete-orphan",
     )
 

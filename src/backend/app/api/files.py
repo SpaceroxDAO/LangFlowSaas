@@ -7,12 +7,13 @@ import logging
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
 from fastapi.responses import FileResponse as FastAPIFileResponse
 from pydantic import BaseModel, Field
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
+from app.middleware.redis_rate_limit import check_rate_limit_with_user
 from app.models.user import User
 from app.services.user_service import UserService
 from app.services.file_service import FileService, FileServiceError, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
@@ -136,6 +137,7 @@ async def list_files(
     description="Upload a new file.",
 )
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     project_id: Optional[str] = None,
     description: Optional[str] = None,
@@ -143,6 +145,9 @@ async def upload_file(
     clerk_user: CurrentUser = None,
 ) -> FileResponse:
     """Upload a new file."""
+    # Rate limit file uploads to prevent abuse
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     user = await get_user_from_clerk(clerk_user, session)
     service = FileService(session)
 

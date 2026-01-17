@@ -324,3 +324,315 @@ export const TOOL_COMBINATIONS = {
 } as const
 
 export type ToolCombination = keyof typeof TOOL_COMBINATIONS
+
+/**
+ * Phase D Selectors: Missions, Billing, Analytics, Embed
+ */
+export const phaseDSelectors = {
+  // ========================================
+  // Missions Page
+  // ========================================
+  missions: {
+    // Page layout
+    pageHeader: 'h1:has-text("Your Missions")',
+    pageSubtitle: 'text=Guided challenges',
+
+    // Stats bar
+    statsBar: '.grid.grid-cols-4',
+    completedStat: 'text=/\\d+\\s*Completed/',
+    inProgressStat: 'text=/\\d+\\s*In Progress/',
+    totalStat: 'text=/\\d+\\s*Total/',
+
+    // Category tabs
+    categoryTabs: '.flex.gap-2',
+    allTab: 'button:has-text("All")',
+    skillSprintTab: 'button:has-text("Skill Sprint")',
+    appliedBuildTab: 'button:has-text("Applied Build")',
+    weeklyQuestTab: 'button:has-text("Weekly Quest")',
+    activeTab: '.bg-violet-600.text-white',
+
+    // Mission cards
+    missionGrid: '.grid.gap-6',
+    missionCard: '.bg-white.rounded-2xl',
+    missionCardByName: (name: string) => `.bg-white.rounded-2xl:has-text("${name}")`,
+    missionIcon: '.w-12.h-12.rounded-xl',
+    missionTitle: '.font-semibold.text-gray-900',
+    missionDescription: '.text-sm.text-gray-500',
+    missionDifficulty: '.text-xs.font-medium',
+    missionDuration: '.text-sm.text-gray-500:has-text("min")',
+    missionProgress: '.bg-gray-200.rounded-full',
+    missionProgressFill: '.bg-violet-600.rounded-full',
+
+    // Status badges
+    notStartedBadge: 'span:has-text("Not Started")',
+    inProgressBadge: 'span:has-text("In Progress")',
+    completedBadge: 'span:has-text("Completed")',
+    lockedBadge: 'span:has-text("Locked")',
+
+    // Action buttons
+    startButton: 'button:has-text("Start")',
+    continueButton: 'button:has-text("Continue")',
+    viewButton: 'button:has-text("View")',
+
+    // Empty state
+    emptyState: 'text=No missions match',
+
+    // Step guide panel (slide-out)
+    stepGuidePanel: '.fixed.right-0.top-0.h-full.w-96',
+    stepGuideClose: 'button:has(svg.lucide-x)',
+    stepGuideTitle: '.text-xl.font-bold',
+    stepGuideSteps: '.space-y-4',
+    stepGuideStep: '.border.rounded-xl',
+    stepGuideStepNumber: '.w-8.h-8.rounded-full',
+    stepGuideStepTitle: '.font-medium',
+    stepGuideStepDescription: '.text-sm.text-gray-500',
+    stepGuideCompleteButton: 'button:has-text("Complete Step")',
+    stepGuideNextButton: 'button:has-text("Next")',
+    stepGuideResetButton: 'button:has-text("Reset")',
+
+    // Mission detail
+    prerequisiteWarning: 'text=Complete these missions first',
+    outcomesList: '.space-y-2',
+  },
+
+  // ========================================
+  // Billing Page
+  // ========================================
+  billing: {
+    // Page layout
+    pageHeader: 'h1:has-text("Billing")',
+    currentPlanSection: '.bg-white.rounded-2xl',
+
+    // Plan cards
+    planCard: '.border.rounded-2xl',
+    freePlanCard: '.border.rounded-2xl:has-text("Free")',
+    proPlanCard: '.border.rounded-2xl:has-text("Pro")',
+    teamPlanCard: '.border.rounded-2xl:has-text("Team")',
+    currentPlanBadge: 'span:has-text("Current Plan")',
+    recommendedBadge: 'span:has-text("Recommended")',
+
+    // Plan details
+    planName: '.text-2xl.font-bold',
+    planPrice: '.text-4xl.font-bold',
+    planPeriod: 'text=/\\/month/',
+    planFeatures: '.space-y-3',
+    planFeatureItem: '.flex.items-center.gap-2',
+
+    // Upgrade buttons
+    upgradeButton: 'button:has-text("Upgrade")',
+    downgradeButton: 'button:has-text("Downgrade")',
+    manageButton: 'button:has-text("Manage Subscription")',
+    cancelButton: 'button:has-text("Cancel Subscription")',
+
+    // Usage section
+    usageSection: 'h2:has-text("Usage")',
+    usageBar: '.bg-gray-200.rounded-full',
+    usageFill: '.bg-violet-600.rounded-full',
+    usageLabel: '.text-sm.text-gray-600',
+    usageCount: '.font-semibold',
+    usageLimit: 'text=/of \\d+/',
+
+    // Usage metrics
+    messagesUsage: 'text=Messages',
+    tokensUsage: 'text=Tokens',
+    agentsUsage: 'text=Agents',
+    storageUsage: 'text=Storage',
+
+    // Billing history
+    billingHistory: 'h2:has-text("Billing History")',
+    invoiceRow: '.border-b.py-4',
+    invoiceDate: '.text-gray-500',
+    invoiceAmount: '.font-semibold',
+    invoiceStatus: 'span.rounded-full',
+    downloadInvoice: 'button:has-text("Download")',
+
+    // Modals
+    upgradeModal: '[role="dialog"]:has-text("Upgrade")',
+    cancelModal: '[role="dialog"]:has-text("Cancel")',
+    confirmButton: 'button:has-text("Confirm")',
+
+    // Stripe elements
+    stripeCheckout: '.stripe-checkout, iframe[src*="stripe"]',
+
+    // Alerts
+    limitWarning: '.bg-yellow-50:has-text("approaching"), .bg-amber-50',
+    limitExceeded: '.bg-red-50:has-text("exceeded")',
+
+    // Loading states
+    loading: '.animate-pulse',
+  },
+
+  // ========================================
+  // Analytics Dashboard Page
+  // ========================================
+  analytics: {
+    // Page layout
+    pageHeader: 'h1:has-text("Analytics")',
+    dateRangePicker: 'button:has-text("Last 7 days")',
+    refreshButton: 'button:has(svg.lucide-refresh-cw)',
+
+    // Stats cards
+    statsGrid: '.grid.grid-cols-4',
+    statCard: '.bg-white.rounded-2xl.shadow',
+    totalConversations: 'text=Total Conversations',
+    totalMessages: 'text=Total Messages',
+    avgResponseTime: 'text=Avg Response Time',
+    userSatisfaction: 'text=User Satisfaction',
+    statValue: '.text-3xl.font-bold',
+    statChange: '.text-sm',
+    positiveChange: '.text-green-600',
+    negativeChange: '.text-red-600',
+
+    // Charts
+    chartContainer: '.recharts-responsive-container',
+    conversationChart: 'h3:has-text("Conversations Over Time")',
+    messageChart: 'h3:has-text("Messages by Agent")',
+    usageChart: 'h3:has-text("Usage Breakdown")',
+
+    // Chart elements
+    chartLine: '.recharts-line',
+    chartBar: '.recharts-bar',
+    chartPie: '.recharts-pie',
+    chartLegend: '.recharts-legend-wrapper',
+    chartTooltip: '.recharts-tooltip-wrapper',
+
+    // Filters
+    agentFilter: 'select:has-text("All Agents")',
+    periodFilter: 'select:has-text("7 days")',
+
+    // Tables
+    topAgentsTable: 'h3:has-text("Top Agents")',
+    recentConversations: 'h3:has-text("Recent Conversations")',
+    tableRow: 'tr.border-b',
+    tableHeader: 'th.text-gray-500',
+
+    // Empty state
+    noDataMessage: 'text=No data available',
+
+    // Export
+    exportButton: 'button:has-text("Export")',
+    exportCSV: 'button:has-text("CSV")',
+    exportPDF: 'button:has-text("PDF")',
+  },
+
+  // ========================================
+  // Embed Widget Modal
+  // ========================================
+  embed: {
+    // Modal
+    modal: '.fixed.inset-0:has-text("Embed Widget")',
+    modalHeader: 'h2:has-text("Embed Widget")',
+    modalClose: 'button:has(svg.lucide-x)',
+
+    // Enable/Disable toggle
+    embedToggle: '.relative.inline-flex.h-6.w-11',
+    toggleEnabled: '.bg-violet-600',
+    toggleDisabled: '.bg-gray-300',
+    statusText: 'text=Widget is active',
+    disabledText: 'text=Enable to get embed code',
+
+    // Configuration section
+    configSection: 'h4:has-text("Widget Settings")',
+    welcomeMessageInput: 'input[placeholder*="welcome"], input[placeholder*="Hi!"]',
+    primaryColorInput: 'input[type="color"]',
+    primaryColorText: 'input.font-mono',
+
+    // Embed code
+    embedCodeSection: '.relative',
+    embedCode: 'pre.bg-gray-900',
+    copyButton: 'button[title="Copy to clipboard"]',
+    copiedIcon: 'svg.text-green-400',
+    copiedMessage: 'text=Copied to clipboard',
+
+    // Footer buttons
+    closeButton: 'button:has-text("Close")',
+    copyCodeButton: 'button:has-text("Copy Code")',
+
+    // Tips section
+    tipsSection: '.bg-blue-50',
+    tipsList: 'ul.text-sm.text-blue-800',
+
+    // Agent card embed trigger
+    embedMenuOption: 'button:has-text("Embed")',
+    shareMenuOption: 'button:has-text("Share")',
+  },
+
+  // ========================================
+  // Sidebar Navigation
+  // ========================================
+  sidebar: {
+    // Main sidebar
+    sidebar: 'aside',
+    sidebarCollapsed: '.w-16',
+    sidebarExpanded: '.w-64',
+    toggleButton: 'button:has(svg.lucide-chevron-left), button:has(svg.lucide-chevron-right)',
+
+    // Navigation links
+    dashboardLink: 'a[href="/dashboard"]',
+    createAgentLink: 'a[href="/create"]',
+    missionsLink: 'a[href="/missions"]',
+    analyticsLink: 'a[href="/analytics"]',
+    billingLink: 'a[href="/billing"]',
+    settingsLink: 'a[href="/settings"]',
+
+    // Active state
+    activeLink: '.bg-violet-100, .bg-violet-50, .text-violet-600',
+
+    // Icons
+    dashboardIcon: 'svg.lucide-layout-dashboard',
+    createIcon: 'svg.lucide-plus',
+    missionsIcon: 'svg.lucide-target',
+    analyticsIcon: 'svg.lucide-bar-chart-3',
+    billingIcon: 'svg.lucide-credit-card',
+    settingsIcon: 'svg.lucide-settings',
+
+    // Footer
+    footer: '.mt-auto',
+    userMenu: '.flex.items-center.gap-2',
+    helpLink: 'a:has-text("Help")',
+  },
+
+  // ========================================
+  // Settings Page
+  // ========================================
+  settings: {
+    // Page layout
+    pageHeader: 'h1:has-text("Settings")',
+
+    // Tabs
+    tabList: '[role="tablist"]',
+    profileTab: 'button:has-text("Profile")',
+    apiKeysTab: 'button:has-text("API Keys")',
+    notificationsTab: 'button:has-text("Notifications")',
+
+    // Profile section
+    profileSection: 'h2:has-text("Profile")',
+    nameInput: 'input[name="name"]',
+    emailInput: 'input[name="email"]',
+    avatarUpload: 'input[type="file"]',
+    saveProfileButton: 'button:has-text("Save Profile")',
+
+    // API Keys section
+    apiKeysSection: 'h2:has-text("API Keys")',
+    openaiKeyInput: 'input[name="openai_key"]',
+    anthropicKeyInput: 'input[name="anthropic_key"]',
+    showKeyButton: 'button:has(svg.lucide-eye)',
+    hideKeyButton: 'button:has(svg.lucide-eye-off)',
+    saveKeysButton: 'button:has-text("Save Keys")',
+    keyMasked: 'text=••••••••',
+
+    // Notifications section
+    notificationsSection: 'h2:has-text("Notifications")',
+    emailNotifications: 'input[name="email_notifications"]',
+    pushNotifications: 'input[name="push_notifications"]',
+
+    // Danger zone
+    dangerZone: 'h2:has-text("Danger Zone")',
+    deleteAccountButton: 'button:has-text("Delete Account")',
+    deleteConfirmInput: 'input[placeholder*="DELETE"]',
+
+    // Success/Error states
+    saveSuccess: 'text=Settings saved',
+    saveError: 'text=Failed to save',
+  },
+}

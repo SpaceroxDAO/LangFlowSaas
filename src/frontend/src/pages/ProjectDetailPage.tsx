@@ -62,9 +62,10 @@ export function ProjectDetailPage() {
 
   // Fetch agent components (new table)
   const { data: agentComponentsData, isLoading: agentsLoading } = useQuery({
-    queryKey: ['agent-components', projectId],
+    queryKey: ['agent-components', projectId, 'all'],
     queryFn: () => api.listAgentComponents(projectId, 1, 100),
     enabled: !!projectId,
+    staleTime: 0, // Always fetch fresh data
   })
 
   // Fetch workflows for count
@@ -85,7 +86,7 @@ export function ProjectDetailPage() {
   const deleteAgentMutation = useMutation({
     mutationFn: (agentId: string) => api.deleteAgentComponent(agentId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-components', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['agent-components', projectId, 'all'] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       setDeleteAgentModal({ isOpen: false, agent: null })
     },
@@ -159,7 +160,7 @@ export function ProjectDetailPage() {
   const handleDuplicateAgent = async (agent: AgentComponent) => {
     try {
       await api.duplicateAgentComponent(agent.id)
-      queryClient.invalidateQueries({ queryKey: ['agent-components', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['agent-components', projectId, 'all'] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
     } catch (error) {
       console.error('Failed to duplicate agent:', error)

@@ -1,8 +1,10 @@
 """
 API routes for Teach Charlie AI.
+
+Updated 2026-01-15: Removed legacy agents_router (deprecated).
+Use agent_components_router and workflows_router instead.
 """
 from app.api.health import router as health_router
-from app.api.agents import router as agents_router
 from app.api.chat import router as chat_router
 from app.api.analytics import router as analytics_router
 from app.api.projects import router as projects_router
@@ -16,10 +18,13 @@ from app.api.files import router as files_router
 from app.api.knowledge_sources import router as knowledge_sources_router
 from app.api.chat_files import router as chat_files_router
 from app.api.agent_presets import router as agent_presets_router
+from app.api.billing import router as billing_router
+from app.api.dashboard import router as dashboard_router
+from app.api.missions import router as missions_router
+from app.api.embed import router as embed_router
 
 __all__ = [
     "health_router",
-    "agents_router",
     "chat_router",
     "analytics_router",
     "projects_router",
@@ -33,4 +38,8 @@ __all__ = [
     "knowledge_sources_router",
     "chat_files_router",
     "agent_presets_router",
+    "billing_router",
+    "dashboard_router",
+    "missions_router",
+    "embed_router",
 ]

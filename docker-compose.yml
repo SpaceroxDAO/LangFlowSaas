@@ -45,6 +45,26 @@ services:
     restart: unless-stopped
     # No port exposed - accessed via nginx
 
+  # =====================================================
+  # Redis - Distributed Cache & Rate Limiting
+  # =====================================================
+  redis:
+    image: redis:7-alpine
+    container_name: teachcharlie-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teachcharlie-network
+    restart: unless-stopped
+
   # PostgreSQL Database
   postgres:
     image: postgres:16
@@ -156,6 +176,8 @@ services:
       DEBUG: ${DEBUG:-true}
       # Development mode - bypass Clerk auth
       DEV_MODE: ${DEV_MODE:-true}
+      # Redis for distributed rate limiting
+      REDIS_URL: redis://redis:6379
     ports:
       - "8000:8000"
     volumes:
@@ -168,6 +190,8 @@ services:
       postgres:
         condition: service_healthy
       langflow:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - teachcharlie-network
@@ -182,6 +206,7 @@ networks:
 volumes:
   postgres_data:
   langflow_data:
+  redis_data:
   # Shared custom components volume (backend writes, Langflow reads)
   custom_components:
   # Chroma vector store data (for RAG - persists embeddings)

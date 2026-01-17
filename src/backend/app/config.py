@@ -57,6 +57,21 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
     rate_limit_per_hour: int = 1000
 
+    # Redis (for distributed rate limiting)
+    redis_url: str = "redis://localhost:6379"
+
+    # Sentry (error monitoring)
+    sentry_dsn: str = ""  # Set to enable Sentry
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate: float = 0.1  # 10% of transactions
+
+    # Stripe (billing)
+    stripe_secret_key: str = ""  # sk_test_xxx or sk_live_xxx
+    stripe_publishable_key: str = ""  # pk_test_xxx or pk_live_xxx
+    stripe_webhook_secret: str = ""  # whsec_xxx
+    stripe_pro_price_id: str = ""  # price_xxx for Pro plan
+    stripe_team_price_id: str = ""  # price_xxx for Team plan
+
     # Encryption key for sensitive data (API keys, credentials)
     # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     encryption_key: str = ""

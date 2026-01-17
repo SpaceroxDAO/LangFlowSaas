@@ -41,20 +41,172 @@ class AgentComponentService:
     async def get_by_id(
         self,
         component_id: uuid.UUID,
-        user_id: uuid.UUID = None,
+        user_id: uuid.UUID,
     ) -> Optional[AgentComponent]:
         """
-        Get agent component by ID, optionally filtered by user.
+        Get agent component by ID, filtered by user for security.
+
+        Args:
+            component_id: AgentComponent UUID
+            user_id: User UUID to ensure ownership (REQUIRED for security)
+
+        Returns:
+            AgentComponent if found and owned by user, None otherwise
         """
         component_id_str = str(component_id)
-        stmt = select(AgentComponent).where(AgentComponent.id == component_id_str)
-
-        if user_id:
-            user_id_str = str(user_id)
-            stmt = stmt.where(AgentComponent.user_id == user_id_str)
+        user_id_str = str(user_id)
+        stmt = select(AgentComponent).where(
+            AgentComponent.id == component_id_str,
+            AgentComponent.user_id == user_id_str,
+        )
 
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def _unsafe_get_by_id(
+        self,
+        component_id: uuid.UUID,
+    ) -> Optional[AgentComponent]:
+        """
+        Get agent component by ID without user filtering.
+
+        WARNING: Only use for internal admin operations.
+        """
+        component_id_str = str(component_id)
+        stmt = select(AgentComponent).where(AgentComponent.id == component_id_str)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_embed_token(
+        self,
+        embed_token: str,
+    ) -> Optional[AgentComponent]:
+        """
+        Get agent component by embed token for public embed access.
+
+        Args:
+            embed_token: The unique embed token
+
+        Returns:
+            AgentComponent if found and embeddable, None otherwise
+        """
+        stmt = select(AgentComponent).where(
+            AgentComponent.embed_token == embed_token,
+            AgentComponent.is_embeddable == True,
+            AgentComponent.is_active == True,
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def chat(
+        self,
+        component_id: uuid.UUID,
+        message: str,
+        user_id: uuid.UUID,
+        conversation_id: Optional[str] = None,
+    ) -> dict:
+        """
+        Simple chat with an agent component using direct LLM call.
+
+        Used for embed widget chat.
+
+        Args:
+            component_id: AgentComponent UUID
+            message: User's message
+            user_id: Owner's user ID
+            conversation_id: Optional conversation ID for context
+
+        Returns:
+            Dict with 'message' and 'conversation_id'
+        """
+        from app.config import settings
+        import httpx
+
+        # Get agent component
+        component = await self._unsafe_get_by_id(component_id)
+        if not component:
+            raise AgentComponentServiceError("Agent component not found")
+
+        # Simple LLM call using system prompt
+        system_prompt = component.system_prompt
+
+        # Get LLM provider settings
+        config = component.advanced_config or {}
+        model_provider = config.get("model_provider", "openai")
+        model_name = config.get("model_name", "gpt-4o-mini")
+        temperature = config.get("temperature", 0.7)
+
+        # Generate or use conversation ID
+        conv_id = conversation_id or str(uuid.uuid4())
+
+        try:
+            # Call OpenAI-compatible API
+            if model_provider == "openai":
+                api_key = settings.openai_api_key
+                if not api_key:
+                    raise AgentComponentServiceError("OpenAI API key not configured")
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": model_name,
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": message},
+                            ],
+                            "temperature": temperature,
+                            "max_tokens": config.get("max_tokens", 1024),
+                        },
+                        timeout=60.0,
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    reply = data["choices"][0]["message"]["content"]
+
+            elif model_provider == "anthropic":
+                api_key = settings.anthropic_api_key
+                if not api_key:
+                    raise AgentComponentServiceError("Anthropic API key not configured")
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={
+                            "x-api-key": api_key,
+                            "anthropic-version": "2023-06-01",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": model_name or "claude-3-haiku-20240307",
+                            "max_tokens": config.get("max_tokens", 1024),
+                            "system": system_prompt,
+                            "messages": [{"role": "user", "content": message}],
+                        },
+                        timeout=60.0,
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    reply = data["content"][0]["text"]
+
+            else:
+                raise AgentComponentServiceError(f"Unsupported model provider: {model_provider}")
+
+            return {
+                "message": reply,
+                "conversation_id": conv_id,
+            }
+
+        except httpx.HTTPStatusError as e:
+            logger.error(f"LLM API error: {e.response.text}")
+            raise AgentComponentServiceError(f"LLM API error: {e.response.status_code}")
+        except Exception as e:
+            logger.error(f"Chat error: {e}")
+            raise AgentComponentServiceError(f"Failed to get response: {str(e)}")
 
     async def list_by_user(
         self,
@@ -359,7 +511,7 @@ class AgentComponentService:
                 is_published=True,
                 component_file_path=file_path,
                 needs_restart=True,
-                message=f"Component '{component.name}' published! Restart Langflow to make it available in the sidebar.",
+                message=f"Component '{component.name}' published! Restart AI Canvas to make it available in the sidebar.",
             )
 
         except ComponentGeneratorError as e:
@@ -429,7 +581,7 @@ class AgentComponentService:
             is_published=False,
             component_file_path=old_file_path,
             needs_restart=True,
-            message="Component unpublished! Restart Langflow to remove it from the sidebar.",
+            message="Component unpublished! Restart AI Canvas to remove it from the sidebar.",
         )
 
     async def export(self, component: AgentComponent) -> dict:
