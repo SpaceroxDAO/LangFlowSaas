@@ -462,6 +462,7 @@ The Mission System introduces gamified learning with guided tours, achievements,
 - [x] MCP server .mcp.json sync implementation (completed 2026-01-17)
 - [ ] Legacy agents migration script
 - [ ] Freemium pricing integration
+- [ ] **Composio Integration** - See `docs/08_COMPOSIO_INTEGRATION_GUIDE.md` for full plan
 
 ## Frontend Pages
 
