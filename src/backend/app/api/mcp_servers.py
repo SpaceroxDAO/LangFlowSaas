@@ -348,3 +348,32 @@ async def sync_mcp_servers(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
+
+
+@router.post(
+    "/sync-and-restart",
+    response_model=MCPServerSyncResponse,
+    summary="Sync MCP servers and restart Langflow",
+    description="Sync all MCP servers to .mcp.json and restart Langflow to apply changes.",
+)
+async def sync_and_restart_mcp_servers(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """
+    Sync all enabled MCP servers to .mcp.json and restart Langflow.
+
+    This combines sync + restart in one call for convenience.
+    After restart, Langflow will pick up the new MCP server configurations.
+    """
+    await get_user_from_clerk(clerk_user, session)  # Ensure authenticated
+    service = MCPServerService(session)
+
+    try:
+        result = await service.sync_and_restart()
+        return result
+    except MCPServerServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )

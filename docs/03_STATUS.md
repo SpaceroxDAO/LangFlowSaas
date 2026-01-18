@@ -61,15 +61,15 @@ Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
 1. **Vector RAG Ingestion Fails**: Langflow-native vector ingestion (Chroma + OpenAI Embeddings) returns template validation errors. Keyword-based search fallback works reliably.
 
-2. **MCP Server .mcp.json Sync Not Implemented**: Creating MCP server in UI does not sync to `.mcp.json` file.
+2. **MCP Server .mcp.json Sync Implemented**: MCP servers sync to `.mcp.json` automatically. Use `/sync-and-restart` endpoint to apply changes to Langflow.
 
 3. **Legacy Agents Table Coexists**: Old `agents` table still exists alongside new `agent_components` table. Legacy agents still work via `/playground/:agentId`.
 
-4. **Agent Presets Drafted but Deferred**: Phase 13 (Agent Presets) has database migration and API routes drafted but is deferred to post-MVP for user feedback integration.
+4. **Agent Presets Active**: Phase 13 (Agent Presets) is fully implemented with 8 default presets available in the onboarding wizard.
 
 ## Phase Progress
 
-### Phases 0-12: Complete ✅
+### Phases 0-13: Complete ✅
 
 All MVP phases completed:
 - Phase 0-4: MVP Foundation (Q&A wizard, Playground, EditAgent)
@@ -83,6 +83,7 @@ All MVP phases completed:
 - Phase 11: Custom Component Generation & E2E Testing
 - Phase 11b-d: EditAgent Redesign, Proxy Fix, Config Management
 - Phase 12: Knowledge Sources & RAG Foundation
+- Phase 13: Agent Presets (8 default templates in wizard)
 
 ### Phase 12: Knowledge Sources & RAG Foundation ✅ Complete
 
@@ -418,16 +419,27 @@ cd src/backend && uvicorn app.main:app --reload
 - [ ] MCP server sync to .mcp.json
 - [ ] Restart notification banner
 
-### Phase 13: Agent Presets (Drafted, Deferred)
+### Phase 13: Agent Presets ✅ Complete
 
-**Status**: ⏳ Deferred to post-MVP
+**Status**: ✅ Fully implemented and active
 
-Agent Presets would allow users to select from pre-configured agent templates during onboarding. Implementation drafted but deferred to incorporate user feedback from initial workshops.
+Agent Presets allow users to select from pre-configured agent templates during onboarding. The feature includes 8 default presets that auto-populate the wizard fields.
 
-**Drafted Files (not active):**
-- `src/backend/alembic/versions/20260114_1049_add_agent_presets_table.py` - DB migration
-- `src/backend/app/api/agent_presets.py` - API routes
-- `src/backend/app/models/agent_preset.py` - Model definition
+**Active Files:**
+- `src/backend/alembic/versions/20260114_1219_603ff68b3523_add_agent_presets_table.py` - DB migration (active)
+- `src/backend/app/api/agent_presets.py` - API routes (4 endpoints)
+- `src/backend/app/models/agent_preset.py` - Model with 8 default presets
+- `src/frontend/src/pages/CreateAgentPage.tsx` - Preset selection UI (lines 491-576)
+
+**Default Presets:**
+1. Customer Support Agent
+2. Sales Assistant
+3. Knowledge Base Expert
+4. Creative Writing Partner
+5. Data Analyst
+6. Code Review Assistant
+7. Meeting Facilitator
+8. Learning Coach
 
 ### Phases 14-17: Mission-Based Learning System (Planned)
 
@@ -447,7 +459,7 @@ The Mission System introduces gamified learning with guided tours, achievements,
 - [ ] Fix RAG vector ingestion (export real template from Langflow UI)
 - [ ] Agent reasoning visibility / chain-of-thought display
 - [ ] Advanced RAG settings (chunk size, embedding models, search type)
-- [ ] MCP server .mcp.json sync implementation
+- [x] MCP server .mcp.json sync implementation (completed 2026-01-17)
 - [ ] Legacy agents migration script
 - [ ] Freemium pricing integration
 

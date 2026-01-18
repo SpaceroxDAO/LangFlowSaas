@@ -31,6 +31,7 @@ from app.schemas.mcp_server import (
     RestartStatusResponse,
 )
 from app.config import settings
+from app.services.langflow_service import LangflowService
 
 # Path to .mcp.json config file
 MCP_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "../../../.mcp.json")
@@ -360,11 +361,15 @@ class MCPServerService:
             message=message,
         )
 
-    async def sync_to_config(self) -> MCPServerSyncResponse:
+    async def sync_to_config(self, auto_restart: bool = False) -> MCPServerSyncResponse:
         """
         Sync all enabled MCP servers to .mcp.json file.
 
         This generates the configuration file that Langflow reads.
+
+        Args:
+            auto_restart: If True, automatically restart Langflow after sync.
+                          Default is False to allow batching multiple changes.
         """
         servers = await self.list_enabled()
 
@@ -399,11 +404,30 @@ class MCPServerService:
 
         await self.session.flush()
 
+        # Optionally restart Langflow to pick up changes
+        restart_message = ""
+        if auto_restart:
+            langflow_service = LangflowService(self.session)
+            restart_result = await langflow_service.restart_langflow()
+            if restart_result["success"]:
+                restart_message = f" {restart_result['message']}"
+            else:
+                restart_message = f" (Restart failed: {restart_result['message']})"
+
         return MCPServerSyncResponse(
             synced_count=len(servers),
-            needs_restart=True,
-            message=f"Synced {len(servers)} servers. Restart Langflow to apply changes.",
+            needs_restart=not auto_restart,
+            message=f"Synced {len(servers)} servers.{restart_message}" if auto_restart
+                    else f"Synced {len(servers)} servers. Restart Langflow to apply changes.",
         )
+
+    async def sync_and_restart(self) -> MCPServerSyncResponse:
+        """
+        Sync all enabled MCP servers and restart Langflow.
+
+        Convenience method that combines sync + restart.
+        """
+        return await self.sync_to_config(auto_restart=True)
 
     async def get_pending_changes(self, user_id: uuid.UUID = None) -> List[PendingChange]:
         """Get list of changes that need Langflow restart."""

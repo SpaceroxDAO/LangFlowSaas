@@ -1529,7 +1529,7 @@
                 "dynamic": false,
                 "info": "The Anthropic API Key to use for the Anthropic model.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2321,12 +2321,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ChatInput-{{CHAT_INPUT_ID}}{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-{{CHAT_INPUT_ID}}\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChromaVectorStore-{{CHROMA_ID}}{\u0153fieldName\u0153:\u0153search_query\u0153,\u0153id\u0153:\u0153ChromaVectorStore-{{CHROMA_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-ChatInput-{{CHAT_INPUT_ID}}{œdataTypeœ:œChatInputœ,œidœ:œChatInput-{{CHAT_INPUT_ID}}œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ChromaVectorStore-{{CHROMA_ID}}{œfieldNameœ:œsearch_queryœ,œidœ:œChromaVectorStore-{{CHROMA_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChatInput-{{CHAT_INPUT_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-{{CHAT_INPUT_ID}}\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-{{CHAT_INPUT_ID}}œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ChromaVectorStore-{{CHROMA_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153search_query\u0153,\u0153id\u0153:\u0153ChromaVectorStore-{{CHROMA_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œChromaVectorStore-{{CHROMA_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -2349,12 +2349,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddingsComponent-{{EMBED_ID}}{\u0153dataType\u0153:\u0153OpenAIEmbeddings\u0153,\u0153id\u0153:\u0153OpenAIEmbeddingsComponent-{{EMBED_ID}}\u0153,\u0153name\u0153:\u0153embeddings\u0153,\u0153output_types\u0153:[\u0153Embeddings\u0153]}-ChromaVectorStore-{{CHROMA_ID}}{\u0153fieldName\u0153:\u0153embedding\u0153,\u0153id\u0153:\u0153ChromaVectorStore-{{CHROMA_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Embeddings\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-OpenAIEmbeddingsComponent-{{EMBED_ID}}{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddingsComponent-{{EMBED_ID}}œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-ChromaVectorStore-{{CHROMA_ID}}{œfieldNameœ:œembeddingœ,œidœ:œChromaVectorStore-{{CHROMA_ID}}œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIEmbeddingsComponent-{{EMBED_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153OpenAIEmbeddings\u0153,\u0153id\u0153:\u0153OpenAIEmbeddingsComponent-{{EMBED_ID}}\u0153,\u0153name\u0153:\u0153embeddings\u0153,\u0153output_types\u0153:[\u0153Embeddings\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddingsComponent-{{EMBED_ID}}œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
         "target": "ChromaVectorStore-{{CHROMA_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153embedding\u0153,\u0153id\u0153:\u0153ChromaVectorStore-{{CHROMA_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Embeddings\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChromaVectorStore-{{CHROMA_ID}}œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -2378,12 +2378,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ChromaVectorStore-{{CHROMA_ID}}{\u0153dataType\u0153:\u0153Chroma\u0153,\u0153id\u0153:\u0153ChromaVectorStore-{{CHROMA_ID}}\u0153,\u0153name\u0153:\u0153search_results\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}-ParserComponent-{{PARSER_ID}}{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153ParserComponent-{{PARSER_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-ChromaVectorStore-{{CHROMA_ID}}{œdataTypeœ:œChromaœ,œidœ:œChromaVectorStore-{{CHROMA_ID}}œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParserComponent-{{PARSER_ID}}{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-{{PARSER_ID}}œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChromaVectorStore-{{CHROMA_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153Chroma\u0153,\u0153id\u0153:\u0153ChromaVectorStore-{{CHROMA_ID}}\u0153,\u0153name\u0153:\u0153search_results\u0153,\u0153output_types\u0153:[\u0153Data\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œChromaœ,œidœ:œChromaVectorStore-{{CHROMA_ID}}œ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}",
         "target": "ParserComponent-{{PARSER_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_data\u0153,\u0153id\u0153:\u0153ParserComponent-{{PARSER_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œParserComponent-{{PARSER_ID}}œ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -2406,12 +2406,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ParserComponent-{{PARSER_ID}}{\u0153dataType\u0153:\u0153ParserComponent\u0153,\u0153id\u0153:\u0153ParserComponent-{{PARSER_ID}}\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-PromptComponent-{{PROMPT_ID}}{\u0153fieldName\u0153:\u0153context\u0153,\u0153id\u0153:\u0153PromptComponent-{{PROMPT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-ParserComponent-{{PARSER_ID}}{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-{{PARSER_ID}}œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-PromptComponent-{{PROMPT_ID}}{œfieldNameœ:œcontextœ,œidœ:œPromptComponent-{{PROMPT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ParserComponent-{{PARSER_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ParserComponent\u0153,\u0153id\u0153:\u0153ParserComponent-{{PARSER_ID}}\u0153,\u0153name\u0153:\u0153parsed_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œParserComponentœ,œidœ:œParserComponent-{{PARSER_ID}}œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
         "target": "PromptComponent-{{PROMPT_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153context\u0153,\u0153id\u0153:\u0153PromptComponent-{{PROMPT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPromptComponent-{{PROMPT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -2434,12 +2434,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ChatInput-{{CHAT_INPUT_ID}}{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-{{CHAT_INPUT_ID}}\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-PromptComponent-{{PROMPT_ID}}{\u0153fieldName\u0153:\u0153question\u0153,\u0153id\u0153:\u0153PromptComponent-{{PROMPT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-ChatInput-{{CHAT_INPUT_ID}}{œdataTypeœ:œChatInputœ,œidœ:œChatInput-{{CHAT_INPUT_ID}}œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-PromptComponent-{{PROMPT_ID}}{œfieldNameœ:œquestionœ,œidœ:œPromptComponent-{{PROMPT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "ChatInput-{{CHAT_INPUT_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-{{CHAT_INPUT_ID}}\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-{{CHAT_INPUT_ID}}œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
         "target": "PromptComponent-{{PROMPT_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153question\u0153,\u0153id\u0153:\u0153PromptComponent-{{PROMPT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPromptComponent-{{PROMPT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -2462,12 +2462,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-PromptComponent-{{PROMPT_ID}}{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153PromptComponent-{{PROMPT_ID}}\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Agent-{{AGENT_ID}}{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Agent-{{AGENT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-PromptComponent-{{PROMPT_ID}}{œdataTypeœ:œPromptœ,œidœ:œPromptComponent-{{PROMPT_ID}}œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-{{AGENT_ID}}{œfieldNameœ:œinput_valueœ,œidœ:œAgent-{{AGENT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "PromptComponent-{{PROMPT_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153PromptComponent-{{PROMPT_ID}}\u0153,\u0153name\u0153:\u0153prompt\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPromptComponent-{{PROMPT_ID}}œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
         "target": "Agent-{{AGENT_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Agent-{{AGENT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-{{AGENT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -2490,12 +2490,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-{{AGENT_ID}}{\u0153dataType\u0153:\u0153Agent\u0153,\u0153id\u0153:\u0153Agent-{{AGENT_ID}}\u0153,\u0153name\u0153:\u0153response\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChatOutput-{{CHAT_OUTPUT_ID}}{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-{{CHAT_OUTPUT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "id": "reactflow__edge-Agent-{{AGENT_ID}}{œdataTypeœ:œAgentœ,œidœ:œAgent-{{AGENT_ID}}œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-{{CHAT_OUTPUT_ID}}{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-{{CHAT_OUTPUT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-{{AGENT_ID}}",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153Agent\u0153,\u0153id\u0153:\u0153Agent-{{AGENT_ID}}\u0153,\u0153name\u0153:\u0153response\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-{{AGENT_ID}}œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ChatOutput-{{CHAT_OUTPUT_ID}}",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-{{CHAT_OUTPUT_ID}}\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-{{CHAT_OUTPUT_ID}}œ,œinputTypesœ:[œMessageœ],œtypeœ:œotherœ}"
       }
     ],
     "viewport": {
