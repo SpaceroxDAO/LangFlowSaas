@@ -592,7 +592,7 @@ export function EditAgentPage() {
 
           {/* Right side - Avatar image */}
           <div className="w-64 flex-shrink-0">
-            <div className="w-full aspect-square bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-center mb-3 overflow-hidden">
+            <div className="w-full aspect-square bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 rounded-xl border border-gray-200 flex items-center justify-center mb-3 overflow-hidden">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
@@ -600,7 +600,7 @@ export function EditAgentPage() {
                   className="w-full h-full object-contain p-2"
                 />
               ) : (
-                <svg className="w-16 h-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-16 h-16 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               )}
@@ -609,10 +609,10 @@ export function EditAgentPage() {
               type="button"
               onClick={handleGenerateAvatar}
               disabled={isGeneratingAvatar}
-              className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl transition-colors ${
+              className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl transition-all ${
                 isGeneratingAvatar
-                  ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                  : 'text-violet-600 bg-violet-50 hover:bg-violet-100 cursor-pointer border border-violet-200'
+                  ? 'text-purple-400 bg-purple-50 cursor-not-allowed'
+                  : 'text-purple-600 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 cursor-pointer border border-purple-200'
               }`}
             >
               {isGeneratingAvatar ? (
@@ -719,7 +719,7 @@ export function EditAgentPage() {
                 Published
               </span>
               <span className="text-sm text-gray-600">
-                {needsRestart ? 'Restart required to apply changes' : 'Available as a custom component in AI Canvas'}
+                {needsRestart ? 'Restart required to apply changes' : 'Available as a reusable agent in the AI Canvas'}
               </span>
             </div>
             {isPublished && (
@@ -767,7 +767,7 @@ export function EditAgentPage() {
             <button
               onClick={handlePublish}
               disabled={isPublishing || isRestarting}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl shadow-sm disabled:opacity-50 hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5 transition-all duration-300"
             >
               {isPublishing ? (
                 <>
@@ -791,7 +791,7 @@ export function EditAgentPage() {
             {existingWorkflowId ? (
               <button
                 onClick={() => navigate(`/canvas/${agentId}`)}
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-colors shadow-sm text-white bg-emerald-500 hover:bg-emerald-600"
+                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl shadow-sm text-white bg-emerald-500 hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all duration-300"
                 title="View workflow in AI Canvas"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -803,10 +803,10 @@ export function EditAgentPage() {
               <button
                 onClick={handleCreateWorkflow}
                 disabled={!canCreateWorkflow || isCreatingWorkflow}
-                className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl transition-colors shadow-sm ${
+                className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl shadow-sm ${
                   canCreateWorkflow && !isCreatingWorkflow
-                    ? 'text-white bg-emerald-500 hover:bg-emerald-600'
-                    : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                    ? 'text-white bg-emerald-500 hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all duration-300'
+                    : 'text-gray-400 bg-gray-100 cursor-not-allowed transition-colors'
                 }`}
                 title={!canCreateWorkflow ? 'Publish first to enable this' : 'Create workflow to test your agent'}
               >
@@ -862,7 +862,7 @@ export function EditAgentPage() {
                 <button
                   onClick={handleRestartLangflow}
                   disabled={isRestarting}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-xl disabled:opacity-50 hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   {isRestarting ? (
                     <>

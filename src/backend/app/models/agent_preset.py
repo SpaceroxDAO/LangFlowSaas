@@ -83,7 +83,7 @@ class AgentPreset(Base):
 # Default presets to seed the database
 DEFAULT_PRESETS = [
     {
-        "name": "Customer Support Agent",
+        "name": "Customer Support",
         "description": "A friendly support agent that helps users with questions and issues.",
         "icon": "Headphones",
         "category": "support",
@@ -96,7 +96,7 @@ DEFAULT_PRESETS = [
         "sort_order": "10",
     },
     {
-        "name": "Document Q&A Assistant",
+        "name": "Document Assistant",
         "description": "An AI that answers questions based on your uploaded documents.",
         "icon": "FileText",
         "category": "rag",

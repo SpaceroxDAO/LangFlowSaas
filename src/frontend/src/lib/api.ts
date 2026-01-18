@@ -38,6 +38,8 @@ import type {
   MCPServerHealthResponse,
   MCPServerSyncResponse,
   MCPServerTemplatesResponse,
+  MCPServerTestConnectionRequest,
+  MCPServerTestConnectionResponse,
   RestartStatusResponse,
   // Dog avatar types
   DogAvatarResponse,
@@ -719,6 +721,13 @@ class ApiClient {
 
   async getMCPServerTemplates(): Promise<MCPServerTemplatesResponse> {
     return this.request('/api/v1/mcp-servers/templates')
+  }
+
+  async testMCPConnection(data: MCPServerTestConnectionRequest): Promise<MCPServerTestConnectionResponse> {
+    return this.request<MCPServerTestConnectionResponse>('/api/v1/mcp-servers/test-connection', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   }
 
   async createMCPServer(data: MCPServerCreate): Promise<MCPServer> {

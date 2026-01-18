@@ -1,5 +1,6 @@
 /**
  * ToolCard - Selectable card for tool/capability selection in Step 3
+ * Updated with brand purple accent colors
  */
 
 interface ToolCardProps {
@@ -24,10 +25,10 @@ export function ToolCard({
       type="button"
       onClick={onToggle}
       className={`
-        w-full p-4 rounded-xl border-2 text-left transition-all
+        w-full p-4 rounded-xl border-2 text-left transition-all duration-200
         ${selected
-          ? 'border-violet-500 bg-violet-50'
-          : 'border-gray-200 bg-white hover:border-gray-300'
+          ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-sm'
+          : 'border-gray-200 bg-white hover:border-purple-200 hover:bg-gray-50'
         }
       `}
     >
@@ -59,10 +60,10 @@ export function ToolCard({
         </div>
         <div
           className={`
-            w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5
+            w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ml-3 mt-0.5 transition-all duration-200
             ${selected
-              ? 'border-violet-500 bg-violet-500'
-              : 'border-gray-300 bg-white'
+              ? 'bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 border-0'
+              : 'border-2 border-gray-300 bg-white'
             }
           `}
         >

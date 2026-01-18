@@ -18,6 +18,8 @@ from app.schemas.mcp_server import (
     MCPServerHealthResponse,
     MCPServerSyncResponse,
     MCPServerTemplatesResponse,
+    MCPServerTestConnectionRequest,
+    MCPServerTestConnectionResponse,
     RestartStatusResponse,
 )
 from app.services.user_service import UserService
@@ -51,6 +53,30 @@ async def list_templates(
 
     templates = service.get_templates()
     return MCPServerTemplatesResponse(templates=templates)
+
+
+@router.post(
+    "/test-connection",
+    response_model=MCPServerTestConnectionResponse,
+    summary="Test MCP server connection",
+    description="Test connection to an MCP server without saving it.",
+)
+async def test_mcp_connection(
+    data: MCPServerTestConnectionRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """
+    Test an MCP server connection without saving.
+
+    Useful for validating configuration before creating a server.
+    For STDIO transport: Tests if the command is available and executable.
+    For SSE/HTTP transport: Makes an HTTP request to verify the server is reachable.
+    """
+    await get_user_from_clerk(clerk_user, session)  # Ensure authenticated
+    service = MCPServerService(session)
+
+    return await service.test_connection(data)
 
 
 @router.post(

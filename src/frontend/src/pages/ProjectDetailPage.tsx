@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { ShareDeployModal } from '@/components/ShareDeployModal'
 import { WorkflowsTab } from '@/components/WorkflowsTab'
 import { TemplateGalleryModal } from '@/components/TemplateGallery'
-import { MCPServersTab, CreateMCPServerModal } from '@/components/MCPServersTab'
+import { MCPServersTab, MCPConfigModal } from '@/components/MCPServersTab'
 import type { AgentComponent, ProjectTab } from '@/types'
 
 // Persist view mode in localStorage
@@ -45,7 +45,7 @@ export function ProjectDetailPage() {
     agent: null,
   })
   const [createWorkflowModal, setCreateWorkflowModal] = useState(false)
-  const [createMCPServerModal, setCreateMCPServerModal] = useState(false)
+  const [mcpConfigModal, setMcpConfigModal] = useState(false)
 
   // Toolbar state for Agents tab
   const [searchQuery, setSearchQuery] = useState('')
@@ -221,7 +221,7 @@ export function ProjectDetailPage() {
           {currentTab === 'agents' && (
             <Link
               to={`/create?project=${projectId}`}
-              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -232,7 +232,7 @@ export function ProjectDetailPage() {
           {currentTab === 'workflows' && (
             <button
               onClick={() => setCreateWorkflowModal(true)}
-              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -242,8 +242,8 @@ export function ProjectDetailPage() {
           )}
           {currentTab === 'mcp-servers' && (
             <button
-              onClick={() => setCreateMCPServerModal(true)}
-              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+              onClick={() => setMcpConfigModal(true)}
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -378,7 +378,7 @@ export function ProjectDetailPage() {
                 <p className="text-gray-500 mb-4">No agents in this project yet</p>
                 <Link
                   to={`/create?project=${projectId}`}
-                  className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+                  className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -536,16 +536,13 @@ export function ProjectDetailPage() {
         />
       )}
 
-      {/* Create MCP Server Modal */}
-      {createMCPServerModal && projectId && (
-        <CreateMCPServerModal
+      {/* MCP Config Modal */}
+      {mcpConfigModal && projectId && (
+        <MCPConfigModal
           projectId={projectId}
-          onClose={() => setCreateMCPServerModal(false)}
-          onSuccess={() => {
-            setCreateMCPServerModal(false)
-            queryClient.invalidateQueries({ queryKey: ['mcp-servers', projectId] })
-            queryClient.invalidateQueries({ queryKey: ['restart-status'] })
-          }}
+          workflows={workflowsData?.workflows || []}
+          servers={mcpServersData?.mcp_servers || []}
+          onClose={() => setMcpConfigModal(false)}
         />
       )}
     </div>

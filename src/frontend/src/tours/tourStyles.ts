@@ -8,15 +8,18 @@ import type { Config } from 'driver.js';
 // Custom styles for all tours
 const tourStyles = `
   .teachcharlie-tour-popover {
-    background: linear-gradient(135deg, #fff 0%, #fff9f5 100%);
-    border: 2px solid #f97316;
+    background: white;
+    border: 2px solid transparent;
+    background-image: linear-gradient(white, white), linear-gradient(90deg, #f97316, #ec4899, #9333ea);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
     border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(249, 115, 22, 0.2);
+    box-shadow: 0 10px 40px rgba(147, 51, 234, 0.15);
     max-width: 340px;
   }
 
   .teachcharlie-tour-popover .driver-popover-title {
-    color: #c2410c;
+    color: #111827;
     font-weight: 600;
     font-size: 1.1rem;
   }
@@ -32,7 +35,7 @@ const tourStyles = `
   }
 
   .teachcharlie-tour-popover .driver-popover-navigation-btns button {
-    background: #f97316;
+    background: #111827;
     color: white;
     border: none;
     border-radius: 8px;
@@ -46,7 +49,7 @@ const tourStyles = `
   }
 
   .teachcharlie-tour-popover .driver-popover-navigation-btns button:hover {
-    background: #ea580c;
+    background: #1f2937;
   }
 
   .teachcharlie-tour-popover .driver-popover-prev-btn {

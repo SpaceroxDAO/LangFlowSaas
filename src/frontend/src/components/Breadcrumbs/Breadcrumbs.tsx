@@ -37,12 +37,17 @@ function ChevronRightIcon() {
 function useEntityIds() {
   const location = useLocation()
   const pathname = location.pathname
+  const searchParams = new URLSearchParams(location.search)
 
   // Match patterns for different routes
   const editMatch = pathname.match(/^\/edit\/([^/]+)/)
   const playgroundAgentMatch = pathname.match(/^\/playground\/([^/]+)$/)
   const playgroundWorkflowMatch = pathname.match(/^\/playground\/workflow\/([^/]+)/)
   const canvasMatch = pathname.match(/^\/canvas\/([^/]+)/)
+  const isCreateRoute = pathname === '/create'
+
+  // For create route, get project ID from query param
+  const createProjectId = isCreateRoute ? searchParams.get('project') : null
 
   return {
     agentId: editMatch?.[1] || playgroundAgentMatch?.[1],
@@ -52,13 +57,15 @@ function useEntityIds() {
     isAgentRoute: !!(editMatch || playgroundAgentMatch),
     isWorkflowRoute: !!playgroundWorkflowMatch,
     isCanvasRoute: !!canvasMatch,
+    isCreateRoute,
+    createProjectId,
   }
 }
 
 /**
  * Hook to get parent context (project, entity name) for orphan routes
  */
-function useParentContext(agentId?: string, workflowId?: string, canvasId?: string) {
+function useParentContext(agentId?: string, workflowId?: string, canvasId?: string, createProjectId?: string | null) {
   // Fetch agent if on agent route
   const { data: agent } = useQuery({
     queryKey: ['agent-component', agentId],
@@ -92,9 +99,9 @@ function useParentContext(agentId?: string, workflowId?: string, canvasId?: stri
     staleTime: 5 * 60 * 1000,
   })
 
-  // Get project ID from entity (prioritize direct agent/workflow, then canvas)
+  // Get project ID from entity (prioritize direct agent/workflow, then canvas, then create route)
   const projectId = agent?.project_id || workflow?.project_id ||
-                    canvasWorkflow?.project_id || canvasAgent?.project_id
+                    canvasWorkflow?.project_id || canvasAgent?.project_id || createProjectId
 
   // Fetch project for parent context
   const { data: project } = useQuery({
@@ -119,8 +126,8 @@ function useParentContext(agentId?: string, workflowId?: string, canvasId?: stri
 export function Breadcrumbs() {
   const location = useLocation()
   const breadcrumbs = useBreadcrumbs(breadcrumbRoutes, { excludePaths })
-  const { agentId, workflowId, canvasId, isAgentRoute, isWorkflowRoute, isCanvasRoute } = useEntityIds()
-  const { project, entityName } = useParentContext(agentId, workflowId, canvasId)
+  const { agentId, workflowId, canvasId, isAgentRoute, isWorkflowRoute, isCanvasRoute, isCreateRoute, createProjectId } = useEntityIds()
+  const { project, entityName } = useParentContext(agentId, workflowId, canvasId, createProjectId)
 
   // Don't show breadcrumbs on dashboard home
   if (location.pathname === '/dashboard') return null
@@ -143,8 +150,8 @@ export function Breadcrumbs() {
     isCurrent: location.pathname === '/dashboard',
   })
 
-  // For orphan routes (edit, playground, canvas), inject project context
-  if ((isAgentRoute || isWorkflowRoute || isCanvasRoute) && project) {
+  // For orphan routes (edit, playground, canvas, create), inject project context
+  if ((isAgentRoute || isWorkflowRoute || isCanvasRoute || isCreateRoute) && project) {
     items.push({
       key: `project-${project.id}`,
       to: `/dashboard/project/${project.id}`,
@@ -153,7 +160,7 @@ export function Breadcrumbs() {
     })
   }
 
-  // Add entity name for agent/workflow/canvas routes
+  // Add entity name for agent/workflow/canvas routes (not create - it has no entity yet)
   if ((isAgentRoute || isWorkflowRoute || isCanvasRoute) && entityName) {
     const entityId = agentId || workflowId || canvasId
     // For playground/canvas routes, link to edit page; for edit page, no link
@@ -169,7 +176,7 @@ export function Breadcrumbs() {
   }
 
   // For standard routes, use the library-generated breadcrumbs
-  if (!isAgentRoute && !isWorkflowRoute && !isCanvasRoute) {
+  if (!isAgentRoute && !isWorkflowRoute && !isCanvasRoute && !isCreateRoute) {
     // Skip Dashboard (index 0) since we added it manually
     breadcrumbs.slice(1).forEach(({ match, breadcrumb }, index) => {
       const isLast = index === breadcrumbs.length - 2
@@ -181,7 +188,7 @@ export function Breadcrumbs() {
       })
     })
   } else {
-    // Add the final breadcrumb (action: Edit Agent, Chat Playground, AI Canvas)
+    // Add the final breadcrumb (action: Edit Agent, Chat Playground, AI Canvas, Create Agent)
     const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1]
     if (lastBreadcrumb) {
       items.push({

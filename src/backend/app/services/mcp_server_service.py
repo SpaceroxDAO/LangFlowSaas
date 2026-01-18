@@ -26,6 +26,8 @@ from app.schemas.mcp_server import (
     MCPServerHealthResponse,
     MCPServerSyncResponse,
     MCPServerTemplateResponse,
+    MCPServerTestConnectionRequest,
+    MCPServerTestConnectionResponse,
     MCP_SERVER_TEMPLATES,
     PendingChange,
     RestartStatusResponse,
@@ -142,14 +144,22 @@ class MCPServerService:
         if data.credentials:
             credentials_encrypted = self._encrypt_credentials(data.credentials)
 
+        # For SSE/HTTP transport, encrypt headers if they contain secrets
+        headers_to_store = data.headers or {}
+
         server = MCPServer(
             user_id=str(user.id),
             project_id=project_id,
             name=data.name,
             description=data.description,
             server_type=data.server_type,
+            transport=data.transport or "stdio",
             command=data.command,
             args=data.args,
+            url=data.url,
+            headers=headers_to_store,
+            ssl_verify=data.ssl_verify,
+            use_cache=data.use_cache,
             env=data.env,
             credentials_encrypted=credentials_encrypted,
             is_enabled=True,
@@ -161,7 +171,7 @@ class MCPServerService:
         await self.session.flush()
         await self.session.refresh(server)
 
-        logger.info(f"Created MCP server {server.id} for user {user.id}")
+        logger.info(f"Created MCP server {server.id} ({data.transport}) for user {user.id}")
 
         # Auto-sync to .mcp.json
         await self.sync_to_config()
@@ -190,14 +200,37 @@ class MCPServerService:
         # Remove schema metadata from env
         env = {k: v for k, v in env.items() if not isinstance(v, dict)}
 
+        # Get transport type from template
+        transport = template.get("transport", "stdio")
+
+        # For SSE/HTTP templates, use provided URL and headers
+        url = data.url if transport in ("sse", "http") else None
+        headers = data.headers or {}
+        ssl_verify = data.ssl_verify
+        use_cache = data.use_cache
+
+        # For custom template, allow user-provided command/args
+        # Otherwise use template defaults
+        if data.template_name == "custom" and data.command:
+            command = data.command
+            args = data.args if data.args is not None else []
+        else:
+            command = template["command"] or None
+            args = template["args"]
+
         server = MCPServer(
             user_id=str(user.id),
             project_id=str(data.project_id) if data.project_id else None,
             name=data.name or template["name"],
             description=data.description or template["description"],
             server_type=template["server_type"],
-            command=template["command"],
-            args=template["args"],
+            transport=transport,
+            command=command,
+            args=args,
+            url=url,
+            headers=headers,
+            ssl_verify=ssl_verify,
+            use_cache=use_cache,
             env=env,
             credentials_encrypted=credentials_encrypted,
             is_enabled=True,
@@ -209,7 +242,7 @@ class MCPServerService:
         await self.session.flush()
         await self.session.refresh(server)
 
-        logger.info(f"Created MCP server from template {data.template_name}")
+        logger.info(f"Created MCP server from template {data.template_name} ({transport})")
 
         # Auto-sync to .mcp.json
         await self.sync_to_config()
@@ -287,64 +320,106 @@ class MCPServerService:
         """
         Check if an MCP server is healthy.
 
-        This attempts to spawn the server process briefly to verify it can start.
+        For STDIO transport: Attempts to spawn the server process briefly.
+        For SSE/HTTP transport: Makes an HTTP request to the server URL.
         """
         import asyncio
         import shutil
+        import time
 
         server.last_health_check = datetime.utcnow()
         message = ""
 
         try:
-            # Check if the command exists
-            command = server.command
-            if not command:
-                server.health_status = "unhealthy"
-                message = "No command configured"
-            elif not shutil.which(command):
-                server.health_status = "unhealthy"
-                message = f"Command '{command}' not found in PATH"
-            else:
-                # Try to spawn the process with --version or --help to verify it starts
-                try:
-                    # Build env with decrypted credentials
-                    env = dict(os.environ)
-                    if server.env:
-                        env.update(server.env)
-                    if server.credentials_encrypted:
-                        credentials = self._decrypt_credentials(server.credentials_encrypted)
-                        env.update({k: str(v) for k, v in credentials.items()})
-
-                    # Try running with --help flag (most CLIs support this)
-                    proc = await asyncio.create_subprocess_exec(
-                        command,
-                        "--help",
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        env=env,
-                    )
-
-                    # Wait with timeout
+            if server.transport in ("sse", "http"):
+                # URL-based transport - check via HTTP request
+                if not server.url:
+                    server.health_status = "unhealthy"
+                    message = "No URL configured"
+                else:
                     try:
-                        await asyncio.wait_for(proc.communicate(), timeout=5.0)
-                        server.health_status = "healthy"
-                        message = f"Command '{command}' is available and executable"
-                    except asyncio.TimeoutError:
-                        proc.kill()
-                        await proc.wait()
-                        # Timeout might be okay - some servers don't exit on --help
-                        server.health_status = "healthy"
-                        message = f"Command '{command}' started (timed out on --help)"
+                        start_time = time.time()
+                        async with httpx.AsyncClient(
+                            timeout=10.0,
+                            verify=server.ssl_verify
+                        ) as client:
+                            # Build headers
+                            headers = dict(server.headers) if server.headers else {}
 
-                except FileNotFoundError:
+                            # Try a HEAD request first, then GET
+                            try:
+                                response = await client.head(server.url, headers=headers)
+                            except Exception:
+                                response = await client.get(server.url, headers=headers)
+
+                            latency_ms = int((time.time() - start_time) * 1000)
+
+                            if response.status_code < 400:
+                                server.health_status = "healthy"
+                                message = f"Server responded with status {response.status_code} ({latency_ms}ms)"
+                            else:
+                                server.health_status = "unhealthy"
+                                message = f"Server returned error status {response.status_code}"
+
+                    except httpx.ConnectError:
+                        server.health_status = "unhealthy"
+                        message = f"Could not connect to {server.url}"
+                    except httpx.TimeoutException:
+                        server.health_status = "unhealthy"
+                        message = "Connection timed out"
+                    except Exception as e:
+                        server.health_status = "unhealthy"
+                        message = f"HTTP request failed: {str(e)}"
+            else:
+                # STDIO transport - check command exists
+                command = server.command
+                if not command:
                     server.health_status = "unhealthy"
-                    message = f"Command '{command}' not found"
-                except PermissionError:
+                    message = "No command configured"
+                elif not shutil.which(command):
                     server.health_status = "unhealthy"
-                    message = f"Permission denied to execute '{command}'"
-                except Exception as e:
-                    server.health_status = "unhealthy"
-                    message = f"Failed to spawn process: {str(e)}"
+                    message = f"Command '{command}' not found in PATH"
+                else:
+                    # Try to spawn the process with --help to verify it starts
+                    try:
+                        # Build env with decrypted credentials
+                        env = dict(os.environ)
+                        if server.env:
+                            env.update(server.env)
+                        if server.credentials_encrypted:
+                            credentials = self._decrypt_credentials(server.credentials_encrypted)
+                            env.update({k: str(v) for k, v in credentials.items()})
+
+                        # Try running with --help flag (most CLIs support this)
+                        proc = await asyncio.create_subprocess_exec(
+                            command,
+                            "--help",
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                            env=env,
+                        )
+
+                        # Wait with timeout
+                        try:
+                            await asyncio.wait_for(proc.communicate(), timeout=5.0)
+                            server.health_status = "healthy"
+                            message = f"Command '{command}' is available and executable"
+                        except asyncio.TimeoutError:
+                            proc.kill()
+                            await proc.wait()
+                            # Timeout might be okay - some servers don't exit on --help
+                            server.health_status = "healthy"
+                            message = f"Command '{command}' started (timed out on --help)"
+
+                    except FileNotFoundError:
+                        server.health_status = "unhealthy"
+                        message = f"Command '{command}' not found"
+                    except PermissionError:
+                        server.health_status = "unhealthy"
+                        message = f"Permission denied to execute '{command}'"
+                    except Exception as e:
+                        server.health_status = "unhealthy"
+                        message = f"Failed to spawn process: {str(e)}"
 
         except Exception as e:
             server.health_status = "unhealthy"
@@ -361,6 +436,152 @@ class MCPServerService:
             message=message,
         )
 
+    async def test_connection(
+        self,
+        data: MCPServerTestConnectionRequest,
+    ) -> MCPServerTestConnectionResponse:
+        """
+        Test an MCP server connection without saving it.
+
+        Useful for validating configuration before creating a server.
+        """
+        import asyncio
+        import shutil
+        import time
+
+        try:
+            if data.transport in ("sse", "http"):
+                # URL-based transport - test via HTTP request
+                if not data.url:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message="URL is required for SSE/HTTP transport",
+                    )
+
+                try:
+                    start_time = time.time()
+                    async with httpx.AsyncClient(
+                        timeout=10.0,
+                        verify=data.ssl_verify
+                    ) as client:
+                        # Build headers
+                        headers = dict(data.headers) if data.headers else {}
+
+                        # Try a HEAD request first, then GET
+                        try:
+                            response = await client.head(data.url, headers=headers)
+                        except Exception:
+                            response = await client.get(data.url, headers=headers)
+
+                        latency_ms = int((time.time() - start_time) * 1000)
+
+                        if response.status_code < 400:
+                            return MCPServerTestConnectionResponse(
+                                success=True,
+                                message=f"Connection successful! Server responded in {latency_ms}ms",
+                                latency_ms=latency_ms,
+                                server_info={
+                                    "status_code": response.status_code,
+                                    "headers": dict(response.headers),
+                                }
+                            )
+                        else:
+                            return MCPServerTestConnectionResponse(
+                                success=False,
+                                message=f"Server returned error status {response.status_code}",
+                                latency_ms=latency_ms,
+                            )
+
+                except httpx.ConnectError as e:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Could not connect to server: {str(e)}",
+                    )
+                except httpx.TimeoutException:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message="Connection timed out after 10 seconds",
+                    )
+                except Exception as e:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Connection failed: {str(e)}",
+                    )
+
+            else:
+                # STDIO transport - test command exists
+                command = data.command
+                if not command:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message="Command is required for STDIO transport",
+                    )
+
+                if not shutil.which(command):
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Command '{command}' not found in system PATH",
+                    )
+
+                # Try to spawn the process with --help to verify it starts
+                try:
+                    # Build env
+                    env = dict(os.environ)
+                    if data.env:
+                        env.update(data.env)
+
+                    start_time = time.time()
+                    proc = await asyncio.create_subprocess_exec(
+                        command,
+                        "--help",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        env=env,
+                    )
+
+                    try:
+                        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+                        latency_ms = int((time.time() - start_time) * 1000)
+
+                        return MCPServerTestConnectionResponse(
+                            success=True,
+                            message=f"Command '{command}' is available and executable ({latency_ms}ms)",
+                            latency_ms=latency_ms,
+                        )
+                    except asyncio.TimeoutError:
+                        proc.kill()
+                        await proc.wait()
+                        latency_ms = int((time.time() - start_time) * 1000)
+                        # Timeout might be okay - some servers don't exit on --help
+                        return MCPServerTestConnectionResponse(
+                            success=True,
+                            message=f"Command '{command}' started successfully (process running)",
+                            latency_ms=latency_ms,
+                        )
+
+                except FileNotFoundError:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Command '{command}' not found",
+                    )
+                except PermissionError:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Permission denied to execute '{command}'",
+                    )
+                except Exception as e:
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Failed to spawn process: {str(e)}",
+                    )
+
+        except Exception as e:
+            logger.error(f"Test connection error: {e}")
+            return MCPServerTestConnectionResponse(
+                success=False,
+                message=f"Test failed: {str(e)}",
+            )
+
     async def sync_to_config(self, auto_restart: bool = False) -> MCPServerSyncResponse:
         """
         Sync all enabled MCP servers to .mcp.json file.
@@ -376,18 +597,35 @@ class MCPServerService:
         config = {"mcpServers": {}}
 
         for server in servers:
-            # Build env with decrypted credentials
-            env = dict(server.env) if server.env else {}
-            if server.credentials_encrypted:
-                credentials = self._decrypt_credentials(server.credentials_encrypted)
-                env.update(credentials)
+            if server.transport in ("sse", "http"):
+                # URL-based transport (SSE/HTTP)
+                server_config = {
+                    "url": server.url,
+                    "transport": server.transport,
+                    "disabled": not server.is_enabled,
+                }
+                # Add headers if present
+                if server.headers:
+                    server_config["headers"] = dict(server.headers)
+                # Add SSL verification setting if disabled
+                if not server.ssl_verify:
+                    server_config["ssl_verify"] = False
+            else:
+                # STDIO transport (command-based)
+                # Build env with decrypted credentials
+                env = dict(server.env) if server.env else {}
+                if server.credentials_encrypted:
+                    credentials = self._decrypt_credentials(server.credentials_encrypted)
+                    env.update(credentials)
 
-            config["mcpServers"][server.name] = {
-                "command": server.command,
-                "args": server.args,
-                "env": env,
-                "disabled": not server.is_enabled,
-            }
+                server_config = {
+                    "command": server.command,
+                    "args": server.args,
+                    "env": env,
+                    "disabled": not server.is_enabled,
+                }
+
+            config["mcpServers"][server.name] = server_config
 
             # Mark as synced
             server.needs_sync = False
@@ -490,10 +728,12 @@ class MCPServerService:
                 name=key,
                 display_name=template["name"],
                 description=template["description"],
+                transport=template.get("transport", "stdio"),
                 command=template["command"],
                 args=template["args"],
                 server_type=template["server_type"],
                 env_schema=template["env_schema"],
+                headers_schema=template.get("headers_schema"),
             )
             for key, template in MCP_SERVER_TEMPLATES.items()
         ]

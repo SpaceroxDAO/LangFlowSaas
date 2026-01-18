@@ -446,14 +446,24 @@ export interface TemplatesResponse {
 // MCP Server Types (External Tool Integrations)
 // =============================================================================
 
+export type MCPTransportType = 'stdio' | 'sse' | 'http'
+
 export interface MCPServer {
   id: string
   project_id?: string
   name: string
   description?: string
   server_type: string
-  command: string
+  transport: MCPTransportType
+  // STDIO transport fields
+  command?: string
   args: string[]
+  // SSE/HTTP transport fields
+  url?: string
+  headers: Record<string, string>
+  ssl_verify: boolean
+  use_cache: boolean
+  // Common fields
   env: Record<string, string>
   is_enabled: boolean
   needs_sync: boolean
@@ -467,8 +477,16 @@ export interface MCPServerCreate {
   name: string
   description?: string
   server_type: string
-  command: string
+  transport?: MCPTransportType
+  // STDIO transport fields
+  command?: string
   args?: string[]
+  // SSE/HTTP transport fields
+  url?: string
+  headers?: Record<string, string>
+  ssl_verify?: boolean
+  use_cache?: boolean
+  // Common fields
   env?: Record<string, string>
   credentials?: Record<string, string>
   project_id?: string
@@ -478,6 +496,15 @@ export interface MCPServerCreateFromTemplate {
   template_name: string
   name?: string
   description?: string
+  // SSE/HTTP fields
+  url?: string
+  headers?: Record<string, string>
+  ssl_verify?: boolean
+  use_cache?: boolean
+  // Custom STDIO fields (for 'custom' template)
+  command?: string
+  args?: string[]
+  // Common fields
   env?: Record<string, string>
   credentials?: Record<string, string>
   project_id?: string
@@ -486,8 +513,13 @@ export interface MCPServerCreateFromTemplate {
 export interface MCPServerUpdate {
   name?: string
   description?: string
+  transport?: MCPTransportType
   command?: string
   args?: string[]
+  url?: string
+  headers?: Record<string, string>
+  ssl_verify?: boolean
+  use_cache?: boolean
   env?: Record<string, string>
   credentials?: Record<string, string>
   is_enabled?: boolean
@@ -518,14 +550,35 @@ export interface MCPServerTemplate {
   name: string
   display_name: string
   description: string
+  transport: MCPTransportType
   command: string
   args: string[]
   server_type: string
-  env_schema: Record<string, { type: string; description: string; required?: boolean }>
+  env_schema: Record<string, { type: string; description: string; required?: boolean; secret?: boolean }>
+  headers_schema?: Record<string, { type: string; description: string; required?: boolean; secret?: boolean }>
 }
 
 export interface MCPServerTemplatesResponse {
   templates: MCPServerTemplate[]
+}
+
+export interface MCPServerTestConnectionRequest {
+  transport: MCPTransportType
+  // STDIO fields
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  // SSE/HTTP fields
+  url?: string
+  headers?: Record<string, string>
+  ssl_verify?: boolean
+}
+
+export interface MCPServerTestConnectionResponse {
+  success: boolean
+  message: string
+  latency_ms?: number
+  server_info?: Record<string, unknown>
 }
 
 export interface PendingChange {

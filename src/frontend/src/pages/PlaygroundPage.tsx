@@ -49,7 +49,7 @@ export function PlaygroundPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [useStreaming, setUseStreaming] = useState(true)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
@@ -458,7 +458,7 @@ export function PlaygroundPage() {
           <div className="p-4 border-b border-gray-200">
             <button
               onClick={startNewChat}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-medium transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5 transition-all duration-300"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -575,23 +575,17 @@ export function PlaygroundPage() {
                 </svg>
               </button>
 
-              {/* Back Button */}
-              <Link
-                to={editAgentComponentId ? `/edit/${editAgentComponentId}` : '/dashboard'}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </Link>
-
               {/* Avatar & Title */}
               <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={entityName} className="w-full h-full object-contain" />
                 ) : (
-                  <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  <svg className="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11.25 16.25h1.5L12 17z"/>
+                    <path d="M16 14v.5"/>
+                    <path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.702 11.702 0 0 0-.493-3.309"/>
+                    <path d="M8 14v.5"/>
+                    <path d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5-1.931.722-3.576-.297-3.656-1-.113-.994 1.177-6.53 4-7 1.923-.321 3.651.845 3.651 2.235A7.497 7.497 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/>
                   </svg>
                 )}
               </div>
@@ -615,7 +609,7 @@ export function PlaygroundPage() {
               </button>
               <button
                 onClick={() => setIsShareModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-500 hover:bg-violet-600 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
@@ -641,15 +635,13 @@ export function PlaygroundPage() {
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50" data-tour="playground-messages">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="w-20 h-20 bg-violet-100 rounded-full flex items-center justify-center mb-4 overflow-hidden">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={entityName} className="w-full h-full object-contain" />
-                ) : (
-                  <svg className="w-10 h-10 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                )}
-              </div>
+              <svg className="w-12 h-12 text-gray-900 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11.25 16.25h1.5L12 17z"/>
+                <path d="M16 14v.5"/>
+                <path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.702 11.702 0 0 0-.493-3.309"/>
+                <path d="M8 14v.5"/>
+                <path d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5-1.931.722-3.576-.297-3.656-1-.113-.994 1.177-6.53 4-7 1.923-.321 3.651.845 3.651 2.235A7.497 7.497 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/>
+              </svg>
               <h2 className="text-lg font-medium text-gray-900 mb-1">
                 Chat with {entityName}
               </h2>

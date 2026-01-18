@@ -418,21 +418,34 @@ export function CreateAgentPage() {
     dispatch({ type: 'PREV_STEP' })
   }, [])
 
-  // Handle preset selection
+  // Handle preset selection (toggleable)
   const handleSelectPreset = useCallback((preset: FeaturedPreset) => {
-    setSelectedPresetId(preset.id)
-    dispatch({
-      type: 'LOAD_PRESET',
-      preset: {
-        name: preset.name,
-        who: preset.who || '',
-        rules: preset.rules ?? null,
-        tools: preset.tools ?? null,
-      },
-    })
-    // Collapse the preset section after selection
-    setPresetsExpanded(false)
-  }, [])
+    if (selectedPresetId === preset.id) {
+      // Unselect and reset to defaults
+      setSelectedPresetId(null)
+      dispatch({
+        type: 'LOAD_PRESET',
+        preset: {
+          name: DEFAULT_AGENT_NAME,
+          who: DEFAULT_AGENT_WHO,
+          rules: DEFAULT_AGENT_RULES,
+          tools: [],
+        },
+      })
+    } else {
+      // Select this preset
+      setSelectedPresetId(preset.id)
+      dispatch({
+        type: 'LOAD_PRESET',
+        preset: {
+          name: preset.name,
+          who: preset.who || '',
+          rules: preset.rules ?? null,
+          tools: preset.tools ?? null,
+        },
+      })
+    }
+  }, [selectedPresetId])
 
   const handleSubmit = useCallback(async () => {
     dispatch({ type: 'SUBMIT_START' })
@@ -467,11 +480,19 @@ export function CreateAgentPage() {
     }
   }, [formData, navigate, projectId])
 
-  // Button styles by step
-  const buttonStyles = {
-    1: 'bg-violet-500 hover:bg-violet-600',
-    2: 'bg-pink-500 hover:bg-pink-600',
-    3: 'bg-violet-500 hover:bg-violet-600',
+  // Button styles per step (solid colors with hover effects)
+  const getStepButtonClass = (step: number) => {
+    const baseClass = 'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300'
+    switch (step) {
+      case 1:
+        return `bg-violet-500 hover:bg-violet-600 hover:shadow-violet-500/25 ${baseClass}`
+      case 2:
+        return `bg-pink-500 hover:bg-pink-600 hover:shadow-pink-500/25 ${baseClass}`
+      case 3:
+        return `bg-emerald-500 hover:bg-emerald-600 hover:shadow-emerald-500/25 ${baseClass}`
+      default:
+        return `bg-emerald-500 hover:bg-emerald-600 hover:shadow-emerald-500/25 ${baseClass}`
+    }
   }
 
   return (
@@ -493,10 +514,10 @@ export function CreateAgentPage() {
                 <button
                   type="button"
                   onClick={() => setPresetsExpanded(!presetsExpanded)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-violet-500" />
+                    <Sparkles className="w-5 h-5 text-orange-500" />
                     <span className="font-medium text-gray-900">Start from a template</span>
                     <span className="text-sm text-gray-500">(optional)</span>
                   </div>
@@ -524,52 +545,22 @@ export function CreateAgentPage() {
                             onClick={() => handleSelectPreset(preset)}
                             className={`relative flex items-start gap-3 p-3 rounded-lg border-2 transition-all text-left ${
                               isSelected
-                                ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200'
-                                : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
+                                ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 ring-2 ring-purple-200'
+                                : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
                             }`}
                           >
                             <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
                               <IconComponent className="w-5 h-5 text-white" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-gray-900 text-sm truncate">
+                            <div className="flex-1 min-w-0 flex items-center">
+                              <div className="font-medium text-gray-900 text-sm">
                                 {preset.name}
                               </div>
-                              <div className="text-xs text-gray-500 line-clamp-2">
-                                {preset.description}
-                              </div>
                             </div>
-                            {isSelected && (
-                              <div className="absolute top-2 right-2 w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </div>
-                            )}
                           </button>
                         )
                       })}
                     </div>
-                    {selectedPresetId && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedPresetId(null)
-                          dispatch({
-                            type: 'LOAD_PRESET',
-                            preset: {
-                              name: DEFAULT_AGENT_NAME,
-                              who: DEFAULT_AGENT_WHO,
-                              rules: DEFAULT_AGENT_RULES,
-                              tools: [],
-                            },
-                          })
-                        }}
-                        className="mt-3 text-sm text-gray-500 hover:text-gray-700 underline"
-                      >
-                        Clear selection and start from scratch
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -586,7 +577,7 @@ export function CreateAgentPage() {
                 onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'name', value: e.target.value })}
                 placeholder="Charlie"
                 data-tour="agent-name"
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   errors.name ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
               />
@@ -604,7 +595,7 @@ export function CreateAgentPage() {
                 placeholder="A friendly Golden Retriever who is an expert in dog treats, bones, and finding the best parks."
                 rows={4}
                 data-tour="agent-job"
-                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   errors.who ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
               />
@@ -614,7 +605,7 @@ export function CreateAgentPage() {
             {/* Generate Appearance */}
             <div className="border border-gray-200 rounded-xl p-4">
               <div className="flex items-start gap-4">
-                <div className="w-20 h-20 bg-violet-50 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                   {formData.avatarUrl ? (
                     <img
                       src={formData.avatarUrl}
@@ -622,7 +613,7 @@ export function CreateAgentPage() {
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <svg className="w-10 h-10 text-violet-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-10 h-10 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   )}
@@ -636,10 +627,10 @@ export function CreateAgentPage() {
                     type="button"
                     onClick={handleGenerateAvatar}
                     disabled={isGeneratingAvatar}
-                    className={`inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-colors ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${
                       isGeneratingAvatar
-                        ? 'text-violet-400 bg-violet-50 cursor-not-allowed'
-                        : 'text-violet-600 bg-violet-50 hover:bg-violet-100 cursor-pointer border border-violet-200'
+                        ? 'text-purple-400 bg-purple-50 cursor-not-allowed'
+                        : 'text-purple-600 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 cursor-pointer border border-purple-200'
                     }`}
                   >
                     {isGeneratingAvatar ? (
@@ -677,7 +668,7 @@ export function CreateAgentPage() {
               </button>
               <button
                 onClick={handleNext}
-                className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 ${buttonStyles[1]}`}
+                className={`px-6 py-3 text-white rounded-xl font-medium flex items-center gap-2 ${getStepButtonClass(1)}`}
               >
                 Next Step
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -714,7 +705,7 @@ export function CreateAgentPage() {
                 placeholder={`You are Charlie, a happy and excited dog. You love humans! Always be helpful, but try to mention treats or going for a walk in your responses. If asked a hard question, answer it simply like a smart dog would. End some sentences with "Woof!"`}
                 rows={8}
                 data-tour="agent-rules"
-                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
+                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   errors.rules ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
               />
@@ -733,7 +724,7 @@ export function CreateAgentPage() {
               <div className="flex gap-2">
                 <button
                   onClick={handleBack}
-                  className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-6 py-3 border border-purple-200 rounded-xl font-medium text-gray-700 hover:bg-purple-50 hover:border-purple-300 transition-colors"
                 >
                   Back
                 </button>
@@ -750,7 +741,7 @@ export function CreateAgentPage() {
               </div>
               <button
                 onClick={handleNext}
-                className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 ${buttonStyles[2]}`}
+                className={`px-6 py-3 text-white rounded-xl font-medium flex items-center gap-2 ${getStepButtonClass(2)}`}
               >
                 Next Step
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -838,7 +829,7 @@ export function CreateAgentPage() {
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 data-tour="create-button"
-                className={`px-6 py-3 text-white rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 ${buttonStyles[3]}`}
+                className={`px-6 py-3 text-white rounded-xl font-medium flex items-center gap-2 disabled:opacity-50 ${getStepButtonClass(3)}`}
               >
                 {isSubmitting ? (
                   <>
