@@ -152,6 +152,24 @@ git push origin main
 
 ## 🧪 Testing Instructions
 
+### ⚠️ CRITICAL: Test URLs
+
+**ALWAYS test on Teach Charlie URLs, NEVER on direct Langflow URLs:**
+
+| ✅ CORRECT (Teach Charlie) | ❌ WRONG (Direct Langflow) |
+|---------------------------|---------------------------|
+| `http://localhost:3001/canvas/{workflow_id}` | `http://localhost:7860/flow/{flow_id}` |
+| `http://localhost:3001/playground/{workflow_id}` | `http://localhost:7860/playground/{flow_id}` |
+| `http://localhost:3001/workflows` | `http://localhost:7860/all` |
+
+**Why this matters**: Langflow is embedded via iframe in Teach Charlie. Issues may appear in the iframe embedding that don't appear when testing Langflow directly. Always test the user's actual experience.
+
+**Testing Flow for Templates/Workflows:**
+1. Go to `http://localhost:3001/workflows` - see workflow list
+2. Click a workflow to go to `/canvas/{id}` - verify edges render visually
+3. Go to `/playground/{id}` - test if chat works (proves connections function)
+4. If chat fails, edges are not properly connected even if they look connected
+
 ### Prefer E2E Tests Over Unit Tests (MVP)
 - Write **3 critical E2E tests** using Playwright:
   1. Signup → Q&A → Playground → Chat works
@@ -165,6 +183,16 @@ git push origin main
 - Test happy path (create agent, chat, unlock flow)
 - Test edge cases (empty inputs, long messages, special characters)
 - Test error states (network failure, LLM timeout, invalid API key)
+
+### Playwright MCP Testing
+When using Playwright MCP for automated testing:
+```
+1. Navigate to http://localhost:3001/workflows
+2. Click on a workflow to open /canvas/{id}
+3. Take snapshot to verify edges are visually rendered
+4. Navigate to /playground/{id} and test chat
+5. If chat fails with connection errors, edges are broken
+```
 
 ## 📚 Core Files & Functions
 

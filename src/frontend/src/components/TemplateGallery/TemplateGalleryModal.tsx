@@ -259,9 +259,9 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
         })
       }
 
-      // For built-in templates or templates without data, create with template name
-      // In the future, we could fetch actual flow data from template files
-      return api.createWorkflow({
+      // For built-in templates, use the template_name to load from backend template files
+      return api.createWorkflowFromTemplate({
+        template_name: template.id,
         name: template.name || 'New Workflow',
         description: template.description,
         project_id: projectId,

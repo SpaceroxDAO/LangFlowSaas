@@ -216,7 +216,7 @@ export function MissionStepPanel({
                       {step.title}
                     </h4>
                     {stepIsCurrent && (
-                      <p className="text-xs text-violet-600 mt-1 leading-relaxed">
+                      <p className="text-xs text-violet-600 mt-1 leading-relaxed whitespace-pre-line">
                         {step.description}
                       </p>
                     )}

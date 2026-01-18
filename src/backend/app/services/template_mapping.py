@@ -248,22 +248,96 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
         words = who.split()[:3]
         return " ".join(words) + " Charlie" if words else "My Charlie"
 
+    # Mapping from API template IDs to actual template file names
+    # Templates in langflow/ subdirectory are official Langflow starter projects
+    TEMPLATE_FILE_MAPPING = {
+        # === GET STARTED (Showcase Templates) ===
+        "get-started-agent": "langflow/Simple Agent",
+        "get-started-prompting": "langflow/Basic Prompting",
+        "get-started-rag": "langflow/Document Q&A",
+
+        # === PROMPTING TEMPLATES ===
+        "basic-prompting": "langflow/Basic Prompting",
+        "prompt-chaining": "langflow/Basic Prompt Chaining",
+
+        # === AGENT TEMPLATES ===
+        "simple-agent": "langflow/Simple Agent",
+        "memory-chatbot": "langflow/Memory Chatbot",
+        "search-agent": "langflow/Search agent",
+        "research-agent": "langflow/Research Agent",
+        "sequential-agent": "langflow/Sequential Tasks Agents",
+        "travel-agent": "langflow/Travel Planning Agents",
+        "social-media-agent": "langflow/Social Media Agent",
+        "pokedex-agent": "langflow/Pokédex Agent",
+
+        # === RAG TEMPLATES ===
+        "vector-store-rag": "langflow/Vector Store RAG",
+        "document-qa": "langflow/Document Q&A",
+        "hybrid-search-rag": "langflow/Hybrid Search RAG",
+        "knowledge-ingestion": "langflow/Knowledge Ingestion",
+        "knowledge-retrieval": "langflow/Knowledge Retrieval",
+
+        # === DOCUMENT PROCESSING ===
+        "financial-report-parser": "langflow/Financial Report Parser",
+        "invoice-summarizer": "langflow/Invoice Summarizer",
+        "meeting-summary": "langflow/Meeting Summary",
+
+        # === CONTENT CREATION ===
+        "blog-writer": "langflow/Blog Writer",
+        "instagram-copywriter": "langflow/Instagram Copywriter",
+        "twitter-thread-generator": "langflow/Twitter Thread Generator",
+        "seo-keyword-generator": "langflow/SEO Keyword Generator",
+        "portfolio-website-generator": "langflow/Portfolio Website Code Generator",
+
+        # === ANALYSIS TEMPLATES ===
+        "text-sentiment-analysis": "langflow/Text Sentiment Analysis",
+        "image-sentiment-analysis": "langflow/Image Sentiment Analysis",
+        "youtube-analysis": "langflow/Youtube Analysis",
+        "market-research": "langflow/Market Research",
+        "news-aggregator": "langflow/News Aggregator",
+
+        # === BUSINESS TEMPLATES ===
+        "saas-pricing": "langflow/SaaS Pricing",
+        "price-deal-finder": "langflow/Price Deal Finder",
+
+        # === DEVELOPER TEMPLATES ===
+        "custom-component-generator": "langflow/Custom Component Generator",
+        "research-translation-loop": "langflow/Research Translation Loop",
+        "nvidia-remix": "langflow/Nvidia Remix",
+
+        # === LEGACY/CUSTOM TEMPLATES (our own) ===
+        "founder-flow": "founder_flow",
+        "support-agent-assist": "support_bot",
+        "rag-agent": "rag_agent",
+        "agent-base": "agent_base",
+    }
+
     def load_template(self, template_name: str = "agent_base") -> Dict[str, Any]:
         """
         Load a flow template from the templates directory.
 
         Args:
             template_name: Name of the template (without .json extension)
+                          Can be an API template ID (e.g., 'get-started-agent')
+                          or a direct file name (e.g., 'agent_base')
 
         Returns:
             Template data as dictionary
         """
-        template_path = self.templates_dir / f"{template_name}.json"
+        # Map API template IDs to actual file names
+        actual_template_name = self.TEMPLATE_FILE_MAPPING.get(template_name, template_name)
+
+        template_path = self.templates_dir / f"{actual_template_name}.json"
 
         if not template_path.exists():
-            raise TemplateMappingError(
-                f"Template '{template_name}' not found at {template_path}"
-            )
+            # Fallback to agent_base if template not found
+            fallback_path = self.templates_dir / "agent_base.json"
+            if fallback_path.exists():
+                template_path = fallback_path
+            else:
+                raise TemplateMappingError(
+                    f"Template '{template_name}' not found at {template_path}"
+                )
 
         try:
             with open(template_path, "r") as f:
@@ -466,7 +540,12 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
         api_key: str,
     ) -> Dict[str, Any]:
         """
-        Inject LLM provider configuration into the Agent node.
+        Inject LLM provider configuration into all components that need it.
+
+        This includes:
+        - Agent nodes (with agent_llm dropdown)
+        - OpenAIModel, AnthropicModel, etc. (with api_key field)
+        - Any other component with an api_key field
 
         Args:
             flow_data: The flow data to modify
@@ -484,14 +563,19 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
             # Default to OpenAI if provider not recognized
             config = LLM_PROVIDER_CONFIGS["openai"]
 
-        # Find and update the Agent node
+        # Find and update ALL nodes that need API keys
         nodes = flow_data.get("data", {}).get("nodes", [])
 
         for node in nodes:
             node_data = node.get("data", {})
-            if node_data.get("type") == "Agent":
-                template_fields = node_data.get("node", {}).get("template", {})
+            node_type = node_data.get("type", "")
+            template_fields = node_data.get("node", {}).get("template", {})
 
+            if not template_fields:
+                continue
+
+            # Update Agent nodes with full LLM config
+            if node_type == "Agent":
                 # Set the LLM provider
                 if "agent_llm" in template_fields:
                     template_fields["agent_llm"]["value"] = config["agent_llm"]
@@ -504,13 +588,52 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
                 # Set the API key
                 if "api_key" in template_fields and api_key:
                     template_fields["api_key"]["value"] = api_key
+                    template_fields["api_key"]["load_from_db"] = False  # Use injected value
                     template_fields["api_key"]["display_name"] = f"{config['agent_llm']} API Key"
 
                 # Set the base URL if applicable
                 if "base_url" in template_fields and config.get("base_url"):
                     template_fields["base_url"]["value"] = config["base_url"]
 
-                break
+            # Update ALL components that have an api_key field
+            # This includes OpenAIModel, AnthropicModel, OpenAIEmbeddings, etc.
+            else:
+                for field_name, field_data in template_fields.items():
+                    if not isinstance(field_data, dict):
+                        continue
+
+                    # Check if this is an API key field
+                    is_api_key_field = (
+                        field_name == "api_key" or
+                        field_name.endswith("_api_key") or
+                        "api_key" in field_name.lower()
+                    )
+
+                    if is_api_key_field and api_key:
+                        # Determine which API key to inject based on field name or component type
+                        key_to_inject = api_key  # Default to user's configured key
+
+                        # If field is provider-specific, only inject if it matches
+                        if "openai" in field_name.lower() and provider != "openai":
+                            continue
+                        if "anthropic" in field_name.lower() and provider != "anthropic":
+                            continue
+                        if "google" in field_name.lower() and provider != "google":
+                            continue
+
+                        # For generic api_key fields, check component type
+                        if field_name == "api_key":
+                            component_type_lower = node_type.lower()
+                            if "openai" in component_type_lower and provider != "openai":
+                                continue
+                            if "anthropic" in component_type_lower and provider != "anthropic":
+                                continue
+                            if "google" in component_type_lower and provider != "google":
+                                continue
+
+                        # Inject the API key
+                        field_data["value"] = key_to_inject
+                        field_data["load_from_db"] = False  # Use injected value, not from DB
 
         return flow_data
 

@@ -387,7 +387,7 @@ function WorkflowRow({
       {/* Name and timestamp */}
       <div className="flex-1 min-w-0 flex items-center gap-3">
         <Link
-          to={`/playground/workflow/${workflow.id}`}
+          to={`/canvas/${workflow.id}`}
           className="font-medium text-gray-900 hover:text-gray-600 truncate"
         >
           {workflow.name}
@@ -544,7 +544,7 @@ function WorkflowCard({
         </div>
       </div>
 
-      <Link to={`/playground/workflow/${workflow.id}`} className="block">
+      <Link to={`/canvas/${workflow.id}`} className="block">
         <h3 className="font-medium text-gray-900 mb-1 truncate hover:text-gray-600">
           {workflow.name}
         </h3>

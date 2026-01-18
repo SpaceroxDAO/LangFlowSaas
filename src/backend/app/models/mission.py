@@ -149,23 +149,155 @@ DEFAULT_MISSIONS = [
             "Chat with your first AI agent",
         ],
     },
+    # ===== L002: FAQ Bot v1 =====
+    # Second mission - teaches specialized agents, guardrails, and escalation
     {
-        "id": "L002",
+        "id": "L002-faq-bot-v1",
         "name": "FAQ Bot v1",
-        "description": "Build a simple FAQ bot that answers common questions about your topic.",
+        "description": "Turn Charlie into a focused FAQ specialist. Learn to add guardrails so Charlie stays on-topic and knows when to ask for help.",
         "category": "skill_sprint",
         "difficulty": "beginner",
         "estimated_minutes": 20,
         "icon": "help-circle",
         "sort_order": 2,
+        "canvas_mode": True,
+        "template_id": "agent_base",
+        # UI Config - show full canvas (same as L001)
+        "ui_config": None,
+        # Component pack - same basic components as L001
+        "component_pack": {
+            "allowed_components": ["ChatInput", "ChatOutput", "Agent"],
+            "allowed_categories": ["input & output", "models & agents"],
+            "validation_rules": {
+                "require_chat_input": True,
+                "require_chat_output": True,
+                "max_nodes": 3,
+            },
+        },
         "steps": [
-            {"id": 1, "title": "Choose a Topic", "description": "Pick something you know well - a hobby, product, or service.", "type": "info"},
-            {"id": 2, "title": "Create Your FAQ Agent", "description": "Use the wizard to create an agent specialized in answering questions.", "type": "action"},
-            {"id": 3, "title": "Add Knowledge", "description": "Include at least 5 FAQ questions in the agent's knowledge.", "type": "action"},
-            {"id": 4, "title": "Test Your Bot", "description": "Ask your bot several questions to see how it handles them.", "type": "action"},
+            # Step 1: Choose Your Topic (info)
+            {
+                "id": 1,
+                "title": "Pick Your FAQ Topic",
+                "description": "For this mission, you'll turn Charlie into an FAQ expert. Think of a topic you know well - maybe a hobby like photography or cooking, a product or service you use, a subject you're passionate about, or your business area. Once you have a topic in mind, continue to the next step!",
+                "type": "info",
+                "phase": "works",
+                "hints": [
+                    "Pick something you could answer 5-10 common questions about",
+                    "The more specific your topic, the better Charlie will perform",
+                    "Example: 'Coffee brewing' is better than just 'food'",
+                ],
+            },
+            # Step 2: Write FAQ-Specialized Instructions (action)
+            {
+                "id": 2,
+                "title": "Create Your FAQ Expert",
+                "description": "Click on the Agent and update the 'Agent Instructions' field. This time, make Charlie a specialist! Try something like: 'You are an FAQ assistant for [your topic]. You help people understand [topic] by answering common questions clearly and concisely. You know about [list 3-5 specific areas].'",
+                "type": "action",
+                "phase": "works",
+                "highlight": {
+                    "element": "field:agent_instructions",
+                    "title": "Specialize Charlie",
+                    "description": "Write instructions that make Charlie an expert in your chosen topic. Be specific about what Charlie knows.",
+                    "position": "left",
+                    "auto_trigger": False,
+                },
+                "hints": [
+                    "Include your specific topic area in the instructions",
+                    "List 3-5 things Charlie should know about",
+                    "Example: 'You know about espresso machines, pour-over methods, and bean selection'",
+                ],
+                "validation": {
+                    "auto": True,
+                    "event_type": "node_configured",
+                    "node_type": "Agent",
+                    "field_name": "agent_instructions",
+                    "min_length": 50,
+                },
+            },
+            # Step 3: Add Guardrails - "I don't know" behavior (action)
+            {
+                "id": 3,
+                "title": "Add Guardrails",
+                "description": "Great FAQ bots know their limits! Add guardrails to Charlie's instructions. Tell Charlie to politely redirect off-topic questions back to your topic, and to say 'I'm not certain about that' rather than guessing when unsure. This prevents Charlie from making up answers or going off-topic!",
+                "type": "action",
+                "phase": "reliable",
+                "highlight": {
+                    "element": "field:agent_instructions",
+                    "title": "Add Safety Rules",
+                    "description": "Update the instructions to include boundaries. Tell Charlie what to do when questions are off-topic or unclear.",
+                    "position": "left",
+                    "auto_trigger": False,
+                },
+                "hints": [
+                    "Add a line like: 'If asked about unrelated topics, politely redirect to [your topic]'",
+                    "Include: 'Never make up information - admit when you're unsure'",
+                    "Think about what questions might trip up your bot",
+                ],
+                "validation": {
+                    "auto": True,
+                    "event_type": "node_configured",
+                    "node_type": "Agent",
+                    "field_name": "agent_instructions",
+                    "min_length": 100,
+                },
+            },
+            # Step 4: Add Escalation Behavior (action)
+            {
+                "id": 4,
+                "title": "Add Escalation",
+                "description": "Sometimes Charlie needs to hand off to a human. Add an escalation instruction telling Charlie to recommend reaching out to a support channel or person for complex issues, complaints, or questions he cannot answer. This builds trust - users know Charlie won't leave them stuck!",
+                "type": "action",
+                "phase": "reliable",
+                "highlight": {
+                    "element": "field:agent_instructions",
+                    "title": "Add Human Handoff",
+                    "description": "Tell Charlie when and how to suggest human help. This could be an email, phone number, or just 'contact support'.",
+                    "position": "left",
+                    "auto_trigger": False,
+                },
+                "hints": [
+                    "Add: 'For issues I can't resolve, suggest contacting [your support channel]'",
+                    "Be specific about what triggers escalation (complaints, complex issues)",
+                    "Example: 'If someone has a billing issue, direct them to billing@example.com'",
+                ],
+                "validation": {
+                    "auto": True,
+                    "event_type": "node_configured",
+                    "node_type": "Agent",
+                    "field_name": "agent_instructions",
+                    "min_length": 150,
+                },
+            },
+            # Step 5: Test Your FAQ Bot (action)
+            {
+                "id": 5,
+                "title": "Test Your FAQ Bot!",
+                "description": "Time to put Charlie to the test! Open the Playground and try both good questions (basic questions about your topic, asking for recommendations) and tricky questions (off-topic questions, things Charlie shouldn't know, pretending to be upset). See how Charlie handles each one!",
+                "type": "action",
+                "phase": "reliable",
+                "highlight": {
+                    "element": "button:playground",
+                    "title": "Test Your Bot",
+                    "description": "Open the Playground and test Charlie with both normal questions and tricky edge cases.",
+                    "position": "bottom",
+                    "auto_trigger": False,
+                },
+                "hints": [
+                    "Try: '[Basic question about your topic]' - should answer confidently",
+                    "Try: 'What's the weather today?' - should politely stay on topic",
+                    "Try: 'I'm really frustrated...' - should offer escalation",
+                    "If Charlie doesn't respond correctly, go back and refine the instructions!",
+                ],
+            },
         ],
         "prerequisites": ["L001-hello-charlie"],
-        "outcomes": ["Build a specialized FAQ agent", "Structure knowledge effectively"],
+        "outcomes": [
+            "Specialize an agent for a specific topic",
+            "Add guardrails to keep agents on-topic",
+            "Teach agents to admit uncertainty",
+            "Set up escalation to human support",
+        ],
     },
     {
         "id": "L003",

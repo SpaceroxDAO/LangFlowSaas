@@ -193,7 +193,7 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="px-4 pb-4">
-                      <p className={`text-sm mb-4 ml-11 ${
+                      <p className={`text-sm mb-4 ml-11 whitespace-pre-line ${
                         stepIsCompleted ? 'text-green-700' : stepIsCurrent ? 'text-violet-700' : 'text-gray-600'
                       }`}>
                         {step.description}
