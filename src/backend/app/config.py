@@ -34,9 +34,11 @@ class Settings(BaseSettings):
     # Set DEV_MODE=true in .env to enable
     dev_mode: bool = False
 
-    # Database (SQLite for development, PostgreSQL for production)
-    # Use sqlite+aiosqlite:///./teachcharlie.db for local dev without Docker
-    database_url: str = "sqlite+aiosqlite:///./teachcharlie.db"
+    # Database - PostgreSQL via Docker Compose (REQUIRED)
+    # IMPORTANT: Always use Docker Compose for development. Do NOT use standalone SQLite.
+    # Run: docker-compose -f docker-compose.dev.yml up -d
+    # This provides PostgreSQL at localhost:5432 for both Teach Charlie and Langflow
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/teachcharlie"
 
     # Langflow
     langflow_api_url: str = "http://localhost:7860"

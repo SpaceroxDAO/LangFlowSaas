@@ -80,13 +80,13 @@ export function MissionStepPanel({
   // Collapsed view - just vertical progress indicators
   if (isCollapsed) {
     return (
-      <div className="h-full flex flex-col items-center py-4 bg-white border-r border-gray-200">
+      <div className="h-full flex flex-col items-center py-4 bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800">
         <button
           onClick={onToggleCollapse}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
           title="Expand guide"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-gray-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -105,7 +105,7 @@ export function MissionStepPanel({
                     ? 'bg-green-500'
                     : stepIsCurrent
                       ? 'bg-violet-500 animate-pulse'
-                      : 'bg-gray-300'
+                      : 'bg-gray-300 dark:bg-neutral-600'
                 }`}
                 title={step.title}
               />
@@ -127,35 +127,35 @@ export function MissionStepPanel({
 
   // Expanded view - full step list
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white dark:bg-neutral-900">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-gray-900 truncate">{m.name}</h2>
-          <p className="text-xs text-gray-500">
+          <h2 className="font-semibold text-gray-900 dark:text-white truncate">{m.name}</h2>
+          <p className="text-xs text-gray-500 dark:text-neutral-400">
             Step {progress.current_step + 1} of {m.steps.length}
           </p>
         </div>
         <button
           onClick={onToggleCollapse}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors ml-2"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors ml-2"
           title="Collapse panel"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-gray-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
       </div>
 
       {/* Progress bar */}
-      <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <div className="px-4 py-2 bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700">
+        <div className="h-1.5 bg-gray-200 dark:bg-neutral-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-violet-500 rounded-full transition-all duration-500"
             style={{ width: `${(progress.completed_steps.length / m.steps.length) * 100}%` }}
           />
         </div>
-        <p className="text-xs text-gray-500 mt-1 text-right">
+        <p className="text-xs text-gray-500 dark:text-neutral-400 mt-1 text-right">
           {progress.completed_steps.length} / {m.steps.length} completed
         </p>
       </div>
@@ -172,10 +172,10 @@ export function MissionStepPanel({
                 key={step.id}
                 className={`p-3 rounded-lg border transition-all ${
                   stepIsCompleted
-                    ? 'border-green-200 bg-green-50'
+                    ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
                     : stepIsCurrent
-                      ? 'border-violet-300 bg-violet-50 shadow-sm'
-                      : 'border-gray-200 bg-white opacity-60'
+                      ? 'border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 shadow-sm dark:shadow-neutral-900/50'
+                      : 'border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 opacity-60'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -186,7 +186,7 @@ export function MissionStepPanel({
                         ? 'bg-green-500 text-white'
                         : stepIsCurrent
                           ? 'bg-violet-500 text-white'
-                          : 'bg-gray-200 text-gray-500'
+                          : 'bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-neutral-400'
                     }`}
                   >
                     {stepIsCompleted ? (
@@ -207,16 +207,16 @@ export function MissionStepPanel({
                     <h4
                       className={`text-sm font-medium ${
                         stepIsCompleted
-                          ? 'text-green-800'
+                          ? 'text-green-800 dark:text-green-400'
                           : stepIsCurrent
-                            ? 'text-violet-800'
-                            : 'text-gray-600'
+                            ? 'text-violet-800 dark:text-violet-400'
+                            : 'text-gray-600 dark:text-neutral-400'
                       }`}
                     >
                       {step.title}
                     </h4>
                     {stepIsCurrent && (
-                      <p className="text-xs text-violet-600 mt-1 leading-relaxed whitespace-pre-line">
+                      <p className="text-xs text-violet-600 dark:text-violet-400 mt-1 leading-relaxed whitespace-pre-line">
                         {step.description}
                       </p>
                     )}
@@ -232,7 +232,7 @@ export function MissionStepPanel({
                       {stepData.highlight?.element && iframeRef && (
                         <button
                           onClick={() => triggerHighlight(stepData.highlight!)}
-                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 border border-violet-200 rounded-lg hover:bg-violet-200 transition-colors"
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -247,7 +247,7 @@ export function MissionStepPanel({
                         <div className="mt-2">
                           <button
                             onClick={() => setShowHints(showHints === step.id ? null : step.id)}
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-violet-600 transition-colors"
+                            className="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
                           >
                             <svg className={`w-3 h-3 transition-transform ${showHints === step.id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -257,7 +257,7 @@ export function MissionStepPanel({
                           {showHints === step.id && (
                             <div className="mt-2 space-y-1.5">
                               {stepData.hints.map((hint, hintIndex) => (
-                                <p key={hintIndex} className="text-xs text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg">
+                                <p key={hintIndex} className="text-xs text-gray-600 dark:text-neutral-300 bg-gray-50 dark:bg-neutral-800 px-2.5 py-1.5 rounded-lg">
                                   {hint}
                                 </p>
                               ))}
@@ -297,16 +297,16 @@ export function MissionStepPanel({
 
       {/* Completion banner */}
       {isCompleted && (
-        <div className="px-4 py-4 bg-green-50 border-t border-green-200">
+        <div className="px-4 py-4 bg-green-50 dark:bg-green-900/20 border-t border-green-200 dark:border-green-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="font-semibold text-green-800">Mission Complete!</p>
-              <p className="text-xs text-green-600">Great work! You can continue exploring.</p>
+              <p className="font-semibold text-green-800 dark:text-green-400">Mission Complete!</p>
+              <p className="text-xs text-green-600 dark:text-green-500">Great work! You can continue exploring.</p>
             </div>
           </div>
         </div>

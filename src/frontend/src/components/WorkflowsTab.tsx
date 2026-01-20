@@ -141,7 +141,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-gray-600" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 dark:border-neutral-600 border-t-gray-600 dark:border-t-gray-300" />
       </div>
     )
   }
@@ -156,7 +156,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-neutral-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -173,7 +173,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
             placeholder="Search workflows..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border-0 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border-0 rounded-md text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
           />
         </div>
 
@@ -182,7 +182,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
           <button
             onClick={() => handleViewModeChange('list')}
             className={`p-2 rounded transition-colors ${
-              viewMode === 'list' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
+              viewMode === 'list' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300'
             }`}
             title="List view"
           >
@@ -193,7 +193,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
           <button
             onClick={() => handleViewModeChange('grid')}
             className={`p-2 rounded transition-colors ${
-              viewMode === 'grid' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'
+              viewMode === 'grid' ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300'
             }`}
             title="Grid view"
           >
@@ -214,11 +214,11 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
         {/* Empty state */}
         {workflows.length === 0 && (
           <div className="text-center py-16">
-            <GitBranch className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">No workflows in this project yet</p>
+            <GitBranch className="w-12 h-12 text-gray-300 dark:text-neutral-600 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-neutral-400 mb-4">No workflows in this project yet</p>
             <button
               onClick={() => setCreateModal(true)}
-              className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+              className="inline-flex items-center gap-2 bg-black dark:bg-white text-white dark:text-neutral-900 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 dark:hover:bg-neutral-100 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -231,13 +231,13 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
         {/* No search results */}
         {workflows.length > 0 && filteredWorkflows.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No workflows found matching "{searchQuery}"</p>
+            <p className="text-gray-500 dark:text-neutral-400">No workflows found matching "{searchQuery}"</p>
           </div>
         )}
 
         {/* List View */}
         {filteredWorkflows.length > 0 && viewMode === 'list' && (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-neutral-800">
             {paginatedWorkflows.map((workflow, index) => (
               <WorkflowRow
                 key={workflow.id}
@@ -272,7 +272,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
 
       {/* Pagination */}
       {filteredWorkflows.length > 0 && (
-        <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+        <div className="px-6 py-3 border-t border-gray-100 dark:border-neutral-800 flex items-center justify-between text-sm text-gray-500 dark:text-neutral-400">
           <span>
             {startItem}-{endItem} of {filteredWorkflows.length} workflows
           </span>
@@ -280,7 +280,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
             <select
               value={currentPage}
               onChange={(e) => setCurrentPage(Number(e.target.value))}
-              className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-300"
+              className="px-2 py-1 border border-gray-200 dark:border-neutral-700 rounded text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
             >
               {Array.from({ length: totalPages }, (_, i) => (
                 <option key={i + 1} value={i + 1}>
@@ -293,7 +293,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -302,7 +302,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -315,12 +315,12 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
 
       {/* Delete Workflow Modal */}
       {deleteModal.isOpen && deleteModal.workflow && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h2 className="text-lg font-medium text-gray-900 mb-2">Delete Workflow</h2>
-            <p className="text-gray-600 text-sm mb-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Delete Workflow</h2>
+            <p className="text-gray-600 dark:text-neutral-400 text-sm mb-6">
               Are you sure you want to delete{' '}
-              <span className="font-medium text-gray-900">{deleteModal.workflow.name}</span>?
+              <span className="font-medium text-gray-900 dark:text-white">{deleteModal.workflow.name}</span>?
               This action cannot be undone.
             </p>
 
@@ -328,7 +328,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
               <button
                 onClick={() => setDeleteModal({ isOpen: false, workflow: null })}
                 disabled={deleteWorkflowMutation.isPending}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm disabled:opacity-50"
+                className="px-4 py-2 text-gray-700 dark:text-neutral-300 border border-gray-300 dark:border-neutral-600 rounded-md hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors text-sm disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -378,7 +378,7 @@ function WorkflowRow({
   const gradientColor = getGradientColor(colorIndex)
 
   return (
-    <div className="flex items-center gap-4 py-3 hover:bg-gray-50 transition-colors group">
+    <div className="flex items-center gap-4 py-3 hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors group">
       {/* Gradient Icon */}
       <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradientColor} flex items-center justify-center flex-shrink-0`}>
         <GitBranch className="w-4 h-4 text-white" />
@@ -388,11 +388,11 @@ function WorkflowRow({
       <div className="flex-1 min-w-0 flex items-center gap-3">
         <Link
           to={`/canvas/${workflow.id}`}
-          className="font-medium text-gray-900 hover:text-gray-600 truncate"
+          className="font-medium text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-neutral-300 truncate"
         >
           {workflow.name}
         </Link>
-        <span className="text-gray-400 text-sm flex-shrink-0">
+        <span className="text-gray-400 dark:text-neutral-500 text-sm flex-shrink-0">
           Edited {getRelativeTime(workflow.updated_at)}
         </span>
       </div>
@@ -401,7 +401,7 @@ function WorkflowRow({
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100">
         <Link
           to={`/canvas/${workflow.id}`}
-          className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
+          className="p-1.5 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 rounded transition-colors"
           title="Open in AI Canvas"
         >
           <ExternalLink className="w-4 h-4" />
@@ -413,7 +413,7 @@ function WorkflowRow({
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-          className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 rounded transition-colors opacity-0 group-hover:opacity-100"
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <circle cx="5" cy="12" r="2" />
@@ -422,17 +422,17 @@ function WorkflowRow({
           </svg>
         </button>
         {menuOpen && (
-          <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+          <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg z-10 py-1">
             <Link
               to={`/canvas/${workflow.id}`}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
             >
               <ExternalLink className="w-4 h-4" />
               Open in AI Canvas
             </Link>
             <button
               onClick={() => { setMenuOpen(false); onExport(workflow) }}
-              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -441,17 +441,17 @@ function WorkflowRow({
             </button>
             <button
               onClick={() => { setMenuOpen(false); onDuplicate(workflow) }}
-              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
               Duplicate
             </button>
-            <div className="border-t border-gray-100 my-1" />
+            <div className="border-t border-gray-100 dark:border-neutral-700 my-1" />
             <button
               onClick={() => { setMenuOpen(false); onDelete(workflow) }}
-              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left"
+              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -485,7 +485,7 @@ function WorkflowCard({
   const gradientColor = getGradientColor(colorIndex)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all group">
+    <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-4 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all group">
       <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradientColor} flex items-center justify-center`}>
           <GitBranch className="w-5 h-5 text-white" />
@@ -494,7 +494,7 @@ function WorkflowCard({
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 rounded transition-colors opacity-0 group-hover:opacity-100"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="5" cy="12" r="2" />
@@ -503,17 +503,17 @@ function WorkflowCard({
             </svg>
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+            <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg z-10 py-1">
               <Link
                 to={`/canvas/${workflow.id}`}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
               >
                 <ExternalLink className="w-4 h-4" />
                 Open in AI Canvas
               </Link>
               <button
                 onClick={() => { setMenuOpen(false); onExport(workflow) }}
-                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -522,17 +522,17 @@ function WorkflowCard({
               </button>
               <button
                 onClick={() => { setMenuOpen(false); onDuplicate(workflow) }}
-                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 Duplicate
               </button>
-              <div className="border-t border-gray-100 my-1" />
+              <div className="border-t border-gray-100 dark:border-neutral-700 my-1" />
               <button
                 onClick={() => { setMenuOpen(false); onDelete(workflow) }}
-                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left"
+                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -545,10 +545,10 @@ function WorkflowCard({
       </div>
 
       <Link to={`/canvas/${workflow.id}`} className="block">
-        <h3 className="font-medium text-gray-900 mb-1 truncate hover:text-gray-600">
+        <h3 className="font-medium text-gray-900 dark:text-white mb-1 truncate hover:text-gray-600 dark:hover:text-neutral-300">
           {workflow.name}
         </h3>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-400 dark:text-neutral-500">
           Edited {getRelativeTime(workflow.updated_at)}
         </p>
       </Link>

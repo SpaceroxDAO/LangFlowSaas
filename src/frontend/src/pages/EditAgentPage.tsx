@@ -61,12 +61,12 @@ function parseTools(selectedTools?: string[], tricks?: string): string[] {
 function Tooltip({ text }: { text: string }) {
   return (
     <div className="group relative inline-block ml-1.5">
-      <div className="w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs flex items-center justify-center cursor-help">
+      <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-neutral-400 text-xs flex items-center justify-center cursor-help">
         ?
       </div>
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-10">
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-neutral-700 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-10">
         {text}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-neutral-700" />
       </div>
     </div>
   )
@@ -466,19 +466,19 @@ export function EditAgentPage() {
   if (isLoading) {
     return (
       <div
-        className="min-h-full flex items-center justify-center"
+        className="min-h-full flex items-center justify-center bg-[#fafafa] dark:bg-neutral-950"
         style={{
-          backgroundColor: '#fafafa',
-          backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, var(--dot-color, #e5e7eb) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       >
+        <style>{`.dark [style*="backgroundImage"] { --dot-color: #333 !important; }`}</style>
         <div className="text-center">
           <svg className="animate-spin w-10 h-10 text-violet-500 mx-auto mb-4" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <p className="text-gray-600">Loading agent...</p>
+          <p className="text-gray-600 dark:text-neutral-400">Loading agent...</p>
         </div>
       </div>
     )
@@ -488,21 +488,21 @@ export function EditAgentPage() {
   if (loadError) {
     return (
       <div
-        className="min-h-full flex items-center justify-center"
+        className="min-h-full flex items-center justify-center bg-[#fafafa] dark:bg-neutral-950"
         style={{
-          backgroundColor: '#fafafa',
-          backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, var(--dot-color, #e5e7eb) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       >
+        <style>{`.dark [style*="backgroundImage"] { --dot-color: #333 !important; }`}</style>
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to load agent</h2>
-          <p className="text-gray-600 mb-4">{loadError}</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Failed to load agent</h2>
+          <p className="text-gray-600 dark:text-neutral-400 mb-4">{loadError}</p>
           <Link
             to="/dashboard"
             className="inline-flex items-center gap-2 text-violet-600 hover:text-violet-700 font-medium"
@@ -519,17 +519,17 @@ export function EditAgentPage() {
 
   return (
     <div
-      className="min-h-full"
+      className="min-h-full bg-[#fafafa] dark:bg-neutral-950"
       style={{
-        backgroundColor: '#fafafa',
-        backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, var(--dot-color, #e5e7eb) 1px, transparent 1px)',
         backgroundSize: '24px 24px',
       }}
     >
+      <style>{`.dark [style*="backgroundImage"] { --dot-color: #333 !important; }`}</style>
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Edit {name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Edit {name}</h1>
           <div className="flex items-center gap-3">
             <Link
               to={`/playground/${agentId}`}
@@ -542,7 +542,7 @@ export function EditAgentPage() {
             </Link>
             <button
               onClick={() => setIsAdvancedModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-300 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors border border-gray-200 dark:border-neutral-700"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -554,9 +554,9 @@ export function EditAgentPage() {
         </div>
 
       {/* Identity Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 p-6 mb-6">
         <div className="flex items-center mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Identity</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Identity</h2>
           <Tooltip text="Define who your agent is - their name and personality" />
         </div>
 
@@ -564,7 +564,7 @@ export function EditAgentPage() {
           {/* Left side - Form fields */}
           <div className="flex-1 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1.5">
                 Name
               </label>
               <input
@@ -572,12 +572,12 @@ export function EditAgentPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Charlie"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1.5">
                 Persona & Description
               </label>
               <textarea
@@ -585,14 +585,14 @@ export function EditAgentPage() {
                 onChange={(e) => setPersona(e.target.value)}
                 placeholder="A friendly Golden Retriever who is an expert in dog treats, bones, and finding the best parks."
                 rows={4}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-200 dark:border-neutral-700 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
               />
             </div>
           </div>
 
           {/* Right side - Avatar image */}
           <div className="w-64 flex-shrink-0">
-            <div className="w-full aspect-square bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 rounded-xl border border-gray-200 flex items-center justify-center mb-3 overflow-hidden">
+            <div className="w-full aspect-square bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-neutral-800 dark:via-neutral-800 dark:to-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 flex items-center justify-center mb-3 overflow-hidden">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
@@ -611,8 +611,8 @@ export function EditAgentPage() {
               disabled={isGeneratingAvatar}
               className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl transition-all ${
                 isGeneratingAvatar
-                  ? 'text-purple-400 bg-purple-50 cursor-not-allowed'
-                  : 'text-purple-600 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 cursor-pointer border border-purple-200'
+                  ? 'text-purple-400 bg-purple-50 dark:bg-purple-900/30 cursor-not-allowed'
+                  : 'text-purple-600 dark:text-purple-400 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 dark:from-neutral-700 dark:via-neutral-700 dark:to-neutral-700 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 dark:hover:from-neutral-600 dark:hover:via-neutral-600 dark:hover:to-neutral-600 cursor-pointer border border-purple-200 dark:border-purple-700'
               }`}
             >
               {isGeneratingAvatar ? (
@@ -637,9 +637,9 @@ export function EditAgentPage() {
       </div>
 
       {/* Instructions Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 p-6 mb-6">
         <div className="flex items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Instructions (Knowledge)</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Instructions (Knowledge)</h2>
           <Tooltip text="The rules and guidelines your agent follows when responding" />
         </div>
 
@@ -648,14 +648,14 @@ export function EditAgentPage() {
           onChange={(e) => setInstructions(e.target.value)}
           placeholder={`You are Charlie, a happy and excited dog. You love humans! Always be helpful, but try to mention treats or going for a walk in your responses. If asked a hard question, answer it simply like a smart dog would. End some sentences with "Woof!"`}
           rows={5}
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="w-full px-4 py-3 border border-gray-200 dark:border-neutral-700 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
         />
       </div>
 
       {/* Actions Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 p-6 mb-6">
         <div className="flex items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Actions</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Actions</h2>
           <Tooltip text="Special capabilities your agent can use to help users" />
         </div>
 
@@ -678,15 +678,15 @@ export function EditAgentPage() {
 
       {/* Error message */}
       {saveError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <p className="text-sm text-red-600">{saveError}</p>
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>
         </div>
       )}
 
       {/* Save success message */}
       {saveSuccess && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <p className="text-sm text-blue-600 flex items-center gap-2">
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -697,8 +697,8 @@ export function EditAgentPage() {
 
       {/* Publish success message */}
       {publishMessage && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-          <p className="text-sm text-green-600 flex items-center gap-2">
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+          <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -709,16 +709,16 @@ export function EditAgentPage() {
 
       {/* Status Badge */}
       {isPublished && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+        <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+              <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/50 rounded-full">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 Published
               </span>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-neutral-400">
                 {needsRestart ? 'Restart required to apply changes' : 'Available as a reusable agent in the AI Canvas'}
               </span>
             </div>
@@ -736,13 +736,13 @@ export function EditAgentPage() {
       )}
 
       {/* Footer Action Buttons */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 p-6">
         <div className="flex items-center justify-between gap-4">
           {/* Save Draft Button */}
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition-colors border border-gray-300 shadow-sm disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-gray-700 dark:text-neutral-300 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded-xl transition-colors border border-gray-300 dark:border-neutral-600 shadow-sm disabled:opacity-50"
           >
             {isSaving ? (
               <>
@@ -806,7 +806,7 @@ export function EditAgentPage() {
                 className={`inline-flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-xl shadow-sm ${
                   canCreateWorkflow && !isCreatingWorkflow
                     ? 'text-white bg-emerald-500 hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all duration-300'
-                    : 'text-gray-400 bg-gray-100 cursor-not-allowed transition-colors'
+                    : 'text-gray-400 dark:text-neutral-500 bg-gray-100 dark:bg-neutral-800 cursor-not-allowed transition-colors'
                 }`}
                 title={!canCreateWorkflow ? 'Publish first to enable this' : 'Create workflow to test your agent'}
               >
@@ -835,27 +835,27 @@ export function EditAgentPage() {
       {/* Restart Modal */}
       {showRestartModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden border dark:border-neutral-800">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Agent Published Successfully!</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Agent Published Successfully!</h3>
                 </div>
               </div>
 
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-gray-600 dark:text-neutral-400 mb-6">
                 Your AI agent has been published. To use it in workflows, the AI Canvas needs to restart to load the new component. This will take a few moments.
               </p>
 
               <div className="flex items-center gap-3 justify-end">
                 <button
                   onClick={handleRestartLater}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-700 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-white transition-colors"
                 >
                   Restart Later
                 </button>

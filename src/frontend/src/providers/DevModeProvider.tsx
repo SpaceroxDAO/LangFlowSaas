@@ -9,7 +9,8 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth as useClerkAuth } from '@clerk/clerk-react'
-import { Settings, LogOut } from 'lucide-react'
+import { Settings, LogOut, Sun, Moon } from 'lucide-react'
+import { useTheme } from './ThemeProvider'
 
 // Dev mode check - available throughout the app
 export const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
@@ -93,6 +94,7 @@ export function DevSignedOut(_props: { children: ReactNode }) {
 // Mock UserButton component - shows a placeholder avatar with dropdown in dev mode
 export function DevUserButton() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <div className="relative">
@@ -104,14 +106,27 @@ export function DevUserButton() {
         D
       </button>
       {menuOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
-          <div className="px-4 py-2 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-900">Dev User</p>
-            <p className="text-xs text-gray-500">{DEV_USER.email}</p>
+        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg z-50 py-1">
+          <div className="px-4 py-2 border-b border-gray-100 dark:border-neutral-700">
+            <p className="text-sm font-medium text-gray-900 dark:text-neutral-100">Dev User</p>
+            <p className="text-xs text-gray-500 dark:text-neutral-400">{DEV_USER.email}</p>
           </div>
+          <button
+            onClick={() => {
+              toggleTheme()
+            }}
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
+          >
+            {theme === 'light' ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" />
+            )}
+            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+          </button>
           <Link
             to="/dashboard/settings"
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700"
             onClick={() => setMenuOpen(false)}
           >
             <Settings className="w-4 h-4" />
@@ -122,7 +137,7 @@ export function DevUserButton() {
               setMenuOpen(false)
               console.log('[Dev Mode] Sign out requested')
             }}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
           >
             <LogOut className="w-4 h-4" />
             Sign out

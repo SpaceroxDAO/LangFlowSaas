@@ -15,7 +15,7 @@ import { breadcrumbRoutes, excludePaths } from './breadcrumbRoutes'
 function ChevronRightIcon() {
   return (
     <svg
-      className="h-4 w-4 text-gray-400 flex-shrink-0"
+      className="h-4 w-4 text-gray-400 dark:text-neutral-500 flex-shrink-0"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -219,14 +219,14 @@ export function Breadcrumbs() {
               {item.to && !item.isCurrent ? (
                 <Link
                   to={item.to}
-                  className="text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
+                  className="text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors whitespace-nowrap"
                 >
                   {item.label}
                 </Link>
               ) : (
                 <span
                   aria-current={item.isCurrent ? 'page' : undefined}
-                  className={`whitespace-nowrap ${item.isCurrent ? 'text-gray-900 font-medium' : 'text-gray-500'}`}
+                  className={`whitespace-nowrap ${item.isCurrent ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-neutral-400'}`}
                 >
                   {item.label}
                 </span>

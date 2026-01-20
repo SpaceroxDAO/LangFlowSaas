@@ -61,14 +61,14 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden bg-white dark:bg-neutral-950 transition-colors duration-200">
       {/* Dev mode banner */}
       <DevModeBanner />
 
       {/* Top header bar - full width */}
-      <header className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0">
+      <header className="h-12 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 flex items-center px-4 shrink-0 transition-colors duration-200">
         {/* Left side - Logo */}
-        <Link to="/dashboard" className="text-gray-900 hover:text-gray-600 transition-colors shrink-0">
+        <Link to="/dashboard" className="text-gray-900 dark:text-neutral-100 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors shrink-0">
           <Dog className="w-6 h-6" />
         </Link>
 
@@ -78,14 +78,14 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         {/* Right side actions */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {/* Dev mode only: Link to AI Canvas (Langflow) */}
           {isDevMode && (
             <a
               href="http://localhost:7860"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+              className="text-xs font-medium text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors flex items-center gap-1"
             >
               AI Canvas
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,7 +104,7 @@ export function AppShell({ children }: AppShellProps) {
         <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
 
         {/* Main content area */}
-        <main className="flex-1 overflow-auto bg-white">
+        <main className="flex-1 overflow-auto bg-white dark:bg-neutral-950 transition-colors duration-200">
           {children}
         </main>
       </div>

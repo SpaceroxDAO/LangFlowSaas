@@ -6,6 +6,7 @@ import './index.css'
 import App from './App'
 import { DevModeProvider, isDevMode } from '@/providers/DevModeProvider'
 import { TourProvider } from '@/providers/TourProvider'
+import { ThemeProvider } from '@/providers/ThemeProvider'
 
 // Dev mode check - skips Clerk auth entirely
 const IS_DEV_MODE = isDevMode
@@ -42,12 +43,14 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TourProvider>
-          <App />
-        </TourProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TourProvider>
+            <App />
+          </TourProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

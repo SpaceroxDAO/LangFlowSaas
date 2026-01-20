@@ -61,7 +61,7 @@ function StepIndicator({ step, index, isCompleted, isCurrent }: {
   }
 
   return (
-    <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-medium">
+    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-neutral-400 flex items-center justify-center font-medium">
       {index + 1}
     </div>
   )
@@ -80,13 +80,13 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Slide-out panel */}
-      <div className="absolute right-0 top-0 bottom-0 w-full max-w-lg bg-white shadow-xl flex flex-col animate-slide-in-right">
+      <div className="absolute right-0 top-0 bottom-0 w-full max-w-lg bg-white dark:bg-neutral-900 shadow-xl dark:shadow-neutral-900/50 flex flex-col animate-slide-in-right">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-neutral-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">{m.name}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{m.name}</h2>
+              <p className="text-sm text-gray-500 dark:text-neutral-400 mt-0.5">
                 {m.category === 'skill_sprint' ? 'Skill Sprint' : 'Applied Build'}
                 <span className="mx-2">•</span>
                 {m.estimated_minutes} min
@@ -94,7 +94,7 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -105,11 +105,11 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
           {/* Progress */}
           {!isCompleted && (
             <div className="mt-4">
-              <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-neutral-400 mb-2">
                 <span>Progress</span>
                 <span>{completedSteps.length} / {m.steps.length} steps</span>
               </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-violet-500 rounded-full transition-all duration-300"
                   style={{ width: `${(completedSteps.length / m.steps.length) * 100}%` }}
@@ -120,15 +120,15 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
 
           {/* Completed banner */}
           {isCompleted && (
-            <div className="mt-4 p-3 bg-green-50 rounded-lg flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-green-800">Mission Completed!</p>
-                <p className="text-sm text-green-600">Great job finishing this mission.</p>
+                <p className="font-medium text-green-800 dark:text-green-400">Mission Completed!</p>
+                <p className="text-sm text-green-600 dark:text-green-500">Great job finishing this mission.</p>
               </div>
             </div>
           )}
@@ -147,10 +147,10 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
                   key={step.id}
                   className={`rounded-lg border transition-all ${
                     stepIsCompleted
-                      ? 'border-green-200 bg-green-50'
+                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
                       : stepIsCurrent
-                        ? 'border-violet-200 bg-violet-50'
-                        : 'border-gray-200 bg-white'
+                        ? 'border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20'
+                        : 'border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800'
                   }`}
                 >
                   {/* Step header */}
@@ -167,21 +167,21 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={`font-medium ${
-                          stepIsCompleted ? 'text-green-800' : stepIsCurrent ? 'text-violet-800' : 'text-gray-700'
+                          stepIsCompleted ? 'text-green-800 dark:text-green-400' : stepIsCurrent ? 'text-violet-800 dark:text-violet-400' : 'text-gray-700 dark:text-neutral-300'
                         }`}>
                           {step.title}
                         </span>
                         <span className={`p-1 rounded ${
-                          step.type === 'action' ? 'bg-blue-100 text-blue-600' :
-                          step.type === 'info' ? 'bg-gray-100 text-gray-600' :
-                          'bg-yellow-100 text-yellow-600'
+                          step.type === 'action' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                          step.type === 'info' ? 'bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-neutral-400' :
+                          'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
                         }`}>
                           <StepTypeIcon type={step.type} />
                         </span>
                       </div>
                     </div>
                     <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      className={`w-5 h-5 text-gray-400 dark:text-neutral-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -194,7 +194,7 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
                   {isExpanded && (
                     <div className="px-4 pb-4">
                       <p className={`text-sm mb-4 ml-11 whitespace-pre-line ${
-                        stepIsCompleted ? 'text-green-700' : stepIsCurrent ? 'text-violet-700' : 'text-gray-600'
+                        stepIsCompleted ? 'text-green-700 dark:text-green-400' : stepIsCurrent ? 'text-violet-700 dark:text-violet-400' : 'text-gray-600 dark:text-neutral-400'
                       }`}>
                         {step.description}
                       </p>
@@ -230,17 +230,17 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-neutral-800 bg-gray-50 dark:bg-neutral-800/50">
           {/* Outcomes */}
           {m.outcomes && m.outcomes.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+              <h4 className="text-xs font-medium text-gray-500 dark:text-neutral-400 uppercase tracking-wide mb-2">
                 What you'll learn
               </h4>
               <ul className="space-y-1">
                 {m.outcomes.map((outcome, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <li key={i} className="flex items-center gap-2 text-sm text-gray-600 dark:text-neutral-300">
+                    <svg className="w-4 h-4 text-green-500 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     {outcome}
@@ -255,7 +255,7 @@ export function MissionStepGuide({ mission, onCompleteStep, onReset, onClose, is
             <button
               onClick={onReset}
               disabled={isLoading}
-              className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2 text-sm text-gray-600 dark:text-neutral-400 hover:text-gray-800 dark:hover:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors disabled:opacity-50"
             >
               Reset Progress
             </button>

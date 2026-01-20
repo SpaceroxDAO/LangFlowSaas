@@ -28,20 +28,20 @@ export function UsageBar({ label, current, max, unit = '', showPercent = true }:
   return (
     <div className="mb-4">
       <div className="flex justify-between items-center mb-1">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm font-medium text-gray-700 dark:text-neutral-300">{label}</span>
+        <span className="text-sm text-gray-500 dark:text-neutral-400">
           {formatNumber(current)}{unit} / {formatNumber(max)}{unit}
-          {showPercent && <span className="ml-1 text-gray-400">({percent}%)</span>}
+          {showPercent && <span className="ml-1 text-gray-400 dark:text-neutral-500">({percent}%)</span>}
         </span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5">
+      <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2.5">
         <div
           className={`h-2.5 rounded-full transition-all duration-300 ${getBarColor()}`}
           style={{ width: `${percent}%` }}
         />
       </div>
       {percent >= 90 && (
-        <p className="text-xs text-red-500 mt-1">
+        <p className="text-xs text-red-500 dark:text-red-400 mt-1">
           Approaching limit. Consider upgrading your plan.
         </p>
       )}

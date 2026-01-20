@@ -25,28 +25,9 @@
   },
 
   "hooks": {
-    "enabled": true,
+    "enabled": false,
     "strictMode": false,
-    "hooks": [
-      {
-        "name": "pre-tool-use",
-        "event": "pre-tool-use",
-        "command": ".claude/hooks/pre-tool-use.sh",
-        "description": "Safety warnings for dangerous operations"
-      },
-      {
-        "name": "post-edit",
-        "event": "post-edit",
-        "command": ".claude/hooks/post-edit.sh",
-        "description": "Auto-format if toolchain detected"
-      },
-      {
-        "name": "pre-commit",
-        "event": "pre-commit",
-        "command": ".claude/hooks/pre-commit.sh",
-        "description": "Run tests if test command detected"
-      }
-    ]
+    "hooks": []
   },
 
   "output": {

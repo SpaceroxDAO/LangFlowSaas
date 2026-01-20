@@ -43,28 +43,38 @@ LangflowSaaS/
 
 ### Development Setup (Docker Compose - REQUIRED)
 
-**IMPORTANT**: This project uses Docker Compose for Langflow. DO NOT use:
-- ❌ Langflow Desktop App
-- ❌ `langflow run` command directly
-- ❌ Any standalone Langflow installation
+> ⛔ **CRITICAL WARNING - READ THIS FIRST**
+>
+> This project uses Docker Compose for Langflow and PostgreSQL. **NEVER USE:**
+> - ❌ **Langflow Desktop App** (uses separate SQLite database, will break sync)
+> - ❌ `langflow run` command directly
+> - ❌ Any standalone Langflow installation
+> - ❌ SQLite database for development
+>
+> **Why?** Langflow Desktop uses its own SQLite database at `~/.langflow/`. Our project uses
+> PostgreSQL in Docker. Workflows created with Desktop won't sync with Docker Langflow,
+> causing "flow not found" errors in the canvas.
 
 ```bash
-# Start ALL services (Langflow + PostgreSQL)
-docker-compose up -d
-
-# Or start just Langflow (if postgres already running)
-docker-compose up -d langflow
+# Start Docker services (PostgreSQL + Langflow + nginx)
+docker-compose -f docker-compose.dev.yml up -d
 
 # View logs
-docker-compose logs -f langflow
+docker-compose -f docker-compose.dev.yml logs -f langflow
+
+# Check status
+docker-compose -f docker-compose.dev.yml ps
 
 # Stop all services
-docker-compose down
+docker-compose -f docker-compose.dev.yml down
 
 # Verify Langflow is running
 curl http://localhost:7860/health
 # Should return: {"status":"ok"}
 ```
+
+> **If you accidentally used Langflow Desktop**: Run the workflow repair endpoint
+> to recreate missing flows: `POST /api/v1/workflows/{id}/repair`
 
 ### Frontend Development
 ```bash

@@ -48,13 +48,14 @@ export function WizardLayout({
 
   return (
     <div
-      className="min-h-full flex items-center justify-center px-4 py-8"
+      className="min-h-full flex items-center justify-center px-4 py-8 bg-[#fafafa] dark:bg-neutral-950"
       style={{
-        backgroundColor: '#fafafa',
-        backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, var(--dot-color, #e5e7eb) 1px, transparent 1px)',
         backgroundSize: '24px 24px',
+        ['--dot-color' as string]: 'var(--tw-dark, #333) var(--tw-light, #e5e7eb)',
       }}
     >
+      <style>{`.dark [style*="--dot-color"] { --dot-color: #333 !important; }`}</style>
       <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-6">
         {/* Left Panel - Info Card */}
         <div
@@ -93,7 +94,7 @@ export function WizardLayout({
         </div>
 
         {/* Right Panel - Form Card */}
-        <div className="flex-1 bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+        <div className="flex-1 bg-white dark:bg-neutral-900 rounded-3xl border border-gray-100 dark:border-neutral-800 shadow-sm p-8">
           {children}
         </div>
       </div>

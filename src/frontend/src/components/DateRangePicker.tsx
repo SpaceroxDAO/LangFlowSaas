@@ -89,7 +89,7 @@ export function DateRangePicker({ value, onChange, className = '' }: DateRangePi
       <select
         value={isCustom ? 'custom' : (value.preset || 7)}
         onChange={handlePresetChange}
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white"
+        className="px-3 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
       >
         {PRESETS.map((preset) => (
           <option key={preset.value} value={preset.value}>
@@ -106,16 +106,16 @@ export function DateRangePicker({ value, onChange, className = '' }: DateRangePi
             value={customStart}
             onChange={handleStartChange}
             max={customEnd || today}
-            className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm"
+            className="px-2 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
           />
-          <span className="text-gray-500 text-sm">to</span>
+          <span className="text-gray-500 dark:text-neutral-400 text-sm">to</span>
           <input
             type="date"
             value={customEnd}
             onChange={handleEndChange}
             min={customStart}
             max={today}
-            className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm"
+            className="px-2 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white"
           />
         </div>
       )}

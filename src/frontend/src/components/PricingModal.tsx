@@ -52,23 +52,23 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-6 border-b border-gray-100 dark:border-neutral-800">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Choose Your Plan</h2>
-              <p className="text-gray-500 mt-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Choose Your Plan</h2>
+              <p className="text-gray-500 dark:text-neutral-400 mt-1">
                 Scale your AI agents as you grow
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-gray-500"
+                className="h-5 w-5 text-gray-500 dark:text-neutral-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -89,12 +89,12 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
           {plansLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse border border-gray-200 rounded-xl p-6">
-                  <div className="h-6 bg-gray-200 rounded w-1/2 mb-4" />
-                  <div className="h-10 bg-gray-200 rounded w-1/3 mb-4" />
+                <div key={i} className="animate-pulse border border-gray-200 dark:border-neutral-800 rounded-xl p-6">
+                  <div className="h-6 bg-gray-200 dark:bg-neutral-700 rounded w-1/2 mb-4" />
+                  <div className="h-10 bg-gray-200 dark:bg-neutral-700 rounded w-1/3 mb-4" />
                   <div className="space-y-2">
                     {[1, 2, 3, 4].map((j) => (
-                      <div key={j} className="h-4 bg-gray-100 rounded" />
+                      <div key={j} className="h-4 bg-gray-100 dark:bg-neutral-800 rounded" />
                     ))}
                   </div>
                 </div>
@@ -112,8 +112,8 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
                     className={`relative border rounded-xl p-6 transition-all ${
                       isPopular
                         ? 'border-violet-500 ring-2 ring-violet-500 ring-opacity-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    } ${isCurrentPlan ? 'bg-gray-50' : 'bg-white'}`}
+                        : 'border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600'
+                    } ${isCurrentPlan ? 'bg-gray-50 dark:bg-neutral-800' : 'bg-white dark:bg-neutral-900'}`}
                   >
                     {isPopular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -124,16 +124,16 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
                     )}
 
                     <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-neutral-400 mt-1">{plan.description}</p>
                     </div>
 
                     <div className="mb-6">
-                      <span className="text-4xl font-bold text-gray-900">
+                      <span className="text-4xl font-bold text-gray-900 dark:text-white">
                         {formatPrice(plan.price_monthly)}
                       </span>
                       {plan.price_monthly > 0 && (
-                        <span className="text-gray-500 ml-1">/month</span>
+                        <span className="text-gray-500 dark:text-neutral-400 ml-1">/month</span>
                       )}
                     </div>
 
@@ -142,7 +142,7 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
                         <li key={index} className="flex items-start gap-2">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5"
+                            className="h-5 w-5 text-green-500 dark:text-green-400 flex-shrink-0 mt-0.5"
                             viewBox="0 0 20 20"
                             fill="currentColor"
                           >
@@ -152,7 +152,7 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
                               clipRule="evenodd"
                             />
                           </svg>
-                          <span className="text-sm text-gray-600">{feature}</span>
+                          <span className="text-sm text-gray-600 dark:text-neutral-300">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -162,10 +162,10 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
                       disabled={isCurrentPlan || isLoading === plan.id}
                       className={`w-full py-2.5 px-4 rounded-lg font-medium transition-colors ${
                         isCurrentPlan
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          ? 'bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500 cursor-not-allowed'
                           : isPopular
                           ? 'bg-violet-500 text-white hover:bg-violet-600'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
                       } ${isLoading === plan.id ? 'opacity-50 cursor-wait' : ''}`}
                     >
                       {isLoading === plan.id
@@ -183,7 +183,7 @@ export function PricingModal({ onClose, currentPlanId = 'free' }: PricingModalPr
           )}
 
           {/* Footer note */}
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-gray-500 dark:text-neutral-400 mt-6">
             All plans include a 14-day money-back guarantee. Cancel anytime.
           </p>
         </div>

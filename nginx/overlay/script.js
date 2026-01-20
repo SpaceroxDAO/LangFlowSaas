@@ -1070,6 +1070,74 @@
     };
 
     // =====================================================
+    // MODULE: THEME SYNC (Dark Mode)
+    // Syncs theme with parent Teach Charlie app
+    // =====================================================
+
+    const ThemeSync = {
+        STORAGE_KEY: 'langflow-theme',
+        currentTheme: 'light',
+
+        init() {
+            console.log('[TeachCharlie] ThemeSync - Initializing');
+
+            // Check URL params for initial theme
+            const params = new URLSearchParams(window.location.search);
+            const urlTheme = params.get('theme');
+            if (urlTheme === 'dark' || urlTheme === 'light') {
+                this.applyTheme(urlTheme);
+            } else {
+                // Check localStorage for saved theme
+                const savedTheme = localStorage.getItem(this.STORAGE_KEY);
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    this.applyTheme(savedTheme);
+                }
+            }
+
+            // Listen for theme changes from parent window
+            window.addEventListener('message', (event) => {
+                if (event.data?.source === 'teach-charlie-parent' && event.data?.type === 'theme_change') {
+                    const theme = event.data.theme;
+                    if (theme === 'dark' || theme === 'light') {
+                        console.log('[TeachCharlie] ThemeSync - Received theme change:', theme);
+                        this.applyTheme(theme);
+                    }
+                }
+            });
+
+            // Signal to parent that we're ready
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    source: 'langflow-overlay',
+                    type: 'ready'
+                }, '*');
+            }
+        },
+
+        applyTheme(theme) {
+            this.currentTheme = theme;
+            const root = document.documentElement;
+
+            if (theme === 'dark') {
+                root.classList.add('dark');
+                // Langflow also uses data-theme attribute
+                root.setAttribute('data-theme', 'dark');
+            } else {
+                root.classList.remove('dark');
+                root.setAttribute('data-theme', 'light');
+            }
+
+            // Save to localStorage
+            localStorage.setItem(this.STORAGE_KEY, theme);
+            console.log('[TeachCharlie] ThemeSync - Applied theme:', theme);
+        },
+
+        getTheme() {
+            return this.currentTheme;
+        }
+    };
+
+    // =====================================================
     // DEBOUNCED OBSERVER
     // =====================================================
 
@@ -1109,8 +1177,9 @@
         FlowMonitor.init();
         MissionUI.init();
         WalkMe.init();
+        ThemeSync.init();
 
-        console.log("[TeachCharlie Overlay] Observer started - Mission modules initialized");
+        console.log("[TeachCharlie Overlay] Observer started - All modules initialized");
     }
 
     if (document.readyState === 'loading') {

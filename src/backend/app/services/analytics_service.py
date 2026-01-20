@@ -11,9 +11,10 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Dict, Any, List, Union
 
-from sqlalchemy import select, func, String
+from sqlalchemy import select, func, String, cast, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models.analytics_daily import AnalyticsDaily
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -130,6 +131,18 @@ class AnalyticsService:
             },
         }
 
+    def _get_date_expr(self, column):
+        """Get a database-agnostic date expression for grouping by date."""
+        # Check if we're using SQLite or PostgreSQL
+        is_sqlite = "sqlite" in settings.database_url.lower()
+
+        if is_sqlite:
+            # SQLite: use date() function which returns YYYY-MM-DD format
+            return func.date(column)
+        else:
+            # PostgreSQL: use to_char for consistent formatting
+            return func.to_char(column, 'YYYY-MM-DD')
+
     async def _get_daily_stats(
         self,
         user_id: str,
@@ -142,8 +155,8 @@ class AnalyticsService:
         end_str = end_date.isoformat()
 
         # Get message counts grouped by date
-        # Use to_char for PostgreSQL date formatting (reuse same expression to avoid GROUP BY issues)
-        msg_date_expr = func.to_char(Message.created_at, 'YYYY-MM-DD')
+        # Use database-agnostic date expression
+        msg_date_expr = self._get_date_expr(Message.created_at)
 
         msg_stmt = (
             select(
@@ -163,7 +176,7 @@ class AnalyticsService:
         msg_by_date = {row[0]: row[1] for row in msg_result.all()}
 
         # Get conversation counts grouped by date
-        conv_date_expr = func.to_char(Conversation.created_at, 'YYYY-MM-DD')
+        conv_date_expr = self._get_date_expr(Conversation.created_at)
 
         conv_stmt = (
             select(

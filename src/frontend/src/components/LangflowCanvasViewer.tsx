@@ -149,10 +149,10 @@ export function LangflowCanvasViewer({
     <div className="flex flex-col h-full overflow-hidden">
       {/* Loading state */}
       {isLoading && (
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
           <div className="text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500 mx-auto mb-3"></div>
-            <p className="text-sm text-gray-600">Loading {agentName}'s brain...</p>
+            <p className="text-sm text-gray-600 dark:text-neutral-400">Loading {agentName}'s brain...</p>
           </div>
         </div>
       )}
@@ -172,8 +172,8 @@ export function LangflowCanvasViewer({
       />
 
       {/* Footer with tips based on level */}
-      <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
+      <div className="px-4 py-2 bg-gray-50 dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700">
+        <p className="text-xs text-gray-500 dark:text-neutral-400">
           {currentLevel === 1 && "Tip: Click the level buttons above to unlock more editing features as you learn."}
           {currentLevel === 2 && "Tip: Try dragging a tool from the sidebar onto the canvas to teach Charlie a new trick!"}
           {currentLevel === 3 && "Tip: You can connect components by dragging from one handle to another."}

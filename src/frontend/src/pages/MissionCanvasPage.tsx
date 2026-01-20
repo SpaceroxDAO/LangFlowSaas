@@ -142,10 +142,10 @@ export function MissionCanvasPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500 mx-auto mb-3" />
-          <p className="text-sm text-gray-600">Preparing your mission...</p>
+          <p className="text-sm text-gray-600 dark:text-neutral-400">Preparing your mission...</p>
         </div>
       </div>
     )
@@ -154,10 +154,10 @@ export function MissionCanvasPage() {
   // Error state
   if (error) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
         <div className="text-center max-w-md">
-          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -166,8 +166,8 @@ export function MissionCanvasPage() {
               />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Mission</h2>
-          <p className="text-sm text-gray-600 mb-4">{error}</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Unable to Load Mission</h2>
+          <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">{error}</p>
           <button
             onClick={() => navigate('/dashboard/missions')}
             className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
@@ -182,9 +182,9 @@ export function MissionCanvasPage() {
   // No mission data
   if (!mission || !canvasUrl) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
         <div className="text-center">
-          <p className="text-gray-600">Mission not found</p>
+          <p className="text-gray-600 dark:text-neutral-400">Mission not found</p>
           <button
             onClick={() => navigate('/dashboard/missions')}
             className="mt-4 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
@@ -197,7 +197,7 @@ export function MissionCanvasPage() {
   }
 
   return (
-    <div className="h-full flex bg-gray-100">
+    <div className="h-full flex bg-gray-100 dark:bg-neutral-950">
       {/* Side Panel */}
       <div
         className={`transition-all duration-300 flex-shrink-0 ${isPanelCollapsed ? 'w-12' : 'w-80'}`}
@@ -215,26 +215,26 @@ export function MissionCanvasPage() {
       {/* Canvas Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Canvas Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+        <div className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/dashboard/missions')}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
               title="Back to missions"
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-gray-600 dark:text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
             <div>
-              <h1 className="font-semibold text-gray-900">{mission.mission.name}</h1>
-              <p className="text-xs text-gray-500">Build your flow to complete the mission</p>
+              <h1 className="font-semibold text-gray-900 dark:text-white">{mission.mission.name}</h1>
+              <p className="text-xs text-gray-500 dark:text-neutral-400">Build your flow to complete the mission</p>
             </div>
           </div>
 
           {/* Mission Mode Badge */}
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-violet-100 text-violet-700 text-xs font-medium rounded-full">
+            <span className="px-3 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-xs font-medium rounded-full">
               Mission Mode
             </span>
           </div>
@@ -242,10 +242,10 @@ export function MissionCanvasPage() {
 
         {/* Canvas Loading State */}
         {isCanvasLoading && (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
             <div className="text-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500 mx-auto mb-3" />
-              <p className="text-sm text-gray-600">Loading canvas...</p>
+              <p className="text-sm text-gray-600 dark:text-neutral-400">Loading canvas...</p>
             </div>
           </div>
         )}

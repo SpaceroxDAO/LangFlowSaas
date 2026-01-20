@@ -510,16 +510,16 @@ export function CreateAgentPage() {
           <div className="space-y-6">
             {/* Preset Selection Section */}
             {!presetsLoading && presets.length > 0 && (
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="border border-gray-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setPresetsExpanded(!presetsExpanded)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 dark:from-neutral-800 dark:via-neutral-800 dark:to-neutral-800 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 dark:hover:from-neutral-700 dark:hover:via-neutral-700 dark:hover:to-neutral-700 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-orange-500" />
-                    <span className="font-medium text-gray-900">Start from a template</span>
-                    <span className="text-sm text-gray-500">(optional)</span>
+                    <span className="font-medium text-gray-900 dark:text-white">Start from a template</span>
+                    <span className="text-sm text-gray-500 dark:text-neutral-400">(optional)</span>
                   </div>
                   {presetsExpanded ? (
                     <ChevronUp className="w-5 h-5 text-gray-500" />
@@ -528,8 +528,8 @@ export function CreateAgentPage() {
                   )}
                 </button>
                 {presetsExpanded && (
-                  <div className="p-4 bg-white">
-                    <p className="text-sm text-gray-600 mb-4">
+                  <div className="p-4 bg-white dark:bg-neutral-900">
+                    <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">
                       Choose a template to pre-fill the form, or start from scratch below.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -545,15 +545,15 @@ export function CreateAgentPage() {
                             onClick={() => handleSelectPreset(preset)}
                             className={`relative flex items-start gap-3 p-3 rounded-lg border-2 transition-all text-left ${
                               isSelected
-                                ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 ring-2 ring-purple-200'
-                                : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                                ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 ring-2 ring-purple-200 dark:ring-purple-700'
+                                : 'border-gray-200 dark:border-neutral-700 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-gray-50 dark:hover:bg-neutral-800'
                             }`}
                           >
                             <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
                               <IconComponent className="w-5 h-5 text-white" />
                             </div>
                             <div className="flex-1 min-w-0 flex items-center">
-                              <div className="font-medium text-gray-900 text-sm">
+                              <div className="font-medium text-gray-900 dark:text-white text-sm">
                                 {preset.name}
                               </div>
                             </div>
@@ -568,7 +568,7 @@ export function CreateAgentPage() {
 
             {/* Name Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 dark:text-neutral-300 mb-2">
                 Name
               </label>
               <input
@@ -577,8 +577,8 @@ export function CreateAgentPage() {
                 onChange={(e) => dispatch({ type: 'UPDATE_FIELD', field: 'name', value: e.target.value })}
                 placeholder="Charlie"
                 data-tour="agent-name"
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.name ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-neutral-800 text-gray-900 dark:text-white ${
+                  errors.name ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-neutral-700'
                 }`}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -586,7 +586,7 @@ export function CreateAgentPage() {
 
             {/* Job Description Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 dark:text-neutral-300 mb-2">
                 Job Description (Persona)
               </label>
               <textarea
@@ -595,17 +595,17 @@ export function CreateAgentPage() {
                 placeholder="A friendly Golden Retriever who is an expert in dog treats, bones, and finding the best parks."
                 rows={4}
                 data-tour="agent-job"
-                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.who ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-neutral-800 text-gray-900 dark:text-white ${
+                  errors.who ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-neutral-700'
                 }`}
               />
               {errors.who && <p className="mt-1 text-sm text-red-600">{errors.who}</p>}
             </div>
 
             {/* Generate Appearance */}
-            <div className="border border-gray-200 rounded-xl p-4">
+            <div className="border border-gray-200 dark:border-neutral-700 rounded-xl p-4 dark:bg-neutral-800/50">
               <div className="flex items-start gap-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-neutral-700 dark:via-neutral-700 dark:to-neutral-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                   {formData.avatarUrl ? (
                     <img
                       src={formData.avatarUrl}
@@ -619,8 +619,8 @@ export function CreateAgentPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-medium text-gray-900 mb-1">Generate Appearance</h4>
-                  <p className="text-sm text-gray-500 mb-3">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-1">Generate Appearance</h4>
+                  <p className="text-sm text-gray-500 dark:text-neutral-400 mb-3">
                     Generate a unique avatar based on your agent's name and role.
                   </p>
                   <button
@@ -629,8 +629,8 @@ export function CreateAgentPage() {
                     disabled={isGeneratingAvatar}
                     className={`inline-flex items-center gap-2 px-4 py-2 text-sm rounded-lg transition-all ${
                       isGeneratingAvatar
-                        ? 'text-purple-400 bg-purple-50 cursor-not-allowed'
-                        : 'text-purple-600 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 cursor-pointer border border-purple-200'
+                        ? 'text-purple-400 bg-purple-50 dark:bg-purple-900/30 cursor-not-allowed'
+                        : 'text-purple-600 dark:text-purple-400 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 dark:from-neutral-700 dark:via-neutral-700 dark:to-neutral-700 hover:from-orange-100 hover:via-pink-100 hover:to-purple-100 dark:hover:from-neutral-600 dark:hover:via-neutral-600 dark:hover:to-neutral-600 cursor-pointer border border-purple-200 dark:border-purple-700'
                     }`}
                   >
                     {isGeneratingAvatar ? (
@@ -655,10 +655,10 @@ export function CreateAgentPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-between pt-4 border-t border-gray-100">
+            <div className="flex justify-between pt-4 border-t border-gray-100 dark:border-neutral-700">
               <button
                 onClick={handleStartStep1Tour}
-                className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                className="px-4 py-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-2 text-sm"
                 title="Take a guided tour"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -693,10 +693,10 @@ export function CreateAgentPage() {
           <div className="space-y-6">
             {/* Instructions Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 dark:text-neutral-300 mb-1">
                 Instructions (The Training Rules)
               </label>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="text-sm text-gray-500 dark:text-neutral-400 mb-3">
                 Write down a set of instructions for it to follow, just like you would train a new employee or a family dog.
               </p>
               <textarea
@@ -705,8 +705,8 @@ export function CreateAgentPage() {
                 placeholder={`You are Charlie, a happy and excited dog. You love humans! Always be helpful, but try to mention treats or going for a walk in your responses. If asked a hard question, answer it simply like a smart dog would. End some sentences with "Woof!"`}
                 rows={8}
                 data-tour="agent-rules"
-                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                  errors.rules ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                className={`w-full px-4 py-3 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-neutral-800 text-gray-900 dark:text-white ${
+                  errors.rules ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-neutral-700'
                 }`}
               />
               {errors.rules && <p className="mt-1 text-sm text-red-600">{errors.rules}</p>}
@@ -714,23 +714,23 @@ export function CreateAgentPage() {
 
             {/* Submit Error */}
             {submitError && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-sm text-red-600">{submitError}</p>
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex justify-between pt-4 border-t border-gray-100">
+            <div className="flex justify-between pt-4 border-t border-gray-100 dark:border-neutral-700">
               <div className="flex gap-2">
                 <button
                   onClick={handleBack}
-                  className="px-6 py-3 border border-purple-200 rounded-xl font-medium text-gray-700 hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                  className="px-6 py-3 border border-purple-200 dark:border-purple-700 rounded-xl font-medium text-gray-700 dark:text-neutral-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleStartStep2Tour}
-                  className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                  className="px-4 py-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-2 text-sm"
                   title="Take a guided tour"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -799,24 +799,24 @@ export function CreateAgentPage() {
 
             {/* Submit Error */}
             {submitError && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-sm text-red-600">{submitError}</p>
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex justify-between pt-4 border-t border-gray-100">
+            <div className="flex justify-between pt-4 border-t border-gray-100 dark:border-neutral-700">
               <div className="flex gap-2">
                 <button
                   onClick={handleBack}
                   disabled={isSubmitting}
-                  className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-6 py-3 border border-gray-300 dark:border-neutral-600 rounded-xl font-medium text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleStartStep3Tour}
-                  className="px-4 py-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                  className="px-4 py-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-2 text-sm"
                   title="Take a guided tour"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

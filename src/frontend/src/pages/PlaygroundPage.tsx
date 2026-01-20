@@ -451,11 +451,11 @@ export function PlaygroundPage() {
       <div
         className={`${
           isSidebarOpen ? 'w-72' : 'w-0'
-        } flex-shrink-0 border-r border-gray-200 bg-gray-50 transition-all duration-300 overflow-hidden`}
+        } flex-shrink-0 border-r border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-900 transition-all duration-300 overflow-hidden`}
       >
         <div className="w-72 h-full flex flex-col">
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
             <button
               onClick={startNewChat}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-500 hover:bg-violet-600 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5 transition-all duration-300"
@@ -470,7 +470,7 @@ export function PlaygroundPage() {
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto p-2">
             {conversations.length === 0 ? (
-              <div className="text-center text-gray-400 text-sm py-8 px-4">
+              <div className="text-center text-gray-400 dark:text-neutral-500 text-sm py-8 px-4">
                 No conversations yet. Start chatting to create one!
               </div>
             ) : (
@@ -480,8 +480,8 @@ export function PlaygroundPage() {
                     key={conv.id}
                     className={`relative w-full text-left px-3 py-2.5 rounded-lg transition-colors group ${
                       conversationId === conv.id
-                        ? 'bg-violet-100 text-violet-900'
-                        : 'hover:bg-gray-100 text-gray-700'
+                        ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-900 dark:text-violet-100'
+                        : 'hover:bg-gray-100 dark:hover:bg-neutral-800 text-gray-700 dark:text-neutral-300'
                     }`}
                   >
                     <button
@@ -508,7 +508,7 @@ export function PlaygroundPage() {
                           <p className="text-sm font-medium truncate">
                             {conv.title || 'New conversation'}
                           </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-gray-400 dark:text-neutral-500 mt-0.5">
                             {formatRelativeTime(new Date(conv.updated_at))}
                           </p>
                         </div>
@@ -520,7 +520,7 @@ export function PlaygroundPage() {
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <button
                           onClick={() => deleteConversation(conv.id)}
-                          className="p-1 text-red-600 hover:text-red-700 bg-red-50 rounded"
+                          className="p-1 text-red-600 hover:text-red-700 bg-red-50 dark:bg-red-900/30 rounded"
                           title="Confirm delete"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,7 +529,7 @@ export function PlaygroundPage() {
                         </button>
                         <button
                           onClick={() => setDeletingConversationId(null)}
-                          className="p-1 text-gray-500 hover:text-gray-700 bg-gray-100 rounded"
+                          className="p-1 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 bg-gray-100 dark:bg-neutral-700 rounded"
                           title="Cancel"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -543,7 +543,7 @@ export function PlaygroundPage() {
                           e.stopPropagation()
                           setDeletingConversationId(conv.id)
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 dark:text-neutral-500 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Delete conversation"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -562,13 +562,13 @@ export function PlaygroundPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-3">
+        <div className="flex-shrink-0 border-b border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Sidebar Toggle */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -576,7 +576,7 @@ export function PlaygroundPage() {
               </button>
 
               {/* Avatar & Title */}
-              <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={entityName} className="w-full h-full object-contain" />
                 ) : (
@@ -590,8 +590,8 @@ export function PlaygroundPage() {
                 )}
               </div>
               <div>
-                <h1 className="text-base font-semibold text-gray-900">{entityName}</h1>
-                <p className="text-xs text-gray-500">Chat Playground</p>
+                <h1 className="text-base font-semibold text-gray-900 dark:text-white">{entityName}</h1>
+                <p className="text-xs text-gray-500 dark:text-neutral-400">Chat Playground</p>
               </div>
             </div>
 
@@ -599,7 +599,7 @@ export function PlaygroundPage() {
               {/* Help Button */}
               <button
                 onClick={handleStartPlaygroundTour}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                 title="Take a guided tour"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -619,7 +619,7 @@ export function PlaygroundPage() {
               {editAgentComponentId && (
                 <Link
                   to={`/edit/${editAgentComponentId}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -632,20 +632,20 @@ export function PlaygroundPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50" data-tour="playground-messages">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-neutral-950" data-tour="playground-messages">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <svg className="w-12 h-12 text-gray-900 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-12 h-12 text-gray-900 dark:text-neutral-100 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M11.25 16.25h1.5L12 17z"/>
                 <path d="M16 14v.5"/>
                 <path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.702 11.702 0 0 0-.493-3.309"/>
                 <path d="M8 14v.5"/>
                 <path d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5-1.931.722-3.576-.297-3.656-1-.113-.994 1.177-6.53 4-7 1.923-.321 3.651.845 3.651 2.235A7.497 7.497 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/>
               </svg>
-              <h2 className="text-lg font-medium text-gray-900 mb-1">
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
                 Chat with {entityName}
               </h2>
-              <p className="text-gray-500 max-w-sm">
+              <p className="text-gray-500 dark:text-neutral-400 max-w-sm">
                 Start a conversation to test your workflow responses
               </p>
             </div>
@@ -693,7 +693,7 @@ export function PlaygroundPage() {
           {isLoading && !useStreaming && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex items-start gap-3">
               {/* Assistant Avatar */}
-              <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={entityName} className="w-full h-full object-contain" />
                 ) : (
@@ -702,7 +702,7 @@ export function PlaygroundPage() {
                   </svg>
                 )}
               </div>
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+              <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
                   <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
@@ -717,7 +717,7 @@ export function PlaygroundPage() {
 
         {/* Input */}
         <FileDropZone onFilesAdded={addFiles} disabled={isLoading || isStreaming}>
-          <div className="flex-shrink-0 border-t border-gray-200 bg-white" data-tour="playground-input">
+          <div className="flex-shrink-0 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900" data-tour="playground-input">
             {/* Attachment Bar */}
             <AttachmentBar files={uploadedFiles} onRemoveFile={removeFile} />
 
@@ -727,9 +727,9 @@ export function PlaygroundPage() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isLoading || isStreaming || isUploading}
-                  className="flex-shrink-0 w-11 h-11 rounded-xl border border-gray-300 text-gray-500
-                             hover:border-violet-500 hover:text-violet-500 hover:bg-violet-50
-                             focus:outline-none focus:ring-2 focus:ring-violet-200
+                  className="flex-shrink-0 w-11 h-11 rounded-xl border border-gray-300 dark:border-neutral-600 text-gray-500 dark:text-neutral-400
+                             hover:border-violet-500 dark:hover:border-violet-400 hover:text-violet-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20
+                             focus:outline-none focus:ring-2 focus:ring-violet-200 dark:focus:ring-violet-800
                              disabled:opacity-50 disabled:cursor-not-allowed
                              transition-colors flex items-center justify-center"
                   title="Attach files"
@@ -767,9 +767,11 @@ export function PlaygroundPage() {
                     placeholder={uploadedFiles.length > 0 ? "Add a message about your files..." : "Type a message..."}
                     disabled={isLoading || isStreaming}
                     rows={1}
-                    className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3
-                               focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-200
-                               disabled:bg-gray-50 disabled:cursor-not-allowed
+                    className="w-full resize-none rounded-xl border border-gray-300 dark:border-neutral-600 px-4 py-3
+                               bg-white dark:bg-neutral-800 text-gray-900 dark:text-white
+                               placeholder-gray-400 dark:placeholder-neutral-500
+                               focus:border-violet-500 dark:focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:focus:ring-violet-800
+                               disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed
                                max-h-[150px] overflow-y-auto transition-colors"
                   />
                 </div>
@@ -808,7 +810,7 @@ export function PlaygroundPage() {
                   </button>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">
+              <p className="text-xs text-gray-400 dark:text-neutral-500 mt-2 text-center">
                 Press Enter to send, Shift+Enter for new line
               </p>
             </div>
@@ -885,7 +887,7 @@ function MessageBubble({
     >
       {/* Avatar */}
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center overflow-hidden flex-shrink-0">
           {avatarUrl ? (
             <img src={avatarUrl} alt={entityName} className="w-full h-full object-contain" />
           ) : (
@@ -910,7 +912,7 @@ function MessageBubble({
           className={`relative rounded-2xl px-4 py-3 shadow-sm ${
             isUser
               ? 'bg-violet-500 text-white rounded-tr-sm'
-              : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm'
+              : 'bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 text-gray-900 dark:text-white rounded-tl-sm'
           }`}
         >
           {isEditing && isUser ? (
@@ -940,7 +942,7 @@ function MessageBubble({
           ) : isUser ? (
             <p className="whitespace-pre-wrap text-sm">{message.content}</p>
           ) : (
-            <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2">
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
           )}

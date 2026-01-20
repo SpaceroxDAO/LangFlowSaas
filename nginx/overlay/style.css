@@ -188,3 +188,45 @@ svg[aria-label*="Langflow"] {
 .driver-overlay {
     cursor: pointer;
 }
+
+/* =====================================================
+   BOTTOM CONTROLS - Hide help/tooltip and lock icons
+   The help and lock buttons in the bottom right corner
+   ===================================================== */
+
+/* Hide the help circle icon button */
+button[data-testid*="help"],
+button[aria-label*="Help"],
+button[aria-label*="help"],
+[data-testid="icon-help-circle"],
+.lucide-help-circle,
+svg[class*="lucide-help-circle"] {
+    display: none !important;
+}
+
+/* Hide the lock/unlock icon button */
+button[aria-label*="Lock"],
+button[aria-label*="lock"],
+button[aria-label*="Unlock"],
+button[aria-label*="unlock"],
+button:has(svg[class*="lucide-lock"]),
+button:has(svg[class*="lucide-unlock"]),
+.lucide-lock,
+.lucide-unlock,
+svg[class*="lucide-lock"],
+svg[class*="lucide-unlock"] {
+    display: none !important;
+}
+
+/* More specific: bottom right control area help button */
+.react-flow__panel button:has(svg[class*="help"]),
+.react-flow__panel button:has(.lucide-help-circle),
+.react-flow__controls button:last-child:has(svg) {
+    display: none !important;
+}
+
+/* Hide the standalone help/info button that appears in bottom right */
+button.absolute.bottom-4.right-4,
+button[class*="absolute"][class*="bottom"][class*="right"]:has(svg[class*="help"]) {
+    display: none !important;
+}

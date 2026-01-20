@@ -322,13 +322,13 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">Templates</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-neutral-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Templates</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors"
             disabled={isCreating}
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -339,7 +339,7 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
 
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar */}
-          <div className="w-52 border-r bg-gray-50 p-4 overflow-y-auto">
+          <div className="w-52 border-r border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 p-4 overflow-y-auto">
             {/* Ungrouped categories */}
             <div className="space-y-1">
               {groupedCategories.ungrouped.map(cat => (
@@ -348,8 +348,8 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                     selectedCategory === cat.id
-                      ? 'bg-violet-100 text-violet-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium'
+                      : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-700'
                   }`}
                 >
                   <CategoryIcon name={cat.icon} />
@@ -361,7 +361,7 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
             {/* Grouped categories */}
             {Object.entries(groupedCategories.grouped).map(([group, cats]) => (
               <div key={group} className="mt-6">
-                <div className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                <div className="px-3 text-xs font-semibold text-gray-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
                   {group}
                 </div>
                 <div className="space-y-1">
@@ -371,8 +371,8 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
                       onClick={() => setSelectedCategory(cat.id)}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                         selectedCategory === cat.id
-                          ? 'bg-violet-100 text-violet-700 font-medium'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium'
+                          : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-700'
                       }`}
                     >
                       <CategoryIcon name={cat.icon} />
@@ -386,20 +386,20 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
             {/* My Agents section (Custom) */}
             {publishedAgents.length > 0 && (
               <div className="mt-6">
-                <div className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                <div className="px-3 text-xs font-semibold text-gray-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
                   Custom
                 </div>
                 <button
                   onClick={() => setSelectedCategory('my-agents')}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                     selectedCategory === 'my-agents'
-                      ? 'bg-violet-100 text-violet-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-medium'
+                      : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-700'
                   }`}
                 >
                   <CategoryIcon name="user" />
                   My Agents
-                  <span className="ml-auto bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded">
+                  <span className="ml-auto bg-gray-200 dark:bg-neutral-600 text-gray-600 dark:text-neutral-300 text-xs px-1.5 py-0.5 rounded">
                     {publishedAgents.length}
                   </span>
                 </button>
@@ -408,7 +408,7 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
           </div>
 
           {/* Main content */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-6 overflow-y-auto bg-white dark:bg-neutral-900">
             {templatesLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500"></div>
@@ -417,13 +417,13 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
               <>
                 {/* Category header */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {selectedCategory === 'my-agents'
                       ? 'My Agents'
                       : templatesData?.categories.find(c => c.id === selectedCategory)?.name || 'Templates'
                     }
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-500 dark:text-neutral-400 mt-1">
                     {selectedCategory === 'my-agents'
                       ? 'Create workflows from your published agents.'
                       : selectedCategory === 'get-started'
@@ -474,7 +474,7 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
                         disabled={isCreating}
                         className={`group relative overflow-hidden rounded-xl p-5 text-left transition-all duration-200 ${
                           isCreating ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] hover:shadow-lg cursor-pointer'
-                        } ${template.is_blank ? 'border-2 border-dashed border-gray-300 bg-gray-50' : gradients[template.gradient] || gradients['purple-pink']}`}
+                        } ${template.is_blank ? 'border-2 border-dashed border-gray-300 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-800' : gradients[template.gradient] || gradients['purple-pink']}`}
                       >
                         {/* Decorative circles for non-blank templates */}
                         {!template.is_blank && (
@@ -493,7 +493,7 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
                                   key={tag}
                                   className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                     template.is_blank
-                                      ? 'bg-gray-200 text-gray-600'
+                                      ? 'bg-gray-200 dark:bg-neutral-700 text-gray-600 dark:text-neutral-300'
                                       : 'bg-white/20 text-white/90'
                                   }`}
                                 >
@@ -505,14 +505,14 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
 
                           {/* Title */}
                           <h4 className={`font-semibold text-lg mb-2 ${
-                            template.is_blank ? 'text-gray-700' : 'text-white'
+                            template.is_blank ? 'text-gray-700 dark:text-neutral-200' : 'text-white'
                           }`}>
                             {template.name}
                           </h4>
 
                           {/* Description */}
                           <p className={`text-sm line-clamp-2 ${
-                            template.is_blank ? 'text-gray-500' : 'text-white/70'
+                            template.is_blank ? 'text-gray-500 dark:text-neutral-400' : 'text-white/70'
                           }`}>
                             {template.description}
                           </p>
@@ -524,17 +524,17 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
 
                 {/* Start from scratch section */}
                 {selectedCategory !== 'my-agents' && (
-                  <div className="mt-8 pt-6 border-t">
+                  <div className="mt-8 pt-6 border-t border-gray-200 dark:border-neutral-700">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-gray-900">Start from scratch</h4>
-                        <p className="text-sm text-gray-500">Begin with a fresh flow to build from scratch.</p>
+                        <h4 className="font-medium text-gray-900 dark:text-white">Start from scratch</h4>
+                        <p className="text-sm text-gray-500 dark:text-neutral-400">Begin with a fresh flow to build from scratch.</p>
                       </div>
                       <button
                         onClick={() => handleSelectTemplate(null)}
                         disabled={isCreating}
-                        className={`inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg transition-colors ${
-                          isCreating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'
+                        className={`inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-neutral-900 rounded-lg transition-colors ${
+                          isCreating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800 dark:hover:bg-neutral-100'
                         }`}
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -552,10 +552,10 @@ export function TemplateGalleryModal({ isOpen, onClose, projectId }: TemplateGal
 
         {/* Creating overlay */}
         {isCreating && (
-          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/80 dark:bg-neutral-900/80 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500 mx-auto mb-3"></div>
-              <p className="text-gray-600">Creating workflow...</p>
+              <p className="text-gray-600 dark:text-neutral-400">Creating workflow...</p>
             </div>
           </div>
         )}

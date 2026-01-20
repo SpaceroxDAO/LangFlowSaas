@@ -95,23 +95,23 @@ export function FilesPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Files</h1>
-        <p className="text-gray-500">Upload and manage files for your agents</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">My Files</h1>
+        <p className="text-gray-500 dark:text-neutral-400">Upload and manage files for your agents</p>
       </div>
 
       {/* Upload Area */}
       <div
         className={`border-2 border-dashed rounded-xl p-8 mb-8 text-center transition-colors ${
           isDragging
-            ? 'border-violet-500 bg-violet-50'
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+            : 'border-gray-300 dark:border-neutral-700 hover:border-gray-400 dark:hover:border-neutral-500 dark:bg-neutral-800/50'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-12 h-12 bg-violet-100 dark:bg-violet-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-6 h-6 text-violet-600 dark:text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -120,9 +120,9 @@ export function FilesPage() {
             />
           </svg>
         </div>
-        <p className="text-gray-600 mb-2">
+        <p className="text-gray-600 dark:text-neutral-300 mb-2">
           Drag and drop files here, or{' '}
-          <label className="text-violet-600 hover:text-violet-700 cursor-pointer font-medium">
+          <label className="text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 cursor-pointer font-medium">
             browse
             <input
               type="file"
@@ -132,7 +132,7 @@ export function FilesPage() {
             />
           </label>
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-400 dark:text-neutral-500">
           Supported formats: PDF, TXT, DOC, DOCX, CSV, JSON, MD, XLSX (max 10MB)
         </p>
 
@@ -144,7 +144,7 @@ export function FilesPage() {
         )}
 
         {uploadError && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
             {uploadError}
           </div>
         )}
@@ -156,9 +156,9 @@ export function FilesPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500" />
         </div>
       ) : files.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-12 bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-gray-400 dark:text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -167,21 +167,21 @@ export function FilesPage() {
               />
             </svg>
           </div>
-          <h3 className="text-gray-900 font-medium mb-1">No files yet</h3>
-          <p className="text-gray-500 text-sm">Upload files to use with your agents</p>
+          <h3 className="text-gray-900 dark:text-white font-medium mb-1">No files yet</h3>
+          <p className="text-gray-500 dark:text-neutral-400 text-sm">Upload files to use with your agents</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 divide-y divide-gray-100 dark:divide-neutral-800">
           {files.map((file: UserFile) => (
             <div
               key={file.id}
-              className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{getFileIcon(file.type)}</span>
                 <div>
-                  <p className="font-medium text-gray-900">{file.name}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-medium text-gray-900 dark:text-white">{file.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-neutral-400">
                     {formatFileSize(file.size)} • Uploaded{' '}
                     {new Date(file.created_at).toLocaleDateString()}
                   </p>
@@ -190,7 +190,7 @@ export function FilesPage() {
               <button
                 onClick={() => deleteMutation.mutate(file.id)}
                 disabled={deleteMutation.isPending}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-2 text-gray-400 dark:text-neutral-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 title="Delete file"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

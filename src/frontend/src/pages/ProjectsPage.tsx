@@ -147,16 +147,16 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-5 h-5 text-orange-500" />
-              <span className="text-sm font-medium text-gray-500">Dashboard</span>
+              <span className="text-sm font-medium text-gray-500 dark:text-neutral-400">Dashboard</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Welcome back to{' '}
               <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
                 Teach Charlie AI
@@ -188,7 +188,7 @@ export function ProjectsPage() {
 
             <button
               onClick={() => setShowTemplateModal(true)}
-              className="group px-4 py-2.5 rounded-lg text-sm font-medium border-2 border-purple-200 text-purple-700 bg-white hover:border-purple-300 hover:bg-purple-50 transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-2"
+              className="group px-4 py-2.5 rounded-lg text-sm font-medium border-2 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 bg-white dark:bg-neutral-800 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-2"
             >
               <GitBranch className="w-4 h-4" />
               Create Workflow
@@ -208,10 +208,10 @@ export function ProjectsPage() {
         {showGettingStarted && (
           <div className="mb-10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Getting Started</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Getting Started</h2>
               <button
                 onClick={() => setShowGettingStarted(false)}
-                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center gap-1 text-sm text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors"
               >
                 <X className="w-4 h-4" />
                 Dismiss
@@ -225,7 +225,7 @@ export function ProjectsPage() {
                   <button
                     key={card.id}
                     onClick={() => handleCardAction(card)}
-                    className="group relative bg-white rounded-2xl border border-gray-200 p-6 text-left hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 hover:-translate-y-1 overflow-hidden"
+                    className="group relative bg-white dark:bg-neutral-800 rounded-2xl border border-gray-200 dark:border-neutral-700 p-6 text-left hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50 transition-all duration-500 hover:-translate-y-1 overflow-hidden"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     {/* Gradient blob background */}
@@ -241,10 +241,10 @@ export function ProjectsPage() {
                       </div>
 
                       {/* Text */}
-                      <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
                         {card.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">
                         {card.description}
                       </p>
 
@@ -264,9 +264,9 @@ export function ProjectsPage() {
         {/* Projects Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Your Projects</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Projects</h2>
             {projects.length > 0 && (
-              <span className="text-sm text-gray-500">{projects.length} project{projects.length !== 1 ? 's' : ''}</span>
+              <span className="text-sm text-gray-500 dark:text-neutral-400">{projects.length} project{projects.length !== 1 ? 's' : ''}</span>
             )}
           </div>
 
@@ -274,7 +274,7 @@ export function ProjectsPage() {
           {isLoading && (
             <div className="flex justify-center py-12">
               <div className="relative">
-                <div className="w-10 h-10 rounded-full border-2 border-gray-200" />
+                <div className="w-10 h-10 rounded-full border-2 border-gray-200 dark:border-neutral-700" />
                 <div className="absolute inset-0 w-10 h-10 rounded-full border-2 border-t-orange-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
               </div>
             </div>
@@ -282,19 +282,19 @@ export function ProjectsPage() {
 
           {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-400">
               Failed to load projects. Please try again.
             </div>
           )}
 
           {/* Empty state */}
           {!isLoading && !error && projects.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-              <div className="w-20 h-20 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="text-center py-16 bg-white dark:bg-neutral-800 rounded-2xl border border-gray-200 dark:border-neutral-700">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 dark:from-orange-900/30 dark:via-pink-900/30 dark:to-purple-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-4xl">📁</span>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">No projects yet</h2>
-              <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No projects yet</h2>
+              <p className="text-gray-600 dark:text-neutral-400 mb-6 max-w-sm mx-auto">
                 Create your first project to organize your agents and workflows
               </p>
               <button
@@ -314,7 +314,7 @@ export function ProjectsPage() {
                 <Link
                   key={project.id}
                   to={`/dashboard/project/${project.id}`}
-                  className="group bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 hover:-translate-y-1 hover:border-gray-300"
+                  className="group bg-white dark:bg-neutral-800 rounded-2xl border border-gray-200 dark:border-neutral-700 p-6 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50 transition-all duration-500 hover:-translate-y-1 hover:border-gray-300 dark:hover:border-gray-600"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -331,24 +331,24 @@ export function ProjectsPage() {
                     )}
                   </div>
 
-                  <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-gray-700 transition-colors">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
                     {project.name}
                   </h3>
                   {project.description && (
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{project.description}</p>
+                    <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4 line-clamp-2">{project.description}</p>
                   )}
 
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-neutral-400">
                     <div className="flex items-center gap-1.5" title="Agents">
-                      <Bot className="w-4 h-4 text-gray-400" />
+                      <Bot className="w-4 h-4 text-gray-400 dark:text-neutral-500" />
                       <span>{project.agent_count || 0}</span>
                     </div>
                     <div className="flex items-center gap-1.5" title="Workflows">
-                      <GitBranch className="w-4 h-4 text-gray-400" />
+                      <GitBranch className="w-4 h-4 text-gray-400 dark:text-neutral-500" />
                       <span>{project.workflow_count || 0}</span>
                     </div>
                     <div className="flex items-center gap-1.5" title="MCP Servers">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-gray-400 dark:text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -369,18 +369,18 @@ export function ProjectsPage() {
         {showNewProjectModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
             <div
-              className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl"
+              className="bg-white dark:bg-neutral-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl"
               style={{ animation: 'modalFadeIn 0.2s ease-out' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Create New Project</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create New Project</h2>
                 <button
                   onClick={() => {
                     setShowNewProjectModal(false)
                     resetForm()
                   }}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -397,7 +397,7 @@ export function ProjectsPage() {
                 <div className="space-y-5">
                   {/* Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-2">
                       Project Name
                     </label>
                     <input
@@ -405,28 +405,28 @@ export function ProjectsPage() {
                       value={newProjectName}
                       onChange={(e) => setNewProjectName(e.target.value)}
                       placeholder="My New Project"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 dark:border-neutral-600 rounded-xl text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 dark:focus:border-purple-500 transition-all"
                       autoFocus
                     />
                   </div>
 
                   {/* Description */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description <span className="text-gray-400 font-normal">(optional)</span>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-2">
+                      Description <span className="text-gray-400 dark:text-neutral-500 font-normal">(optional)</span>
                     </label>
                     <textarea
                       value={newProjectDescription}
                       onChange={(e) => setNewProjectDescription(e.target.value)}
                       placeholder="A brief description of this project..."
                       rows={2}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 transition-all resize-none"
+                      className="w-full px-4 py-3 border border-gray-200 dark:border-neutral-600 rounded-xl text-sm bg-white dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 dark:focus:border-purple-500 transition-all resize-none"
                     />
                   </div>
 
                   {/* Icon */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-2">Icon</label>
                     <div className="flex gap-2 flex-wrap">
                       {iconOptions.map((icon) => (
                         <button
@@ -435,8 +435,8 @@ export function ProjectsPage() {
                           onClick={() => setSelectedIcon(icon.id)}
                           className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg transition-all ${
                             selectedIcon === icon.id
-                              ? 'bg-purple-100 ring-2 ring-purple-500'
-                              : 'bg-gray-100 hover:bg-gray-200'
+                              ? 'bg-purple-100 dark:bg-purple-900/40 ring-2 ring-purple-500'
+                              : 'bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600'
                           }`}
                         >
                           {icon.emoji}
@@ -447,7 +447,7 @@ export function ProjectsPage() {
 
                   {/* Color */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-2">Color</label>
                     <div className="flex gap-2 flex-wrap">
                       {colorOptions.map((color) => (
                         <button
@@ -455,7 +455,7 @@ export function ProjectsPage() {
                           type="button"
                           onClick={() => setSelectedColor(color)}
                           className={`w-9 h-9 rounded-full transition-all hover:scale-110 ${
-                            selectedColor === color ? 'ring-2 ring-offset-2 ring-gray-400' : ''
+                            selectedColor === color ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800 ring-gray-400 dark:ring-gray-500' : ''
                           }`}
                           style={{ backgroundColor: color }}
                         />
@@ -465,7 +465,7 @@ export function ProjectsPage() {
                 </div>
 
                 {createProjectMutation.isError && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                  <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm">
                     Failed to create project. Please try again.
                   </div>
                 )}
@@ -478,7 +478,7 @@ export function ProjectsPage() {
                       resetForm()
                     }}
                     disabled={createProjectMutation.isPending}
-                    className="px-5 py-2.5 text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 text-gray-700 dark:text-neutral-300 border border-gray-200 dark:border-neutral-600 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>

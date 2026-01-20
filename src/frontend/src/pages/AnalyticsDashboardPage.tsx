@@ -79,13 +79,13 @@ export function AnalyticsDashboardPage() {
     return (
       <div className="p-8">
         <div className="animate-pulse">
-          <div className="h-8 w-48 bg-gray-200 rounded mb-4" />
-          <div className="h-4 w-64 bg-gray-100 rounded mb-8" />
+          <div className="h-8 w-48 bg-gray-200 dark:bg-neutral-700 rounded mb-4" />
+          <div className="h-4 w-64 bg-gray-100 dark:bg-neutral-800 rounded mb-8" />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-4">
-                <div className="h-4 w-24 bg-gray-200 rounded mb-2" />
-                <div className="h-8 w-16 bg-gray-100 rounded" />
+              <div key={i} className="bg-white dark:bg-neutral-900 rounded-xl p-4">
+                <div className="h-4 w-24 bg-gray-200 dark:bg-neutral-700 rounded mb-2" />
+                <div className="h-8 w-16 bg-gray-100 dark:bg-neutral-800 rounded" />
               </div>
             ))}
           </div>
@@ -99,19 +99,19 @@ export function AnalyticsDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-500">Monitor your usage and performance</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          <p className="text-gray-500 dark:text-neutral-400">Monitor your usage and performance</p>
         </div>
         <div className="flex items-center gap-2">
           <DateRangePicker value={dateRange} onChange={setDateRange} />
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50 transition-colors"
+            className="p-2 border border-gray-300 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50 transition-colors"
             title="Refresh data"
           >
             <svg
-              className={`w-5 h-5 text-gray-600 ${isFetching ? 'animate-spin' : ''}`}
+              className={`w-5 h-5 text-gray-600 dark:text-neutral-400 ${isFetching ? 'animate-spin' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -135,11 +135,11 @@ export function AnalyticsDashboardPage() {
               }
               window.open(`/api/v1/dashboard/export?${params.toString()}`, '_blank')
             }}
-            className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition-colors"
+            className="flex items-center gap-1 px-3 py-2 border border-gray-300 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition-colors"
             title="Export as CSV"
           >
             <svg
-              className="w-4 h-4 text-gray-600"
+              className="w-4 h-4 text-gray-600 dark:text-neutral-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -151,29 +151,29 @@ export function AnalyticsDashboardPage() {
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
-            <span className="text-gray-700">Export</span>
+            <span className="text-gray-700 dark:text-neutral-300">Export</span>
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Total Agents</p>
-          <p className="text-2xl font-bold text-gray-900">
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-4">
+          <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">Total Agents</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {stats?.totals.agents || 0}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Total Workflows</p>
-          <p className="text-2xl font-bold text-gray-900">
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-4">
+          <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">Total Workflows</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {stats?.totals.workflows || 0}
           </p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Messages This Period</p>
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-4">
+          <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">Messages This Period</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {formatNumber(stats?.comparison?.current_period.messages || 0)}
             </p>
             {stats?.comparison && (
@@ -181,10 +181,10 @@ export function AnalyticsDashboardPage() {
             )}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500 mb-1">Tokens This Period</p>
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-4">
+          <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">Tokens This Period</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
               {formatNumber(stats?.comparison?.current_period.tokens || 0)}
             </p>
             {stats?.comparison && (
@@ -195,8 +195,8 @@ export function AnalyticsDashboardPage() {
       </div>
 
       {/* Activity Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-6 mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Daily Messages
         </h2>
         <div className="flex items-end gap-1 h-40">
@@ -212,14 +212,14 @@ export function AnalyticsDashboardPage() {
                   style={{ height: `${Math.max(height, 2)}%` }}
                 />
                 {/* Tooltip */}
-                <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 dark:bg-neutral-700 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
                   {formatDate(d.date)}: {d.messages} messages
                 </div>
               </div>
             )
           })}
         </div>
-        <div className="flex justify-between mt-2 text-xs text-gray-500">
+        <div className="flex justify-between mt-2 text-xs text-gray-500 dark:text-neutral-400">
           <span>{stats?.daily[0] ? formatDate(stats.daily[0].date) : ''}</span>
           <span>
             {stats?.daily[stats.daily.length - 1]
@@ -231,12 +231,12 @@ export function AnalyticsDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Recent Conversations */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Recent Conversations
           </h2>
           {stats?.recent_conversations.length === 0 ? (
-            <p className="text-gray-500 text-sm">No conversations yet.</p>
+            <p className="text-gray-500 dark:text-neutral-400 text-sm">No conversations yet.</p>
           ) : (
             <div className="space-y-3">
               {stats?.recent_conversations.map((conv) => (
@@ -249,12 +249,12 @@ export function AnalyticsDashboardPage() {
                       ? `/playground/${conv.agent_id}`
                       : '#'
                   }
-                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="block p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors"
                 >
-                  <p className="font-medium text-gray-900 truncate">
+                  <p className="font-medium text-gray-900 dark:text-white truncate">
                     {conv.title}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-neutral-400 mt-1">
                     {conv.updated_at
                       ? new Date(conv.updated_at).toLocaleDateString('en-US', {
                           month: 'short',
@@ -271,12 +271,12 @@ export function AnalyticsDashboardPage() {
         </div>
 
         {/* Top Agents */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Top Agents by Usage
           </h2>
           {stats?.agent_stats.length === 0 ? (
-            <p className="text-gray-500 text-sm">No agents yet.</p>
+            <p className="text-gray-500 dark:text-neutral-400 text-sm">No agents yet.</p>
           ) : (
             <div className="space-y-3">
               {stats?.agent_stats.map((agent, index) => {
@@ -286,14 +286,14 @@ export function AnalyticsDashboardPage() {
                 return (
                   <div key={agent.id}>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-gray-700 truncate flex-1">
+                      <span className="text-sm font-medium text-gray-700 dark:text-neutral-300 truncate flex-1">
                         {index + 1}. {agent.name}
                       </span>
-                      <span className="text-sm text-gray-500 ml-2">
+                      <span className="text-sm text-gray-500 dark:text-neutral-400 ml-2">
                         {agent.conversations} conv.
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
                       <div
                         className="bg-violet-500 h-2 rounded-full transition-all"
                         style={{ width: `${width}%` }}
@@ -308,7 +308,7 @@ export function AnalyticsDashboardPage() {
       </div>
 
       {/* Period Info */}
-      <div className="text-center text-sm text-gray-400 mt-8">
+      <div className="text-center text-sm text-gray-400 dark:text-neutral-500 mt-8">
         <p>
           Showing data from {stats?.period.start} to {stats?.period.end}
         </p>

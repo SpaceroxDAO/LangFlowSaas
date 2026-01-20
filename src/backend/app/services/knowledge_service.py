@@ -204,7 +204,15 @@ class KnowledgeService:
         error_message = None
 
         try:
-            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(
+                timeout=30.0,
+                follow_redirects=True,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (compatible; TeachCharlieBot/1.0; +https://teachcharlie.ai)",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.5",
+                }
+            ) as client:
                 response = await client.get(url)
                 response.raise_for_status()
                 content = response.text

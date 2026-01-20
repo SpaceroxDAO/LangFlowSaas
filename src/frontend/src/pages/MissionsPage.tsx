@@ -148,7 +148,7 @@ export function MissionsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="flex items-center gap-3 text-gray-500">
+        <div className="flex items-center gap-3 text-gray-500 dark:text-neutral-400">
           <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -163,27 +163,27 @@ export function MissionsPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">Failed to load missions</h3>
-          <p className="text-gray-500">{(error as Error).message}</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Failed to load missions</h3>
+          <p className="text-gray-500 dark:text-neutral-400">{(error as Error).message}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800">
         <div className="max-w-6xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Learning Missions</h1>
-              <p className="text-gray-600 mt-1">Build your AI skills step by step</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Learning Missions</h1>
+              <p className="text-gray-600 dark:text-neutral-400 mt-1">Build your AI skills step by step</p>
             </div>
 
             {/* Stats */}
@@ -191,22 +191,22 @@ export function MissionsPage() {
               <div className="flex items-center gap-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-violet-600">{stats.completed}</div>
-                  <div className="text-xs text-gray-500">Completed</div>
+                  <div className="text-xs text-gray-500 dark:text-neutral-400">Completed</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">{stats.in_progress}</div>
-                  <div className="text-xs text-gray-500">In Progress</div>
+                  <div className="text-xs text-gray-500 dark:text-neutral-400">In Progress</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-400">{stats.not_started}</div>
-                  <div className="text-xs text-gray-500">Not Started</div>
+                  <div className="text-2xl font-bold text-gray-400 dark:text-neutral-500">{stats.not_started}</div>
+                  <div className="text-xs text-gray-500 dark:text-neutral-400">Not Started</div>
                 </div>
                 <div className="ml-4 w-20 h-20">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                     <path
                       d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                       fill="none"
-                      stroke="#e5e7eb"
+                      className="stroke-gray-200 dark:stroke-neutral-700"
                       strokeWidth="3"
                     />
                     <path
@@ -217,7 +217,7 @@ export function MissionsPage() {
                       strokeDasharray={`${stats.completion_percent}, 100`}
                     />
                   </svg>
-                  <div className="text-center -mt-14 text-sm font-bold text-gray-700">
+                  <div className="text-center -mt-14 text-sm font-bold text-gray-700 dark:text-neutral-300">
                     {stats.completion_percent}%
                   </div>
                 </div>
@@ -231,8 +231,8 @@ export function MissionsPage() {
               onClick={() => setSelectedCategory(null)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedCategory === null
-                  ? 'bg-violet-100 text-violet-700'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300'
+                  : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800'
               }`}
             >
               All Missions
@@ -243,8 +243,8 @@ export function MissionsPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   selectedCategory === cat.id
-                    ? 'bg-violet-100 text-violet-700'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300'
+                    : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800'
                 }`}
               >
                 {cat.name}
@@ -259,7 +259,7 @@ export function MissionsPage() {
         {/* In Progress Section */}
         {inProgressMissions.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
               Continue Where You Left Off
             </h2>
@@ -280,7 +280,7 @@ export function MissionsPage() {
         {/* Not Started Section */}
         {notStartedMissions.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Available Missions
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -300,7 +300,7 @@ export function MissionsPage() {
         {/* Completed Section */}
         {completedMissions.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -323,13 +323,13 @@ export function MissionsPage() {
         {/* Empty state */}
         {filteredMissions.length === 0 && (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-              <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-neutral-800 flex items-center justify-center">
+              <svg className="w-10 h-10 text-gray-400 dark:text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No missions found</h3>
-            <p className="text-gray-500">Check back later for new learning missions.</p>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No missions found</h3>
+            <p className="text-gray-500 dark:text-neutral-400">Check back later for new learning missions.</p>
           </div>
         )}
       </div>

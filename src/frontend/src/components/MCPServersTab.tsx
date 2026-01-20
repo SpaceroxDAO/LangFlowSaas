@@ -115,7 +115,7 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-gray-600" />
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 dark:border-neutral-600 border-t-gray-600 dark:border-t-gray-300" />
       </div>
     )
   }
@@ -124,14 +124,14 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
     <>
       {/* Pending Changes Banner */}
       {hasPendingChanges && (
-        <div className="mx-6 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+        <div className="mx-6 mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="text-sm font-medium text-amber-800">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
                 {pendingChanges.length} pending change{pendingChanges.length > 1 ? 's' : ''} require a restart
               </p>
-              <p className="text-xs text-amber-600">
+              <p className="text-xs text-amber-600 dark:text-amber-400">
                 Sync changes and restart Langflow to apply MCP server configurations
               </p>
             </div>
@@ -150,8 +150,8 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
       {/* Empty state - No MCP servers configured */}
       {servers.length === 0 && (
         <div className="text-center py-16">
-          <Server className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 mb-4">No MCP servers configured yet</p>
+          <Server className="w-12 h-12 text-gray-300 dark:text-neutral-600 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-neutral-400 mb-4">No MCP servers configured yet</p>
           <button
             onClick={() => setMcpModalOpen(true)}
             className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300"
@@ -339,33 +339,33 @@ function MCPConfigModal({ projectId, workflows, servers, onClose }: MCPConfigMod
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-4xl mx-4 shadow-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-neutral-900 rounded-xl w-full max-w-4xl mx-4 shadow-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Add New MCP Server</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-neutral-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Add New MCP Server</h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-6 border-b border-gray-200">
+        <div className="px-6 border-b border-gray-200 dark:border-neutral-700">
           <div className="flex gap-1">
             <button
               onClick={() => { setActiveTab('external'); setAddServerMode(false) }}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'external'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                  : 'border-transparent text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
               }`}
             >
               Add External Server
               {servers.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                <span className="ml-2 px-2 py-0.5 bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400 text-xs rounded-full">
                   {servers.length}
                 </span>
               )}
@@ -374,8 +374,8 @@ function MCPConfigModal({ projectId, workflows, servers, onClose }: MCPConfigMod
               onClick={() => setActiveTab('expose')}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'expose'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                  : 'border-transparent text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-300'
               }`}
             >
               Expose Internal Project as Server
@@ -648,7 +648,7 @@ function ExternalServerCard({
   const gradientColor = getGradientColor(colorIndex)
 
   return (
-    <div className={`bg-white border rounded-lg p-4 transition-all ${server.is_enabled ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
+    <div className={`bg-white dark:bg-neutral-800 border rounded-lg p-4 transition-all ${server.is_enabled ? 'border-gray-200 dark:border-neutral-700' : 'border-gray-100 dark:border-neutral-800 opacity-60'}`}>
       <div className="flex items-start gap-4">
         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${gradientColor} flex items-center justify-center flex-shrink-0`}>
           {server.transport === 'sse' || server.transport === 'http' ? (
@@ -660,18 +660,18 @@ function ExternalServerCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-gray-900">{server.name}</h3>
+            <h3 className="font-medium text-gray-900 dark:text-white">{server.name}</h3>
             {getHealthIcon(server.health_status)}
             {server.needs_sync && (
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs rounded-full">
                 Pending sync
               </span>
             )}
           </div>
           {server.description && (
-            <p className="text-sm text-gray-500 mt-1">{server.description}</p>
+            <p className="text-sm text-gray-500 dark:text-neutral-400 mt-1">{server.description}</p>
           )}
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 dark:text-neutral-500">
             <span>Type: {server.server_type}</span>
             {server.transport === 'sse' || server.transport === 'http' ? (
               <span className="truncate max-w-[200px]" title={server.url}>URL: {server.url}</span>
@@ -686,7 +686,7 @@ function ExternalServerCard({
             onClick={() => onToggle(server)}
             disabled={isToggling}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
-              server.is_enabled ? 'bg-purple-600' : 'bg-gray-200'
+              server.is_enabled ? 'bg-purple-600' : 'bg-gray-200 dark:bg-neutral-700'
             }`}
           >
             <span
@@ -700,7 +700,7 @@ function ExternalServerCard({
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-              className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-colors"
+              className="p-1.5 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 rounded transition-colors"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <circle cx="5" cy="12" r="2" />
@@ -709,10 +709,10 @@ function ExternalServerCard({
               </svg>
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+              <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg z-10 py-1">
                 <button
                   onClick={() => { setMenuOpen(false); onDelete(server) }}
-                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left"
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete
