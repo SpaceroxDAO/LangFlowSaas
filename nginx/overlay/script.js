@@ -10,7 +10,7 @@
 (function() {
     'use strict';
 
-    console.log("[TeachCharlie Overlay] White-label script initialized v45 - Added pointer-events:auto to click capture");
+    console.log("[TeachCharlie Overlay] White-label script initialized v46 - Added SaveMonitor for unsaved changes detection");
 
     // Dog icon SVG (from user's dog.svg file)
     const DOG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.25 16.25h1.5L12 17z"/><path d="M16 14v.5"/><path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.702 11.702 0 0 0-.493-3.309"/><path d="M8 14v.5"/><path d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5-1.931.722-3.576-.297-3.656-1-.113-.994 1.177-6.53 4-7 1.923-.321 3.651.845 3.651 2.235A7.497 7.497 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277 2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-3.656 1-1.261-.472-1.855-1.45-2.239-2.5"/></svg>`;
@@ -1138,6 +1138,256 @@
     };
 
     // =====================================================
+    // MODULE: SAVE MONITOR (Unsaved Changes Detection)
+    // Detects unsaved changes and communicates with parent
+    // =====================================================
+
+    const SaveMonitor = {
+        hasUnsavedChanges: false,
+        isSaving: false,
+        lastSaveTime: null,
+        changeDebounceTimer: null,
+        initialStateSet: false,
+
+        init() {
+            console.log('[TeachCharlie] SaveMonitor - Initializing');
+
+            // Wait for the canvas to be ready
+            this.waitForCanvas();
+
+            // Listen for save commands from parent
+            window.addEventListener('message', (event) => {
+                if (event.data?.source === 'teach-charlie-parent') {
+                    if (event.data.type === 'check_unsaved') {
+                        this.reportState();
+                    } else if (event.data.type === 'request_save') {
+                        this.triggerSave();
+                    }
+                }
+            });
+
+            // Handle beforeunload to warn about unsaved changes
+            window.addEventListener('beforeunload', (e) => {
+                if (this.hasUnsavedChanges) {
+                    e.preventDefault();
+                    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                    return e.returnValue;
+                }
+            });
+        },
+
+        waitForCanvas() {
+            const checkCanvas = setInterval(() => {
+                const reactFlowPane = document.querySelector('.react-flow__pane');
+                const nodesContainer = document.querySelector('.react-flow__nodes');
+
+                if (reactFlowPane && nodesContainer) {
+                    clearInterval(checkCanvas);
+                    this.setupObservers();
+                    // Small delay to let initial render complete
+                    setTimeout(() => {
+                        this.initialStateSet = true;
+                        console.log('[TeachCharlie] SaveMonitor - Initial state set, now tracking changes');
+                    }, 2000);
+                }
+            }, 500);
+
+            // Timeout after 30 seconds
+            setTimeout(() => clearInterval(checkCanvas), 30000);
+        },
+
+        setupObservers() {
+            console.log('[TeachCharlie] SaveMonitor - Setting up observers');
+
+            // Watch for DOM changes that indicate user edits
+            const flowContainer = document.querySelector('.react-flow');
+            if (flowContainer) {
+                const observer = new MutationObserver((mutations) => {
+                    if (!this.initialStateSet) return;
+
+                    // Check for meaningful changes (not just style updates)
+                    for (const mutation of mutations) {
+                        // Node additions/removals
+                        if (mutation.type === 'childList') {
+                            const hasNodeChange = Array.from(mutation.addedNodes).some(node =>
+                                node.classList?.contains('react-flow__node') ||
+                                node.querySelector?.('.react-flow__node')
+                            ) || Array.from(mutation.removedNodes).some(node =>
+                                node.classList?.contains('react-flow__node') ||
+                                node.querySelector?.('.react-flow__node')
+                            );
+
+                            if (hasNodeChange) {
+                                this.markAsChanged('node_change');
+                                break;
+                            }
+                        }
+                    }
+                });
+
+                observer.observe(flowContainer, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+
+            // Watch for input changes (field edits)
+            document.addEventListener('input', (e) => {
+                if (!this.initialStateSet) return;
+                const target = e.target;
+                // Check if input is within a node or settings panel
+                if (target.closest('.react-flow__node') ||
+                    target.closest('[class*="sidebar"]') ||
+                    target.closest('[role="dialog"]') ||
+                    target.closest('[class*="settings"]')) {
+                    this.markAsChanged('input_change');
+                }
+            }, true);
+
+            // Watch for edge connections (mouse up on handles)
+            document.addEventListener('mouseup', (e) => {
+                if (!this.initialStateSet) return;
+                const target = e.target;
+                if (target.closest('.react-flow__handle') ||
+                    target.closest('.react-flow__edge')) {
+                    // Delay check to allow edge to be created
+                    setTimeout(() => this.checkForEdgeChanges(), 100);
+                }
+            }, true);
+
+            // Watch for keyboard shortcuts (Ctrl+S, Cmd+S)
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    // User is saving
+                    this.onSaveTriggered();
+                }
+            }, true);
+
+            // Watch for Langflow's save notifications/toasts
+            this.watchForSaveNotifications();
+        },
+
+        checkForEdgeChanges() {
+            // Simple heuristic: if there's an edge being drawn or just connected
+            const edges = document.querySelectorAll('.react-flow__edge');
+            // This is called after potential edge changes
+            this.markAsChanged('edge_change');
+        },
+
+        watchForSaveNotifications() {
+            // Watch for toast notifications that indicate save status
+            const toastObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            const text = node.textContent?.toLowerCase() || '';
+                            // Detect Langflow save success messages
+                            if (text.includes('saved') || text.includes('flow saved') ||
+                                text.includes('changes saved') || text.includes('save successful')) {
+                                this.onSaveComplete();
+                            } else if (text.includes('saving') || text.includes('auto-saving')) {
+                                this.onSaveStarted();
+                            }
+                        }
+                    }
+                }
+            });
+
+            toastObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            // Also watch for Langflow's auto-save indicator
+            const checkAutoSave = setInterval(() => {
+                // Look for auto-save status indicators
+                const savingIndicator = document.querySelector('[class*="saving"], [data-testid*="saving"]');
+                if (savingIndicator) {
+                    const text = savingIndicator.textContent?.toLowerCase() || '';
+                    if (text.includes('saving')) {
+                        this.onSaveStarted();
+                    } else if (text.includes('saved') || text.includes('up to date')) {
+                        this.onSaveComplete();
+                    }
+                }
+            }, 1000);
+
+            // Clear interval after 5 minutes (auto-save should have kicked in by then)
+            setTimeout(() => clearInterval(checkAutoSave), 300000);
+        },
+
+        markAsChanged(reason) {
+            // Debounce rapid changes
+            if (this.changeDebounceTimer) {
+                clearTimeout(this.changeDebounceTimer);
+            }
+
+            this.changeDebounceTimer = setTimeout(() => {
+                if (!this.hasUnsavedChanges) {
+                    console.log('[TeachCharlie] SaveMonitor - Changes detected:', reason);
+                    this.hasUnsavedChanges = true;
+                    this.notifyParent('unsaved_changes', { hasChanges: true, reason });
+                }
+            }, 300);
+        },
+
+        onSaveTriggered() {
+            console.log('[TeachCharlie] SaveMonitor - Save triggered');
+            this.isSaving = true;
+            this.notifyParent('save_started', {});
+        },
+
+        onSaveStarted() {
+            if (!this.isSaving) {
+                console.log('[TeachCharlie] SaveMonitor - Auto-save started');
+                this.isSaving = true;
+                this.notifyParent('save_started', {});
+            }
+        },
+
+        onSaveComplete() {
+            console.log('[TeachCharlie] SaveMonitor - Save complete');
+            this.isSaving = false;
+            this.hasUnsavedChanges = false;
+            this.lastSaveTime = Date.now();
+            this.notifyParent('save_complete', { timestamp: this.lastSaveTime });
+        },
+
+        triggerSave() {
+            console.log('[TeachCharlie] SaveMonitor - Triggering save via keyboard shortcut');
+            // Simulate Ctrl+S / Cmd+S
+            const event = new KeyboardEvent('keydown', {
+                key: 's',
+                code: 'KeyS',
+                ctrlKey: navigator.platform.includes('Mac') ? false : true,
+                metaKey: navigator.platform.includes('Mac') ? true : false,
+                bubbles: true
+            });
+            document.dispatchEvent(event);
+            this.onSaveTriggered();
+        },
+
+        reportState() {
+            this.notifyParent('save_state', {
+                hasUnsavedChanges: this.hasUnsavedChanges,
+                isSaving: this.isSaving,
+                lastSaveTime: this.lastSaveTime
+            });
+        },
+
+        notifyParent(type, data) {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    source: 'langflow-overlay',
+                    type: type,
+                    ...data
+                }, '*');
+                console.log('[TeachCharlie] SaveMonitor - Notified parent:', type, data);
+            }
+        }
+    };
+
+    // =====================================================
     // DEBOUNCED OBSERVER
     // =====================================================
 
@@ -1178,8 +1428,9 @@
         MissionUI.init();
         WalkMe.init();
         ThemeSync.init();
+        SaveMonitor.init();
 
-        console.log("[TeachCharlie Overlay] Observer started - All modules initialized");
+        console.log("[TeachCharlie Overlay] Observer started - All modules initialized (including SaveMonitor)");
     }
 
     if (document.readyState === 'loading') {

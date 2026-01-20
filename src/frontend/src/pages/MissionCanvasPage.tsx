@@ -24,6 +24,11 @@ export function MissionCanvasPage() {
   const [isCompletingStep, setIsCompletingStep] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Unsaved changes state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSaveNotification, setShowSaveNotification] = useState(false)
+
   // Get flow and filter from URL params (fallback) or canvas data
   const flowId = searchParams.get('flow') || canvasData?.flow_id
   const componentFilter = searchParams.get('filter') || canvasData?.component_filter
@@ -46,6 +51,80 @@ export function MissionCanvasPage() {
     return `${langflowUrl}/flow/${flowId}${queryString ? `?${queryString}` : ''}`
   }
   const canvasUrl = buildCanvasUrl()
+
+  // State for showing navigation confirmation dialog
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null)
+
+  // Handle save state messages from Langflow iframe
+  useEffect(() => {
+    const handleSaveMessage = (event: MessageEvent) => {
+      if (event.data?.source !== 'langflow-overlay') return
+
+      const { type } = event.data
+
+      switch (type) {
+        case 'unsaved_changes':
+          setHasUnsavedChanges(event.data.hasChanges)
+          break
+        case 'save_started':
+          setIsSaving(true)
+          setShowSaveNotification(true)
+          break
+        case 'save_complete':
+          setIsSaving(false)
+          setHasUnsavedChanges(false)
+          setTimeout(() => setShowSaveNotification(false), 2000)
+          break
+        case 'save_state':
+          setHasUnsavedChanges(event.data.hasUnsavedChanges)
+          setIsSaving(event.data.isSaving)
+          break
+      }
+    }
+
+    window.addEventListener('message', handleSaveMessage)
+    return () => window.removeEventListener('message', handleSaveMessage)
+  }, [])
+
+  // Handle browser beforeunload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  // Handle navigation confirmation
+  const handleConfirmNavigation = useCallback(() => {
+    if (pendingNavigationPath) {
+      setHasUnsavedChanges(false) // Clear to prevent beforeunload
+      setShowLeaveConfirm(false)
+      navigate(pendingNavigationPath)
+      setPendingNavigationPath(null)
+    }
+  }, [pendingNavigationPath, navigate])
+
+  const handleCancelNavigation = useCallback(() => {
+    setShowLeaveConfirm(false)
+    setPendingNavigationPath(null)
+  }, [])
+
+  // Intercept internal navigation when there are unsaved changes
+  const handleNavigateWithCheck = useCallback((path: string) => {
+    if (hasUnsavedChanges) {
+      setPendingNavigationPath(path)
+      setShowLeaveConfirm(true)
+    } else {
+      navigate(path)
+    }
+  }, [hasUnsavedChanges, navigate])
 
   // Load mission and start canvas mode
   useEffect(() => {
@@ -198,6 +277,69 @@ export function MissionCanvasPage() {
 
   return (
     <div className="h-full flex bg-gray-100 dark:bg-neutral-950">
+      {/* Save Notification */}
+      {showSaveNotification && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg ${
+            isSaving
+              ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800'
+              : 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+          }`}>
+            {isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Saving changes...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">Changes saved</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Confirmation Dialog */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Unsaved Changes</h3>
+                  <p className="text-sm text-gray-500 dark:text-neutral-400">You have unsaved changes that will be lost.</p>
+                </div>
+              </div>
+              <p className="text-gray-600 dark:text-neutral-300 mb-6">
+                Are you sure you want to leave this page? Your changes haven't been saved yet.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={handleCancelNavigation}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-neutral-300 bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 rounded-lg transition-colors"
+                >
+                  Stay on Page
+                </button>
+                <button
+                  onClick={handleConfirmNavigation}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+                >
+                  Leave Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Side Panel */}
       <div
         className={`transition-all duration-300 flex-shrink-0 ${isPanelCollapsed ? 'w-12' : 'w-80'}`}
@@ -218,7 +360,7 @@ export function MissionCanvasPage() {
         <div className="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/dashboard/missions')}
+              onClick={() => handleNavigateWithCheck('/dashboard/missions')}
               className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
               title="Back to missions"
             >
