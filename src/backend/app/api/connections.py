@@ -110,12 +110,29 @@ async def handle_oauth_callback(
     Handle the OAuth callback after user authorizes the app.
 
     This finalizes the connection and stores the connection status.
+    Supports lookup by either:
+    - connection_id: Our internal ID (preferred)
+    - composio_connection_id: Composio's connectedAccountId from OAuth callback
     """
     user = await get_user_from_clerk(clerk_user, session)
     service = ComposioConnectionService(session)
 
     try:
-        return await service.handle_callback(user=user, connection_id=data.connection_id)
+        if data.connection_id:
+            # Lookup by our internal connection ID
+            return await service.handle_callback(user=user, connection_id=data.connection_id)
+        elif data.composio_connection_id:
+            # Lookup by Composio's connection ID
+            return await service.handle_callback_by_composio_id(
+                user=user,
+                composio_connection_id=data.composio_connection_id,
+                app_name=data.app_name,
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either connection_id or composio_connection_id is required",
+            )
     except ComposioConnectionServiceError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

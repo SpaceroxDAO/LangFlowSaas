@@ -1077,7 +1077,9 @@ export interface ConnectionInitiateResponse {
 }
 
 export interface ConnectionCallbackRequest {
-  connection_id: string
+  connection_id?: string           // Our internal connection ID
+  composio_connection_id?: string  // Composio's connectedAccountId from callback
+  app_name?: string                // App name from callback (for lookup)
 }
 
 export interface ConnectionListResponse {

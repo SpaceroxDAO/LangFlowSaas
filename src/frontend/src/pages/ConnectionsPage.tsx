@@ -184,27 +184,47 @@ export function ConnectionsPage() {
   const [connectingApp, setConnectingApp] = useState<string | null>(null)
   const [revokingId, setRevokingId] = useState<string | null>(null)
 
-  // Handle OAuth callback
+  // Handle OAuth callback - check for both our connection_id and Composio's connectedAccountId
   const connectionId = searchParams.get('connection_id')
+  const composioConnectedAccountId = searchParams.get('connectedAccountId')
+  const callbackStatus = searchParams.get('status')
+  const callbackAppName = searchParams.get('appName')
 
   useEffect(() => {
     api.setTokenGetter(getToken)
   }, [getToken])
 
-  // Handle OAuth callback when connection_id is present
+  // Handle OAuth callback when connection_id or connectedAccountId is present
   useEffect(() => {
-    if (connectionId) {
-      api.handleConnectionCallback({ connection_id: connectionId }).then(() => {
-        queryClient.invalidateQueries({ queryKey: ['connections'] })
-        queryClient.invalidateQueries({ queryKey: ['available-apps'] })
-        // Clear the URL params
+    const handleCallback = async () => {
+      if (connectionId) {
+        // Our internal connection_id - use directly
+        try {
+          await api.handleConnectionCallback({ connection_id: connectionId })
+          queryClient.invalidateQueries({ queryKey: ['connections'] })
+          queryClient.invalidateQueries({ queryKey: ['available-apps'] })
+        } catch (error) {
+          console.error('Callback error:', error)
+        }
         setSearchParams({})
-      }).catch((error) => {
-        console.error('Callback error:', error)
+      } else if (composioConnectedAccountId && callbackStatus === 'success') {
+        // Composio's connectedAccountId - look up by Composio ID
+        try {
+          await api.handleConnectionCallback({
+            composio_connection_id: composioConnectedAccountId,
+            app_name: callbackAppName || undefined
+          })
+          queryClient.invalidateQueries({ queryKey: ['connections'] })
+          queryClient.invalidateQueries({ queryKey: ['available-apps'] })
+        } catch (error) {
+          console.error('Callback error:', error)
+        }
         setSearchParams({})
-      })
+      }
     }
-  }, [connectionId, queryClient, setSearchParams])
+
+    handleCallback()
+  }, [connectionId, composioConnectedAccountId, callbackStatus, callbackAppName, queryClient, setSearchParams])
 
   // Fetch available apps
   const { data: appsData, isLoading: appsLoading } = useQuery({

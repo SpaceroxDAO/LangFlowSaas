@@ -113,11 +113,24 @@ class ConnectionInitiateResponse(BaseModel):
 
 
 class ConnectionCallbackRequest(BaseModel):
-    """Request from OAuth callback."""
+    """Request from OAuth callback.
 
-    connection_id: uuid.UUID = Field(
-        ...,
+    Supports two lookup methods:
+    1. connection_id: Our internal connection ID (preferred)
+    2. composio_connection_id: Composio's connectedAccountId from OAuth callback
+    """
+
+    connection_id: Optional[uuid.UUID] = Field(
+        default=None,
         description="Internal connection ID from initiate response",
+    )
+    composio_connection_id: Optional[str] = Field(
+        default=None,
+        description="Composio's connectedAccountId from OAuth callback URL",
+    )
+    app_name: Optional[str] = Field(
+        default=None,
+        description="App name from callback (helps with lookup)",
     )
 
 

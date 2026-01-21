@@ -270,6 +270,74 @@ class ComposioConnectionService:
 
         return ConnectionResponse.model_validate(connection)
 
+    async def handle_callback_by_composio_id(
+        self,
+        user: User,
+        composio_connection_id: str,
+        app_name: Optional[str] = None,
+    ) -> ConnectionResponse:
+        """
+        Handle OAuth callback using Composio's connection ID.
+
+        This is used when Composio returns connectedAccountId in the callback URL
+        instead of our internal connection_id.
+        """
+        # Find the pending connection by Composio connection ID
+        connection = await self.get_by_composio_id(composio_connection_id, user.id)
+
+        if not connection:
+            # Try to find by app name if provided (fallback for most recent pending)
+            if app_name:
+                connection = await self.get_pending_by_app(app_name, user.id)
+
+        if not connection:
+            raise ComposioConnectionServiceError(
+                f"Connection not found for composio_id={composio_connection_id}"
+            )
+
+        # Update the composio_connection_id if it changed (Composio may return a different ID)
+        if connection.composio_connection_id != composio_connection_id:
+            logger.info(
+                f"Updating composio_connection_id from {connection.composio_connection_id} "
+                f"to {composio_connection_id}"
+            )
+            connection.composio_connection_id = composio_connection_id
+
+        # Use the existing handle_callback logic
+        return await self.handle_callback(user=user, connection_id=uuid.UUID(str(connection.id)))
+
+    async def get_by_composio_id(
+        self,
+        composio_connection_id: str,
+        user_id: uuid.UUID,
+    ) -> Optional[UserConnection]:
+        """Get connection by Composio's connection ID."""
+        stmt = select(UserConnection).where(
+            UserConnection.composio_connection_id == composio_connection_id,
+            UserConnection.user_id == str(user_id),
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_pending_by_app(
+        self,
+        app_name: str,
+        user_id: uuid.UUID,
+    ) -> Optional[UserConnection]:
+        """Get the most recent pending connection for an app."""
+        stmt = (
+            select(UserConnection)
+            .where(
+                UserConnection.app_name == app_name,
+                UserConnection.user_id == str(user_id),
+                UserConnection.status == "pending",
+            )
+            .order_by(UserConnection.created_at.desc())
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_by_id(
         self,
         connection_id: uuid.UUID,
