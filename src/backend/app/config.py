@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     anthropic_api_key: str = ""
 
+    # Composio Integration (OAuth for 500+ apps)
+    # Get from: https://app.composio.dev/settings
+    composio_api_key: str = ""
+    composio_callback_url: str = "http://localhost:3001/settings/connections/callback"
+
     def validate_startup(self) -> bool:
         """
         Validate required environment variables on startup.

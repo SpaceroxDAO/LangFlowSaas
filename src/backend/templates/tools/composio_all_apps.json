@@ -1,0 +1,134 @@
+{
+  "id_prefix": "ComposioAllApps",
+  "component_type": "ComposioAllApps",
+  "display_name": "All My Connected Apps",
+  "description": "Load tools from ALL your connected Composio apps automatically. Zero configuration required.",
+  "icon": "layers",
+  "node": {
+    "data": {
+      "id": "ComposioAllApps-XXXXX",
+      "node": {
+        "base_classes": [
+          "Tool"
+        ],
+        "beta": false,
+        "category": "custom_components",
+        "conditional_paths": [],
+        "custom_fields": {},
+        "description": "Load tools from ALL your connected Composio apps automatically",
+        "display_name": "All My Connected Apps",
+        "documentation": "",
+        "edited": false,
+        "field_order": [
+          "entity_id",
+          "composio_api_key",
+          "tool_limit"
+        ],
+        "frozen": false,
+        "icon": "layers",
+        "key": "ComposioAllApps",
+        "legacy": false,
+        "lf_version": "1.2.0",
+        "metadata": {},
+        "minimized": false,
+        "output_types": [],
+        "outputs": [
+          {
+            "allows_loop": false,
+            "cache": true,
+            "display_name": "Tools",
+            "group_outputs": false,
+            "hidden": false,
+            "loop_types": null,
+            "method": "get_all_tools",
+            "name": "tools",
+            "options": null,
+            "required_inputs": null,
+            "selected": "Tool",
+            "tool_mode": true,
+            "types": [
+              "Tool"
+            ],
+            "value": "__UNDEFINED__"
+          }
+        ],
+        "pinned": false,
+        "score": 0.001,
+        "template": {
+          "_type": "Component",
+          "entity_id": {
+            "_input_type": "StrInput",
+            "advanced": true,
+            "display_name": "Entity ID",
+            "dynamic": false,
+            "info": "Pre-configured. Only change if using a custom entity.",
+            "list": false,
+            "load_from_db": false,
+            "name": "entity_id",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "str",
+            "value": "default"
+          },
+          "composio_api_key": {
+            "_input_type": "SecretStrInput",
+            "advanced": true,
+            "display_name": "Composio API Key",
+            "dynamic": false,
+            "info": "Pre-configured from environment. Leave blank.",
+            "list": false,
+            "load_from_db": false,
+            "name": "composio_api_key",
+            "password": true,
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "str",
+            "value": ""
+          },
+          "tool_limit": {
+            "_input_type": "IntInput",
+            "advanced": true,
+            "display_name": "Tools Per App",
+            "dynamic": false,
+            "info": "Maximum tools to load per connected app",
+            "list": false,
+            "load_from_db": false,
+            "name": "tool_limit",
+            "placeholder": "",
+            "required": false,
+            "show": true,
+            "title_case": false,
+            "type": "int",
+            "value": 10
+          }
+        },
+        "tool_mode": true
+      },
+      "selected_output": "tools",
+      "showNode": true,
+      "type": "ComposioAllApps"
+    },
+    "dragging": false,
+    "id": "ComposioAllApps-XXXXX",
+    "measured": {
+      "height": 200,
+      "width": 320
+    },
+    "position": {
+      "x": 550,
+      "y": 400
+    },
+    "selected": false,
+    "type": "genericNode"
+  },
+  "edge_output": {
+    "name": "tools",
+    "output_types": [
+      "Tool"
+    ]
+  }
+}

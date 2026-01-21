@@ -430,6 +430,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </svg>
           </Link>
 
+          {/* Connected Accounts */}
+          <Link
+            to="/dashboard/connections"
+            className={`w-8 h-8 rounded flex items-center justify-center transition-colors ${
+              location.pathname === '/dashboard/connections'
+                ? 'bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100'
+                : 'text-gray-400 dark:text-neutral-500 hover:bg-gray-50 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-neutral-100'
+            }`}
+            title="Connected Accounts"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </Link>
+
           {/* Settings */}
           <Link
             to="/dashboard/settings"
@@ -623,6 +638,21 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
           </svg>
           Billing
+        </Link>
+
+        {/* Connected Accounts */}
+        <Link
+          to="/dashboard/connections"
+          className={`flex items-center gap-2 px-2 py-1.5 rounded transition-colors text-sm ${
+            location.pathname === '/dashboard/connections'
+              ? 'bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100'
+              : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-50 dark:hover:bg-neutral-800 hover:text-gray-900 dark:hover:text-neutral-100'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          Connections
         </Link>
 
         {/* Settings */}

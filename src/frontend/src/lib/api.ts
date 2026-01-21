@@ -80,7 +80,29 @@ import type {
   CanvasStartResponse,
   CanvasEvent,
   CanvasEventResponse,
+  // Connection types (Composio OAuth)
+  Connection,
+  ConnectionInitiateRequest,
+  ConnectionInitiateResponse,
+  ConnectionCallbackRequest,
+  ConnectionListResponse,
+  ConnectionStatusResponse,
+  ComposioAppsResponse,
+  ConnectionToolsRequest,
+  ConnectionToolsResponse,
+  // Enhanced Chat with Composio Tools
+  ToolAvailabilityResponse,
+  EnhancedChatRequest,
+  EnhancedChatResponse,
 } from '@/types'
+
+// Stream event type for SSE
+interface StreamEvent {
+  event: string
+  data: Record<string, unknown>
+  index?: number
+  timestamp?: string
+}
 
 // Check dev mode from environment
 const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
@@ -1122,6 +1144,151 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(event),
     })
+  }
+
+  // ===========================================================================
+  // Connections (Composio OAuth Integrations)
+  // ===========================================================================
+
+  async getAvailableApps(): Promise<ComposioAppsResponse> {
+    return this.request('/api/v1/connections/apps')
+  }
+
+  async initiateConnection(data: ConnectionInitiateRequest): Promise<ConnectionInitiateResponse> {
+    return this.request<ConnectionInitiateResponse>('/api/v1/connections/initiate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async handleConnectionCallback(data: ConnectionCallbackRequest): Promise<Connection> {
+    return this.request<Connection>('/api/v1/connections/callback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listConnections(
+    page: number = 1,
+    pageSize: number = 20,
+    activeOnly: boolean = false
+  ): Promise<ConnectionListResponse> {
+    const params = new URLSearchParams()
+    params.append('page', page.toString())
+    params.append('page_size', pageSize.toString())
+    params.append('active_only', activeOnly.toString())
+    return this.request(`/api/v1/connections?${params}`)
+  }
+
+  async getConnection(connectionId: string): Promise<Connection> {
+    return this.request(`/api/v1/connections/${connectionId}`)
+  }
+
+  async checkConnectionStatus(connectionId: string): Promise<ConnectionStatusResponse> {
+    return this.request(`/api/v1/connections/${connectionId}/status`)
+  }
+
+  async refreshConnection(connectionId: string): Promise<Connection> {
+    return this.request<Connection>(`/api/v1/connections/${connectionId}/refresh`, {
+      method: 'POST',
+    })
+  }
+
+  async revokeConnection(connectionId: string): Promise<void> {
+    return this.request(`/api/v1/connections/${connectionId}/revoke`, {
+      method: 'POST',
+    })
+  }
+
+  async deleteConnection(connectionId: string): Promise<void> {
+    return this.request(`/api/v1/connections/${connectionId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async getConnectionTools(data: ConnectionToolsRequest): Promise<ConnectionToolsResponse> {
+    return this.request<ConnectionToolsResponse>('/api/v1/connections/tools', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // =============================================================================
+  // Enhanced Chat with Composio Tools
+  // =============================================================================
+
+  async checkToolAvailability(): Promise<ToolAvailabilityResponse> {
+    return this.request<ToolAvailabilityResponse>('/api/v1/connections/tools/availability')
+  }
+
+  async enhancedChat(data: EnhancedChatRequest): Promise<EnhancedChatResponse> {
+    return this.request<EnhancedChatResponse>('/api/v1/connections/chat', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async enhancedChatStream(
+    data: EnhancedChatRequest,
+    onEvent: (event: StreamEvent) => void,
+    signal?: AbortSignal
+  ): Promise<void> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+    }
+
+    const token = await this.getToken?.()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/v1/connections/chat/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+      signal,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Request failed' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('No response body')
+    }
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6).trim()
+            if (dataStr && dataStr !== '[DONE]') {
+              try {
+                const event = JSON.parse(dataStr) as StreamEvent
+                onEvent(event)
+              } catch {
+                // Skip malformed events
+              }
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
   }
 }
 

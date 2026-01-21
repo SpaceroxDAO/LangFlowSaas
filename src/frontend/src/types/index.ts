@@ -1041,3 +1041,118 @@ export interface CanvasEventResponse {
   step_completed: boolean
   current_step: number
 }
+
+// ===========================================================================
+// Connection Types (Composio OAuth Integrations)
+// ===========================================================================
+
+export type ConnectionStatus = 'pending' | 'active' | 'expired' | 'revoked' | 'error'
+
+export interface Connection {
+  id: string
+  app_name: string
+  app_display_name: string
+  status: ConnectionStatus
+  account_identifier: string | null
+  scopes: string[] | null
+  available_actions: Array<{ name: string; description?: string }> | null
+  connected_at: string | null
+  last_used_at: string | null
+  expires_at: string | null
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConnectionInitiateRequest {
+  app_name: string
+  redirect_url?: string
+}
+
+export interface ConnectionInitiateResponse {
+  connection_id: string
+  composio_connection_id: string
+  redirect_url: string
+  expires_in: number
+}
+
+export interface ConnectionCallbackRequest {
+  connection_id: string
+}
+
+export interface ConnectionListResponse {
+  connections: Connection[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface ConnectionStatusResponse {
+  id: string
+  app_name: string
+  status: ConnectionStatus
+  is_active: boolean
+  needs_reconnection: boolean
+  last_error: string | null
+}
+
+export interface ComposioAppInfo {
+  app_name: string
+  display_name: string
+  description: string
+  icon: string
+  category: string
+  actions: string[]
+  is_connected: boolean
+  connection_id: string | null
+  connection_status: ConnectionStatus | null
+}
+
+export interface ComposioAppsResponse {
+  apps: ComposioAppInfo[]
+  categories: string[]
+}
+
+export interface ConnectionToolsRequest {
+  app_names: string[]
+}
+
+export interface ConnectionToolInfo {
+  name: string
+  description: string
+  app_name: string
+  parameters?: Record<string, unknown>
+}
+
+export interface ConnectionToolsResponse {
+  tools: ConnectionToolInfo[]
+  total: number
+}
+
+// Tool Availability (for playground indicators)
+export interface ToolAvailabilityResponse {
+  has_tools: boolean
+  tool_count: number
+  connected_apps: string[]
+  tools: {
+    name: string
+    description: string
+    app_name: string
+    parameters?: Record<string, unknown>
+  }[]
+}
+
+// Enhanced Chat with Composio Tools
+export interface EnhancedChatRequest {
+  message: string
+  conversation_id?: string
+  workflow_id?: string
+  app_names?: string[]
+}
+
+export interface EnhancedChatResponse {
+  text: string
+  session_id: string
+  tools_used: string[]
+  metadata: Record<string, unknown>
+}

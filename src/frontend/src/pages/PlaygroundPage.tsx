@@ -10,7 +10,19 @@ import { useStreamingChat } from '@/hooks/useStreamingChat'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTour, useShouldShowTour } from '@/providers/TourProvider'
 import { startPlaygroundTour } from '@/tours'
-import type { ChatMessage, WorkflowConversation } from '@/types'
+import type { ChatMessage, WorkflowConversation, ToolAvailabilityResponse } from '@/types'
+
+// App icon mapping for tool indicators
+const APP_ICONS: Record<string, string> = {
+  gmail: '📧',
+  googlecalendar: '📅',
+  slack: '💬',
+  notion: '📝',
+  hubspot: '👥',
+  googledrive: '📁',
+  github: '🐙',
+  linear: '📋',
+}
 
 // Format relative time (e.g., "2 min ago", "Yesterday")
 function formatRelativeTime(date: Date): string {
@@ -52,14 +64,22 @@ export function PlaygroundPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const [useStreaming, setUseStreaming] = useState(true)
+  const [useConnectedTools, setUseConnectedTools] = useState(false)
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null)
   const [playgroundTourStarted, setPlaygroundTourStarted] = useState(false)
+  const [enhancedStreamingMessage, setEnhancedStreamingMessage] = useState<{
+    id: string
+    content: string
+    isStreaming: boolean
+    toolCalls?: { name: string; input?: unknown; output?: string; isComplete: boolean }[]
+  } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const enhancedAbortControllerRef = useRef<AbortController | null>(null)
 
   // Tour hooks
   const { completeTour } = useTour()
@@ -123,6 +143,14 @@ export function PlaygroundPage() {
     enabled: !!agentId && !isWorkflowMode && !!agentComponent,
   })
 
+  // Fetch connected Composio tools availability
+  const { data: toolAvailability } = useQuery({
+    queryKey: ['tool-availability'],
+    queryFn: () => api.checkToolAvailability(),
+    staleTime: 60000, // Cache for 1 minute
+    refetchOnWindowFocus: false,
+  })
+
   const chatWorkflow = isWorkflowMode ? workflow : associatedWorkflows?.[0]
   const entity = isWorkflowMode ? workflow : agentComponent
   const entityName = entity?.name || 'Loading...'
@@ -177,6 +205,26 @@ export function PlaygroundPage() {
     }
   }, [streamingMessage?.isStreaming, streamingMessage?.id])
 
+  // Convert completed enhanced streaming message to regular message
+  useEffect(() => {
+    if (enhancedStreamingMessage && !enhancedStreamingMessage.isStreaming && enhancedStreamingMessage.content) {
+      // Enhanced streaming is done, add the message to the messages array
+      const completedMessage: ChatMessage = {
+        id: enhancedStreamingMessage.id,
+        role: 'assistant',
+        content: enhancedStreamingMessage.content,
+        timestamp: new Date(),
+        status: 'sent',
+        // Include tool calls in metadata for display
+        metadata: enhancedStreamingMessage.toolCalls?.length
+          ? { toolCalls: enhancedStreamingMessage.toolCalls }
+          : undefined,
+      }
+      setMessages((prev) => [...prev, completedMessage])
+      setEnhancedStreamingMessage(null)
+    }
+  }, [enhancedStreamingMessage?.isStreaming, enhancedStreamingMessage?.id])
+
   // Fetch conversation history
   const { data: conversationsData } = useQuery({
     queryKey: ['workflow-conversations', chatWorkflow?.id],
@@ -209,7 +257,7 @@ export function PlaygroundPage() {
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingMessage?.content])
+  }, [messages, streamingMessage?.content, enhancedStreamingMessage?.content])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -246,7 +294,116 @@ export function PlaygroundPage() {
     setInput('')
     clearFiles() // Clear files after adding to message
 
-    // Use streaming if enabled
+    // Use enhanced chat with connected tools if enabled
+    if (useConnectedTools && toolAvailability?.has_tools) {
+      // Mark user message as sent immediately
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === userMessage.id ? { ...m, status: 'sent' as const } : m
+        )
+      )
+
+      // Create abort controller for enhanced streaming
+      const abortController = new AbortController()
+      enhancedAbortControllerRef.current = abortController
+
+      const assistantMessageId = crypto.randomUUID()
+      setEnhancedStreamingMessage({
+        id: assistantMessageId,
+        content: '',
+        isStreaming: true,
+        toolCalls: [],
+      })
+
+      try {
+        await api.enhancedChatStream(
+          {
+            message: messageContent,
+            conversation_id: conversationId || undefined,
+            workflow_id: chatWorkflow?.id,
+            app_names: toolAvailability.connected_apps,
+          },
+          (event) => {
+            if (event.event === 'text_delta') {
+              setEnhancedStreamingMessage((prev) =>
+                prev ? { ...prev, content: prev.content + (event.data.text || '') } : prev
+              )
+            } else if (event.event === 'text_complete') {
+              setEnhancedStreamingMessage((prev) =>
+                prev ? { ...prev, content: String(event.data.text || prev.content) } : prev
+              )
+            } else if (event.event === 'tool_call_start') {
+              setEnhancedStreamingMessage((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      toolCalls: [
+                        ...(prev.toolCalls || []),
+                        {
+                          name: String(event.data.tool_name || 'unknown'),
+                          input: event.data.tool_input,
+                          isComplete: false,
+                        },
+                      ],
+                    }
+                  : prev
+              )
+            } else if (event.event === 'tool_call_end') {
+              setEnhancedStreamingMessage((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      toolCalls: prev.toolCalls?.map((tc, i) =>
+                        i === (event.index ?? prev.toolCalls!.length - 1)
+                          ? { ...tc, output: String(event.data.output || ''), isComplete: true }
+                          : tc
+                      ),
+                    }
+                  : prev
+              )
+            } else if (event.event === 'session_start') {
+              if (event.data.conversation_id) {
+                setConversationId(String(event.data.conversation_id))
+              }
+            } else if (event.event === 'done') {
+              setEnhancedStreamingMessage((prev) =>
+                prev ? { ...prev, isStreaming: false } : prev
+              )
+            } else if (event.event === 'error') {
+              console.error('Enhanced chat error:', event.data.message)
+              setEnhancedStreamingMessage((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      isStreaming: false,
+                      content: prev.content || `Error: ${event.data.message}`,
+                    }
+                  : prev
+              )
+            }
+          },
+          abortController.signal
+        )
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Enhanced chat failed:', error)
+          setEnhancedStreamingMessage((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  isStreaming: false,
+                  content: prev.content || 'Failed to get response. Please try again.',
+                }
+              : prev
+          )
+        }
+      } finally {
+        enhancedAbortControllerRef.current = null
+      }
+      return
+    }
+
+    // Use regular streaming if enabled (default Langflow execution)
     if (useStreaming) {
       // Mark user message as sent immediately
       setMessages((prev) =>
@@ -298,7 +455,7 @@ export function PlaygroundPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, isStreaming, isUploading, entityId, conversationId, isWorkflowMode, workflowId, chatWorkflow, queryClient, useStreaming, sendStreamingMessage, uploadedFiles, clearFiles])
+  }, [input, isLoading, isStreaming, isUploading, entityId, conversationId, isWorkflowMode, workflowId, chatWorkflow, queryClient, useStreaming, useConnectedTools, toolAvailability, sendStreamingMessage, uploadedFiles, clearFiles])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -689,6 +846,75 @@ export function PlaygroundPage() {
             />
           )}
 
+          {/* Enhanced streaming message with tool calls */}
+          {enhancedStreamingMessage && enhancedStreamingMessage.isStreaming && (
+            <div className="flex items-start gap-3" data-testid="enhanced-streaming-message">
+              {/* Assistant Avatar */}
+              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={entityName} className="w-full h-full object-contain" />
+                ) : (
+                  <svg className="w-4 h-4 text-violet-600 dark:text-violet-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
+                )}
+              </div>
+              {/* Message Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{entityName}</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                    <svg className="w-3 h-3 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                    </svg>
+                    Using Tools
+                  </span>
+                </div>
+                {/* Tool Calls Display */}
+                {enhancedStreamingMessage.toolCalls && enhancedStreamingMessage.toolCalls.length > 0 && (
+                  <div className="mb-2 space-y-1">
+                    {enhancedStreamingMessage.toolCalls.map((tc, idx) => (
+                      <div
+                        key={idx}
+                        className={`text-xs px-2 py-1 rounded border ${
+                          tc.isComplete
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+                            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 animate-pulse'
+                        }`}
+                      >
+                        <span className="font-medium">{tc.isComplete ? '✓' : '⏳'} {tc.name}</span>
+                        {tc.isComplete && tc.output && (
+                          <span className="ml-2 text-gray-500 dark:text-gray-400 truncate max-w-xs inline-block align-bottom">
+                            → {tc.output.slice(0, 50)}{tc.output.length > 50 ? '...' : ''}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Response Content */}
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{enhancedStreamingMessage.content || '...'}</ReactMarkdown>
+                </div>
+                {/* Stop Button */}
+                <button
+                  onClick={() => {
+                    enhancedAbortControllerRef.current?.abort()
+                    setEnhancedStreamingMessage((prev) =>
+                      prev ? { ...prev, isStreaming: false } : prev
+                    )
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Stop generating
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Legacy loading indicator for non-streaming mode */}
           {isLoading && !useStreaming && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex items-start gap-3">
@@ -716,8 +942,62 @@ export function PlaygroundPage() {
         </div>
 
         {/* Input */}
-        <FileDropZone onFilesAdded={addFiles} disabled={isLoading || isStreaming}>
+        <FileDropZone onFilesAdded={addFiles} disabled={isLoading || isStreaming || enhancedStreamingMessage?.isStreaming}>
           <div className="flex-shrink-0 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900" data-tour="playground-input">
+            {/* Connected Tools Indicator with Toggle */}
+            {toolAvailability?.has_tools && (
+              <div className="px-4 py-2 border-b border-gray-100 dark:border-neutral-800">
+                <div className="max-w-4xl mx-auto">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium text-gray-500 dark:text-neutral-400 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Connected Tools:
+                      </span>
+                      {toolAvailability.connected_apps.map((app) => (
+                        <span
+                          key={app}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-opacity ${
+                            useConnectedTools
+                              ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+                              : 'bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-neutral-400 border-gray-200 dark:border-neutral-700 opacity-60'
+                          }`}
+                          title={`${app} is connected - ${toolAvailability.tools.filter(t => t.app_name === app).length} actions available`}
+                        >
+                          <span>{APP_ICONS[app] || '🔧'}</span>
+                          {app.charAt(0).toUpperCase() + app.slice(1).replace('google', 'Google ')}
+                        </span>
+                      ))}
+                      <Link
+                        to="/dashboard/connections"
+                        className="text-xs text-violet-600 dark:text-violet-400 hover:underline ml-1"
+                      >
+                        Manage
+                      </Link>
+                    </div>
+                    {/* Toggle Switch */}
+                    <label className="flex items-center gap-2 cursor-pointer" data-testid="connected-tools-toggle">
+                      <span className={`text-xs font-medium transition-colors ${useConnectedTools ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 dark:text-neutral-400'}`}>
+                        {useConnectedTools ? 'Tools Active' : 'Tools Off'}
+                      </span>
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={useConnectedTools}
+                          onChange={(e) => setUseConnectedTools(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <div className={`w-9 h-5 rounded-full transition-colors ${useConnectedTools ? 'bg-violet-600' : 'bg-gray-300 dark:bg-neutral-600'}`} />
+                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${useConnectedTools ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Attachment Bar */}
             <AttachmentBar files={uploadedFiles} onRemoveFile={removeFile} />
 
@@ -726,7 +1006,7 @@ export function PlaygroundPage() {
                 {/* File picker button */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading || isStreaming || isUploading}
+                  disabled={isLoading || isStreaming || enhancedStreamingMessage?.isStreaming || isUploading}
                   className="flex-shrink-0 w-11 h-11 rounded-xl border border-gray-300 dark:border-neutral-600 text-gray-500 dark:text-neutral-400
                              hover:border-violet-500 dark:hover:border-violet-400 hover:text-violet-500 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20
                              focus:outline-none focus:ring-2 focus:ring-violet-200 dark:focus:ring-violet-800
@@ -755,7 +1035,7 @@ export function PlaygroundPage() {
                 {/* Voice input button */}
                 <VoiceInputButton
                   onTranscript={handleVoiceTranscript}
-                  disabled={isLoading || isStreaming}
+                  disabled={isLoading || isStreaming || enhancedStreamingMessage?.isStreaming}
                 />
 
                 <div className="flex-1 relative">
@@ -765,7 +1045,7 @@ export function PlaygroundPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder={uploadedFiles.length > 0 ? "Add a message about your files..." : "Type a message..."}
-                    disabled={isLoading || isStreaming}
+                    disabled={isLoading || isStreaming || enhancedStreamingMessage?.isStreaming}
                     rows={1}
                     className="w-full resize-none rounded-xl border border-gray-300 dark:border-neutral-600 px-4 py-3
                                bg-white dark:bg-neutral-800 text-gray-900 dark:text-white

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from app.models.mcp_server import MCPServer
     from app.models.user_file import UserFile
     from app.models.subscription import Subscription
+    from app.models.user_connection import UserConnection
 
 
 class User(BaseModel):
@@ -122,6 +123,14 @@ class User(BaseModel):
         back_populates="user",
         lazy="select",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    # Composio connections (OAuth to external apps)
+    connections: Mapped[List["UserConnection"]] = relationship(
+        "UserConnection",
+        back_populates="user",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 

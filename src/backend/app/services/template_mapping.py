@@ -109,6 +109,8 @@ TOOL_MAPPING = {
     "calculator": "calculator",        # Math calculations
     "weather": "open_meteo",           # Open-Meteo - free weather API
     "knowledge_search": "knowledge_retriever",  # RAG - search uploaded documents
+    # Composio integration - connected apps
+    "composio_all_apps": "composio_all_apps",  # All connected Composio apps (Gmail, Slack, etc.)
     # Legacy tools (kept for backwards compatibility)
     "duckduckgo": "web_search",        # DuckDuckGo - free but rate-limited
     "langsearch": "langsearch",        # LangSearch - AI-optimized web search

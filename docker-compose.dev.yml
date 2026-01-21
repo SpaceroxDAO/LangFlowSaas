@@ -36,9 +36,12 @@ services:
     networks:
       - teachcharlie-network
 
-  # Langflow AI Agent Engine
+  # Langflow AI Agent Engine (with Composio support)
   langflow:
-    image: langflowai/langflow:latest
+    build:
+      context: .
+      dockerfile: langflow.Dockerfile
+    image: teachcharlie-langflow:latest
     container_name: ${LANGFLOW_CONTAINER_NAME:-teachcharlie-langflow}
     user: "0:0"
     environment:
@@ -53,13 +56,15 @@ services:
       LANGFLOW_API_KEY: ${LANGFLOW_API_KEY:-dev-langflow-api-key}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      COMPOSIO_API_KEY: ${COMPOSIO_API_KEY:-}
       LANGFLOW_SECRET_KEY: ${LANGFLOW_SECRET_KEY:-dev-secret-key-change-in-production}
       LANGFLOW_BACKEND_ONLY: "false"
     ports:
       - "7860:7860"
     volumes:
       - langflow_data:/app/langflow
-      - custom_components:/app/custom_components
+      # Bind mount for custom components - allows live updates without Docker restart
+      - ./src/backend/custom_components:/app/custom_components
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,4 +101,3 @@ networks:
 volumes:
   postgres_data:
   langflow_data:
-  custom_components:

@@ -18,6 +18,7 @@ import { BillingPage } from '@/pages/BillingPage'
 import { AnalyticsDashboardPage } from '@/pages/AnalyticsDashboardPage'
 import { MissionsPage } from '@/pages/MissionsPage'
 import { MissionCanvasPage } from '@/pages/MissionCanvasPage'
+import { ConnectionsPage } from '@/pages/ConnectionsPage'
 import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
 
 // Use dev mode or Clerk components based on environment
@@ -72,6 +73,27 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <SettingsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/connections"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ConnectionsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        {/* Alias route for OAuth callback */}
+        <Route
+          path="/settings/connections/callback"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ConnectionsPage />
               </AppShell>
             </ProtectedRoute>
           }

@@ -32,6 +32,7 @@ from app.api import (
     dashboard_router,
     missions_router,
     embed_router,
+    connections_router,
 )
 
 
@@ -78,6 +79,49 @@ async def sync_mcp_servers():
             logger.info(f"MCP servers synced on startup: {result.synced_count} servers")
     except Exception as e:
         logger.warning(f"MCP server sync failed (non-fatal): {e}")
+
+
+async def sync_builtin_components():
+    """Sync built-in custom components to the components directory."""
+    import os
+    import shutil
+    from pathlib import Path
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Source: built-in components in the backend package
+    source_dir = Path(__file__).parent.parent / "custom_components"
+
+    # Destination: the shared components directory (Docker volume or local)
+    dest_dir = Path(os.environ.get("CUSTOM_COMPONENTS_PATH", "./custom_components"))
+
+    if not source_dir.exists():
+        logger.debug("No built-in custom components to sync")
+        return
+
+    try:
+        # Ensure destination exists
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Sync the tools folder specifically
+        tools_source = source_dir / "tools"
+        tools_dest = dest_dir / "tools"
+
+        if tools_source.exists():
+            # Copy tools folder
+            if tools_dest.exists():
+                shutil.rmtree(tools_dest)
+            shutil.copytree(tools_source, tools_dest)
+            logger.info(f"Synced built-in tools components to {tools_dest}")
+
+        # Create/update __init__.py if needed
+        init_file = dest_dir / "__init__.py"
+        if not init_file.exists():
+            init_file.write_text('# Custom components for Teach Charlie\n')
+
+    except Exception as e:
+        logger.warning(f"Failed to sync built-in components (non-fatal): {e}")
 
 
 async def seed_default_missions():
@@ -187,6 +231,9 @@ async def lifespan(app: FastAPI):
     if settings.debug:
         await create_tables()
 
+    # Sync built-in custom components (like Composio tools)
+    await sync_builtin_components()
+
     # Seed default presets if needed
     await seed_default_presets()
 
@@ -246,6 +293,7 @@ app.include_router(billing_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(missions_router, prefix="/api/v1")
 app.include_router(embed_router, prefix="/api/v1")
+app.include_router(connections_router, prefix="/api/v1")
 
 # Mount static files for serving generated avatars
 # Path(__file__).parent = /app/app (where main.py is located)

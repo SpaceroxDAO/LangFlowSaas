@@ -1,8 +1,399 @@
 # Composio Integration Guide for Teach Charlie
 
-> **Status**: Planning
-> **Last Updated**: 2026-01-17
+> **Status**: Phase 2 Complete (Tool Integration Implemented)
+> **Last Updated**: 2026-01-21
 > **Author**: Implementation Guide for Multi-User Tool Integration
+
+---
+
+## Implementation Status
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1: Foundation | **Complete** | OAuth connection management, settings page |
+| Phase 2: Agent Integration | **Complete** | Composio tools in chat, availability indicators |
+| Phase 3: Mission Integration | Pending | Mission-required connections |
+| Phase 4: Polish & Scale | Pending | Monitoring, additional apps |
+
+---
+
+## User Journey: From Connection to Tool Usage
+
+This section documents the complete user experience for connecting apps and using them in AI chat.
+
+### Journey Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    COMPOSIO USER JOURNEY                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. DISCOVER                    2. CONNECT                3. USE            │
+│  ┌─────────────────┐           ┌─────────────────┐       ┌─────────────────┐│
+│  │ Dashboard       │    →      │ Connections     │   →   │ Playground      ││
+│  │ /connections    │           │ OAuth Flow      │       │ Enhanced Chat   ││
+│  └─────────────────┘           └─────────────────┘       └─────────────────┘│
+│                                                                              │
+│  User sees available           User authorizes           Tools appear as    │
+│  apps they can connect         via OAuth popup           badges above chat  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Step 1: Discover Available Apps
+
+**URL**: `/dashboard/connections`
+
+The user navigates to the Connections page from the dashboard. They see:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  🔗 Connected Apps                                                           │
+│                                                                              │
+│  Connect your apps to give Charlie superpowers!                              │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  📧 Gmail                                                            │    │
+│  │  Read, search, and send emails                                      │    │
+│  │  [Connect]                                                          │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  📅 Google Calendar                                                  │    │
+│  │  View and create calendar events                                    │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  💬 Slack                                                            │    │
+│  │  Send messages and manage channels                                  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Technical Flow**:
+1. Frontend calls `GET /api/v1/connections/apps`
+2. Backend uses `ComposioConnectionService.get_available_apps(user)`
+3. Returns list of apps with connection status per user
+
+### Step 2: Initiate OAuth Connection
+
+When user clicks "Connect" on an app:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Connecting Gmail...                                                         │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                          OAUTH POPUP                                 │    │
+│  │                                                                      │    │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │    │
+│  │  │                      Google                                   │  │    │
+│  │  │                                                               │  │    │
+│  │  │  Sign in with Google                                         │  │    │
+│  │  │                                                               │  │    │
+│  │  │  Teach Charlie wants access to:                              │  │    │
+│  │  │  ✓ Read your emails                                          │  │    │
+│  │  │  ✓ Send emails on your behalf                                │  │    │
+│  │  │  ✓ Manage your calendar                                      │  │    │
+│  │  │                                                               │  │    │
+│  │  │  [Cancel]                             [Allow]                │  │    │
+│  │  └──────────────────────────────────────────────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Technical Flow**:
+1. Frontend calls `POST /api/v1/connections/initiate` with `{ app_name: "gmail" }`
+2. Backend uses Composio SDK:
+   - Creates integration: `client.integrations.create(use_composio_auth=True)`
+   - Initiates connection: `client.connected_accounts.initiate(integration_id=...)`
+3. Returns `{ redirect_url: "https://composio...", connection_id: "..." }`
+4. Frontend opens popup to `redirect_url`
+5. User completes OAuth in Google's UI
+6. Composio redirects back to callback URL
+
+### Step 3: Handle OAuth Callback
+
+After successful OAuth:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ✅ Gmail Connected Successfully!                                            │
+│                                                                              │
+│  Your account john@gmail.com is now connected.                              │
+│  Charlie can now help you with:                                             │
+│  • Searching your inbox                                                     │
+│  • Reading email content                                                    │
+│  • Sending emails on your behalf                                            │
+│                                                                              │
+│  [Got it!]                                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Technical Flow**:
+1. Frontend listens for popup close or postMessage
+2. Calls `POST /api/v1/connections/callback` with `{ connection_id }`
+3. Backend verifies connection status with Composio
+4. Stores connection record in `user_connections` table
+5. Returns connection details with status "active"
+
+### Step 4: See Connected Tools in Playground
+
+When user opens any agent's playground:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Charlie - Sales Agent                                    [Settings] [Share]│
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                                                                        │  │
+│  │        (Chat messages appear here)                                    │  │
+│  │                                                                        │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  Connected Tools: [📧 Gmail] [📅 Calendar] [💬 Slack]    [Manage →]   │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  Type your message...                                        [Send]  │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Technical Flow**:
+1. PlaygroundPage loads and calls `GET /api/v1/connections/tools/availability`
+2. `ComposioAgentService.check_user_has_tools(user)` returns availability
+3. `ComposioAgentService.get_available_tools_for_user(user)` returns tool list
+4. Frontend displays connected apps as colorful badges with emoji icons
+5. Hovering a badge shows tooltip: "Gmail is connected - 15 actions available"
+6. "Manage" link navigates to `/dashboard/connections`
+
+### Step 5: Chat with Connected Tools
+
+When user sends a message that could use connected tools:
+
+```
+User: "Search my inbox for emails from John about the proposal"
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  👤 You                                                              2:30 PM│
+│  Search my inbox for emails from John about the proposal                    │
+│                                                                              │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                              │
+│  🤖 Charlie                                                          2:30 PM│
+│  I'll search your Gmail for emails from John about the proposal.            │
+│                                                                              │
+│  🔧 Using GMAIL_SEARCH...                                                   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ Query: from:john proposal                                           │   │
+│  │ Found: 3 emails                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                              │
+│  I found 3 emails from John about the proposal:                             │
+│                                                                              │
+│  1. **Re: Q1 Proposal Draft** (Jan 18)                                      │
+│     "Looks good, let's discuss the pricing section..."                      │
+│                                                                              │
+│  2. **Proposal Feedback** (Jan 15)                                          │
+│     "I've reviewed the initial draft and have some thoughts..."             │
+│                                                                              │
+│  3. **Proposal Meeting** (Jan 12)                                           │
+│     "Can we schedule a call to go over the proposal?"                       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Technical Flow (Enhanced Chat)**:
+1. Frontend can use either:
+   - Standard Langflow execution (tools defined in flow)
+   - Enhanced Composio execution (direct LangChain agent)
+2. For enhanced chat, calls `POST /api/v1/connections/chat/stream`
+3. Backend creates LangChain agent with Composio tools:
+   ```python
+   toolset = ComposioToolSet(api_key=settings.composio_api_key)
+   tools = toolset.get_tools(entity_id=str(user.id))
+   agent = create_openai_functions_agent(llm, tools, prompt)
+   ```
+4. Agent executes and streams results via SSE
+5. Tool calls are visible in the stream (tool_call_start, tool_call_end events)
+
+### Connection Status Management
+
+Users can manage connections from the Connections page:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  📧 Gmail                                              Status: ✅ Active     │
+│  Connected as: john@gmail.com                                               │
+│  Connected: 3 days ago                                                      │
+│  Last used: 2 hours ago                                                     │
+│                                                                              │
+│  Available Actions:                                                         │
+│  • GMAIL_SEARCH - Search your inbox                                        │
+│  • GMAIL_READ - Read email content                                         │
+│  • GMAIL_SEND - Send emails                                                │
+│  • GMAIL_CREATE_DRAFT - Create email drafts                                │
+│                                                                              │
+│  [Refresh Connection]  [Disconnect]                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Available Actions**:
+- **Refresh**: `POST /api/v1/connections/{id}/refresh` - Re-validates with Composio
+- **Disconnect**: `POST /api/v1/connections/{id}/revoke` - Marks as revoked
+- **Delete**: `DELETE /api/v1/connections/{id}` - Permanently removes record
+
+### Error Handling
+
+**Expired Token**:
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ⚠️ Gmail connection needs refresh                                          │
+│                                                                              │
+│  Your Gmail connection has expired. Please reconnect to continue            │
+│  using Gmail features.                                                       │
+│                                                                              │
+│  [Reconnect Gmail]                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**No Connections**:
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  💡 Connect your apps for more power!                                        │
+│                                                                              │
+│  Charlie can do more when connected to your apps.                           │
+│  Try connecting Gmail, Calendar, or Slack.                                  │
+│                                                                              │
+│  [Connect Apps →]                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Technical Implementation Reference
+
+This section documents the actual implemented files and their purposes.
+
+### Backend Files
+
+| File | Purpose |
+|------|---------|
+| `app/services/composio_connection_service.py` | OAuth flow management, connection CRUD |
+| `app/services/composio_agent_service.py` | LangChain agent execution with Composio tools |
+| `app/api/connections.py` | REST API endpoints for connections and enhanced chat |
+| `app/schemas/connection.py` | Pydantic models for request/response validation |
+| `app/models/user_connection.py` | SQLAlchemy model for `user_connections` table |
+
+### Frontend Files
+
+| File | Purpose |
+|------|---------|
+| `src/pages/ConnectionsPage.tsx` | Connections management UI |
+| `src/pages/PlaygroundPage.tsx` | Chat with tool availability indicators |
+| `src/lib/api.ts` | API client methods |
+| `src/types/index.ts` | TypeScript interfaces |
+
+### API Endpoints (Implemented)
+
+#### Connection Management
+
+```
+GET    /api/v1/connections/apps                    # List available apps
+POST   /api/v1/connections/initiate                # Start OAuth flow
+POST   /api/v1/connections/callback                # Handle OAuth callback
+GET    /api/v1/connections                         # List user's connections
+GET    /api/v1/connections/{id}                    # Get connection details
+GET    /api/v1/connections/{id}/status             # Check connection status
+POST   /api/v1/connections/{id}/refresh            # Refresh connection
+POST   /api/v1/connections/{id}/revoke             # Revoke connection
+DELETE /api/v1/connections/{id}                    # Delete connection
+```
+
+#### Tool Execution
+
+```
+POST   /api/v1/connections/tools                   # Get tools for apps
+GET    /api/v1/connections/tools/availability      # Check if user has tools
+POST   /api/v1/connections/chat                    # Enhanced chat (non-streaming)
+POST   /api/v1/connections/chat/stream             # Enhanced chat (SSE streaming)
+```
+
+### Key Classes
+
+#### ComposioConnectionService
+
+Handles OAuth flows and connection management:
+
+```python
+class ComposioConnectionService:
+    async def get_available_apps(user) -> ComposioAppsResponse
+    async def initiate_connection(user, data) -> ConnectionInitiateResponse
+    async def handle_callback(user, connection_id) -> ConnectionResponse
+    async def get_tools_for_user(user, app_names) -> ConnectionToolsResponse
+    async def get_active_connections(user_id) -> List[UserConnection]
+```
+
+#### ComposioAgentService
+
+Executes LangChain agents with Composio tools:
+
+```python
+class ComposioAgentService:
+    async def check_user_has_tools(user) -> bool
+    async def get_available_tools_for_user(user) -> List[Dict]
+    def _get_langchain_tools(user, app_names) -> List[Tool]
+    async def chat(user, message, workflow, ...) -> Dict
+    async def chat_stream(user, message, workflow, ...) -> AsyncGenerator[StreamEvent]
+```
+
+### Streaming Events
+
+The enhanced chat stream (`/connections/chat/stream`) emits these SSE events:
+
+| Event Type | Description |
+|------------|-------------|
+| `session_start` | Session initialized with session_id |
+| `text_delta` | Incremental text from LLM |
+| `text_complete` | Final complete text |
+| `tool_call_start` | Tool execution beginning (shows tool name, input) |
+| `tool_call_end` | Tool execution complete (shows output) |
+| `error` | Error occurred |
+| `done` | Stream complete |
+
+### Database Schema
+
+```sql
+CREATE TABLE user_connections (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id),
+    app_name VARCHAR(100) NOT NULL,
+    app_display_name VARCHAR(255),
+    composio_connection_id VARCHAR(255),
+    composio_entity_id VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'pending',  -- pending, active, expired, revoked
+    connected_at TIMESTAMP,
+    last_used_at TIMESTAMP,
+    account_identifier VARCHAR(255),
+    scopes JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Environment Variables
+
+```bash
+# Required
+COMPOSIO_API_KEY=your_composio_api_key
+
+# Optional (defaults shown)
+DEFAULT_LLM_MODEL=gpt-4o
+```
 
 ---
 
@@ -672,53 +1063,63 @@ The connection limit (1,000 on free tier) is per Composio account, not per app:
 
 ## 9. Implementation Phases
 
-### Phase 1: Foundation (Week 1-2)
+### Phase 1: Foundation (Week 1-2) - COMPLETE
 
 **Goal**: Basic connection management without Langflow integration
 
-**Tasks:**
-1. Set up Composio account and obtain API key
-2. Create `user_connections` database table and migration
-3. Implement connection management API endpoints:
-   - `POST /connections/initiate`
-   - `GET /connections/callback`
-   - `GET /connections`
-   - `DELETE /connections/{id}`
-4. Create "Connected Accounts" settings page in frontend
-5. Implement basic Gmail connection flow as proof of concept
+**Status**: Complete
 
-**Deliverables:**
-- Users can connect/disconnect Gmail
-- Connections stored in database
-- Settings page shows connection status
+**Implemented:**
+1. Composio SDK integrated with async/await support
+2. `user_connections` database table with migration
+3. Full connection management API:
+   - `POST /connections/initiate` - OAuth initiation
+   - `POST /connections/callback` - OAuth callback handling
+   - `GET /connections` - List user connections
+   - `GET /connections/{id}` - Get connection details
+   - `GET /connections/{id}/status` - Check status
+   - `POST /connections/{id}/refresh` - Refresh connection
+   - `POST /connections/{id}/revoke` - Revoke access
+   - `DELETE /connections/{id}` - Delete record
+4. ConnectionsPage frontend component
+5. OAuth flow working with Gmail and other Composio apps
 
-**Testing:**
-- Connect Gmail with test account
-- Verify token refresh works
-- Verify disconnection removes access
+**Files Created:**
+- `app/services/composio_connection_service.py`
+- `app/api/connections.py`
+- `app/schemas/connection.py`
+- `app/models/user_connection.py`
+- `src/pages/ConnectionsPage.tsx`
 
 ---
 
-### Phase 2: Agent Integration (Week 3-4)
+### Phase 2: Agent Integration (Week 3-4) - COMPLETE
 
 **Goal**: Agents can use connected apps as tools
 
-**Tasks:**
-1. Create `ComposioToolset` Langflow component
-2. Update `create_flow_from_qa` to inject Composio tools
-3. Update agent creation wizard to show connected apps
-4. Implement tool selection UI for connected apps
-5. Add Composio tools to workflow execution
+**Status**: Complete
 
-**Deliverables:**
-- Agents can be created with Gmail tools
-- Tool execution works in playground
-- Users see which apps each agent can access
+**Implemented:**
+1. `ComposioAgentService` - LangChain agent execution with Composio tools
+2. Enhanced chat endpoints bypassing Langflow for direct tool access
+3. Tool availability indicator in PlaygroundPage
+4. SSE streaming for real-time tool execution visibility
+5. Tool call events (start/end) in stream for UI feedback
 
-**Testing:**
-- Create agent with Gmail access
-- Send "search my inbox for emails from John" message
-- Verify agent searches Gmail and returns results
+**Files Created:**
+- `app/services/composio_agent_service.py`
+
+**API Endpoints Added:**
+- `GET /connections/tools/availability` - Check if user has tools
+- `POST /connections/chat` - Non-streaming enhanced chat
+- `POST /connections/chat/stream` - Streaming enhanced chat with SSE
+
+**Architecture Decision:**
+Rather than modifying Langflow flows at runtime, created a parallel execution path using LangChain directly. This approach:
+- Avoids complex Langflow flow manipulation
+- Provides cleaner tool injection
+- Enables real-time tool call visibility
+- Maintains backward compatibility with existing Langflow execution
 
 ---
 
@@ -919,4 +1320,10 @@ result = tools[0].invoke({"query": "from:john@example.com"})
 
 | Date | Author | Changes |
 |------|--------|---------|
+| 2026-01-21 | Claude | Added toggle mode for connected tools in Playground |
+| 2026-01-21 | Claude | Created "My Connected Apps" custom Langflow component |
+| 2026-01-21 | Claude | Added E2E tests for Composio features |
+| 2026-01-21 | Claude | Added backend startup sync for built-in components |
+| 2026-01-21 | Claude | Added User Journey documentation, Technical Reference, Implementation Status |
+| 2026-01-21 | Claude | Phase 2 complete: ComposioAgentService, enhanced chat endpoints, playground indicators |
 | 2026-01-17 | Claude | Initial document creation |

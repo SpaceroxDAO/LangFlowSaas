@@ -22,6 +22,7 @@ from app.api.billing import router as billing_router
 from app.api.dashboard import router as dashboard_router
 from app.api.missions import router as missions_router
 from app.api.embed import router as embed_router
+from app.api.connections import router as connections_router
 
 __all__ = [
     "health_router",
@@ -42,4 +43,5 @@ __all__ = [
     "dashboard_router",
     "missions_router",
     "embed_router",
+    "connections_router",
 ]

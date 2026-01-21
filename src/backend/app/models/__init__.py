@@ -31,6 +31,8 @@ from app.models.analytics_daily import AnalyticsDaily
 # Mission/learning models
 from app.models.mission import Mission
 from app.models.user_mission_progress import UserMissionProgress
+# Composio connections
+from app.models.user_connection import UserConnection
 
 __all__ = [
     "User",
@@ -53,4 +55,6 @@ __all__ = [
     # Missions
     "Mission",
     "UserMissionProgress",
+    # Composio connections
+    "UserConnection",
 ]
