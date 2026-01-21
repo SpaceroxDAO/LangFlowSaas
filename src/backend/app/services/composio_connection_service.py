@@ -74,46 +74,47 @@ class ComposioConnectionService:
         """
         return str(user.id)
 
-    def _get_or_create_integration(self, app_name: str) -> str:
+    def _get_or_create_auth_config(self, app_name: str) -> str:
         """
-        Get or create a Composio integration for an app.
+        Get or create a Composio auth config for an app.
 
         Uses Composio-managed auth (Composio's OAuth credentials) to simplify setup.
-        Returns the integration_id needed for initiating connections.
+        Returns the auth_config_id needed for initiating connections.
+
+        Note: Composio SDK v0.10+ uses auth_configs instead of integrations.
         """
         composio = self._get_composio_client()
 
         try:
-            # First check if we already have an integration for this app
-            existing_integrations = composio.integrations.get()
-            for integration in existing_integrations:
-                if hasattr(integration, 'appName') and integration.appName == app_name:
-                    logger.info(f"Found existing integration for {app_name}: {integration.id}")
-                    return integration.id
+            # First check if we already have an auth config for this app
+            existing_configs = composio.auth_configs.list()
+            if hasattr(existing_configs, 'items'):
+                for config in existing_configs.items:
+                    # Check if this config is for our app (toolkit)
+                    if hasattr(config, 'toolkit') and hasattr(config.toolkit, 'slug'):
+                        if config.toolkit.slug == app_name:
+                            logger.info(f"Found existing auth config for {app_name}: {config.id}")
+                            return config.id
 
-            # No existing integration, get the app details first
-            app = composio.apps.get(name=app_name)
-            if not app:
-                raise ComposioConnectionServiceError(
-                    f"App '{app_name}' not found in Composio"
-                )
-
-            # Create new integration using Composio's managed auth
-            integration = composio.integrations.create(
-                app_id=app.appId,
-                name=f"{app_name}-oauth",
-                use_composio_auth=True,
+            # No existing auth config, create a new one using Composio's managed auth
+            import time
+            config = composio.auth_configs.create(
+                toolkit=app_name,
+                options={
+                    'name': f'auth_config_{app_name}_{int(time.time()*1000)}',
+                    'type': 'use_composio_managed_auth'
+                }
             )
 
-            logger.info(f"Created new integration for {app_name}: {integration.id}")
-            return integration.id
+            logger.info(f"Created new auth config for {app_name}: {config.id}")
+            return config.id
 
         except ComposioConnectionServiceError:
             raise
         except Exception as e:
-            logger.error(f"Failed to get/create integration for {app_name}: {e}")
+            logger.error(f"Failed to get/create auth config for {app_name}: {e}")
             raise ComposioConnectionServiceError(
-                f"Failed to get/create integration for {app_name}: {e}"
+                f"Failed to get/create auth config for {app_name}: {e}"
             )
 
     async def initiate_connection(
@@ -140,21 +141,25 @@ class ComposioConnectionService:
         try:
             composio = self._get_composio_client()
 
-            # Get or create integration for this app
-            integration_id = self._get_or_create_integration(app_name)
-            logger.info(f"Using integration {integration_id} for {app_name}")
+            # Get or create auth config for this app (SDK v0.10+)
+            auth_config_id = self._get_or_create_auth_config(app_name)
+            logger.info(f"Using auth config {auth_config_id} for {app_name}")
 
-            # Initiate connection with Composio
-            # SDK 0.7.x uses: initiate(integration_id, entity_id, params, labels, redirect_url)
+            # Initiate connection with Composio (SDK v0.10+ API)
             connection_request = composio.connected_accounts.initiate(
-                integration_id=integration_id,
-                entity_id=entity_id,
-                redirect_url=callback_url,
+                user_id=entity_id,
+                auth_config_id=auth_config_id,
+                callback_url=callback_url,
             )
 
             # Extract the connection ID and redirect URL from the response
-            composio_conn_id = connection_request.connectedAccountId
-            redirect_url_response = connection_request.redirectUrl
+            composio_conn_id = connection_request.id if hasattr(connection_request, 'id') else str(connection_request)
+            redirect_url_response = connection_request.redirect_url if hasattr(connection_request, 'redirect_url') else None
+
+            if not redirect_url_response:
+                raise ComposioConnectionServiceError(
+                    f"No redirect URL returned from Composio for {app_name}"
+                )
 
             # Create pending connection record in our database
             connection = UserConnection(
@@ -211,10 +216,10 @@ class ComposioConnectionService:
         try:
             composio = self._get_composio_client()
 
-            # Get the connection status from Composio
+            # Get the connection status from Composio (SDK v0.10+ uses nanoid)
             try:
                 connected_account = composio.connected_accounts.get(
-                    connection_id=connection.composio_connection_id
+                    nanoid=connection.composio_connection_id
                 )
 
                 # Check status
@@ -534,9 +539,9 @@ class ComposioConnectionService:
         try:
             composio = self._get_composio_client()
 
-            # Check connection status with Composio
+            # Check connection status with Composio (SDK v0.10+ uses nanoid)
             connected_account = composio.connected_accounts.get(
-                connection_id=connection.composio_connection_id
+                nanoid=connection.composio_connection_id
             )
 
             if connected_account and hasattr(connected_account, 'status'):
