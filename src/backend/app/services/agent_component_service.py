@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 from app.models.agent_component import AgentComponent
 from app.models.user import User
 from app.models.project import Project
+from app.models.workflow import Workflow
 from app.schemas.agent_component import (
     AgentComponentCreateFromQA,
     AgentComponentUpdate,
-    AgentComponentPublishResponse,
 )
 from app.services.template_mapping import TemplateMapper, template_mapper
-from app.services.component_generator import ComponentGenerator, ComponentGeneratorError, get_component_generator
+from app.services.langflow_client import LangflowClient, langflow_client
 
 
 class AgentComponentServiceError(Exception):
@@ -34,9 +34,11 @@ class AgentComponentService:
         self,
         session: AsyncSession,
         mapper: TemplateMapper = None,
+        langflow: LangflowClient = None,
     ):
         self.session = session
         self.mapper = mapper or template_mapper
+        self.langflow = langflow or langflow_client
 
     async def get_by_id(
         self,
@@ -347,7 +349,7 @@ class AgentComponentService:
         component: AgentComponent,
         update_data: AgentComponentUpdate,
     ) -> AgentComponent:
-        """Update agent component data."""
+        """Update agent component data and sync to linked workflows."""
         data = update_data.model_dump(exclude_unset=True)
 
         # Handle advanced_config specially - convert Pydantic model to dict
@@ -374,20 +376,6 @@ class AgentComponentService:
             )
             data["system_prompt"] = system_prompt
 
-            # If component was published, it needs re-publishing
-            if component.is_published:
-                data["is_published"] = False
-                component.component_file_path = None
-                component.component_class_name = None
-                logger.info(f"Component {component.id} needs re-publishing after Q&A update")
-
-        # If advanced_config changed and component is published, needs re-publishing
-        if "advanced_config" in data and component.is_published:
-            data["is_published"] = False
-            component.component_file_path = None
-            component.component_class_name = None
-            logger.info(f"Component {component.id} needs re-publishing after advanced_config update")
-
         # Apply updates
         for field, value in data.items():
             setattr(component, field, value)
@@ -395,19 +383,75 @@ class AgentComponentService:
         await self.session.flush()
         await self.session.refresh(component)
 
+        # Sync changes to linked workflows in Langflow
+        await self._sync_linked_workflows(component)
+
         return component
+
+    async def _sync_linked_workflows(self, component: AgentComponent) -> None:
+        """
+        Sync agent component changes to all linked workflows in Langflow.
+
+        This updates the Agent node's system_prompt in each workflow's Langflow flow.
+        """
+        # Find workflows that use this agent component
+        component_id_str = str(component.id)
+        stmt = select(Workflow).where(
+            Workflow.agent_component_ids.contains([component_id_str]),
+            Workflow.is_active == True,
+        )
+        result = await self.session.execute(stmt)
+        workflows = list(result.scalars().all())
+
+        if not workflows:
+            return
+
+        logger.info(f"Syncing agent {component.id} changes to {len(workflows)} workflow(s)")
+
+        for workflow in workflows:
+            try:
+                # Get current flow from Langflow
+                langflow_flow = await self.langflow.get_flow(workflow.langflow_flow_id)
+                flow_data = langflow_flow.get("data", {})
+
+                # Find and update the Agent node's system_prompt
+                nodes = flow_data.get("nodes", [])
+                updated = False
+
+                for node in nodes:
+                    node_data = node.get("data", {})
+                    node_type = node_data.get("type", "")
+
+                    if node_type == "Agent":
+                        template_fields = node_data.get("node", {}).get("template", {})
+                        if "system_prompt" in template_fields:
+                            template_fields["system_prompt"]["value"] = component.system_prompt
+                            updated = True
+                            logger.debug(f"Updated system_prompt in workflow {workflow.id}")
+
+                        # Also update the agent display name if name changed
+                        if component.name:
+                            node_data["node"]["display_name"] = component.name
+
+                if updated:
+                    # Push updated flow to Langflow
+                    await self.langflow.update_flow(
+                        flow_id=workflow.langflow_flow_id,
+                        data=flow_data,
+                    )
+
+                    # Update our cached flow_data
+                    workflow.flow_data = {"data": flow_data}
+                    await self.session.flush()
+
+                    logger.info(f"Synced agent changes to workflow {workflow.id}")
+
+            except Exception as e:
+                logger.error(f"Failed to sync agent to workflow {workflow.id}: {e}")
+                # Continue with other workflows even if one fails
 
     async def delete(self, component: AgentComponent) -> bool:
         """Delete an agent component."""
-        # If published, clean up the Python component file
-        if component.component_file_path:
-            try:
-                generator = get_component_generator()
-                generator.delete_component(component.component_file_path)
-                logger.info(f"Deleted component file for {component.id}")
-            except Exception as e:
-                logger.warning(f"Failed to delete component file for {component.id}: {e}")
-
         await self.session.delete(component)
         await self.session.flush()
         return True
@@ -445,144 +489,6 @@ class AgentComponentService:
 
         logger.info(f"Duplicated agent component {component.id} as {new_component.id}")
         return new_component
-
-    async def publish(
-        self,
-        component: AgentComponent,
-    ) -> AgentComponentPublishResponse:
-        """
-        Publish an agent component to the Langflow sidebar.
-
-        This generates a Python component file that mirrors Langflow's
-        Agent component but with prefilled configuration from the user's
-        Q&A answers. The component appears in the sidebar after Langflow restart.
-        """
-        if component.is_published:
-            return AgentComponentPublishResponse(
-                id=component.id,
-                name=component.name,
-                is_published=True,
-                component_file_path=component.component_file_path,
-                needs_restart=False,
-                message="Component is already published.",
-            )
-
-        # Generate the Python component file
-        try:
-            generator = get_component_generator()
-
-            file_path, class_name = generator.generate_component(
-                component_id=str(component.id),
-                user_id=str(component.user_id),
-                name=component.name,
-                description=component.description or f"AI Agent: {component.name}",
-                system_prompt=component.system_prompt,
-                advanced_config=component.advanced_config,
-            )
-
-            # Validate the generated file
-            is_valid, error = generator.validate_generated_component(file_path)
-            if not is_valid:
-                logger.error(f"Generated component validation failed: {error}")
-                # Clean up invalid file
-                generator.delete_component(file_path)
-                return AgentComponentPublishResponse(
-                    id=component.id,
-                    name=component.name,
-                    is_published=False,
-                    component_file_path=None,
-                    needs_restart=False,
-                    message=f"Failed to generate component: {error}",
-                )
-
-            # Update component record
-            component.is_published = True
-            component.component_file_path = file_path
-            component.component_class_name = class_name
-
-            await self.session.flush()
-            await self.session.refresh(component)
-
-            logger.info(f"Published agent component {component.id} to {file_path}")
-
-            return AgentComponentPublishResponse(
-                id=component.id,
-                name=component.name,
-                is_published=True,
-                component_file_path=file_path,
-                needs_restart=True,
-                message=f"Component '{component.name}' published! Restart AI Canvas to make it available in the sidebar.",
-            )
-
-        except ComponentGeneratorError as e:
-            logger.error(f"Failed to generate component for {component.id}: {e}")
-            return AgentComponentPublishResponse(
-                id=component.id,
-                name=component.name,
-                is_published=False,
-                component_file_path=None,
-                needs_restart=False,
-                message=f"Failed to generate component: {str(e)}",
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error publishing component {component.id}: {e}")
-            return AgentComponentPublishResponse(
-                id=component.id,
-                name=component.name,
-                is_published=False,
-                component_file_path=None,
-                needs_restart=False,
-                message=f"Unexpected error: {str(e)}",
-            )
-
-    async def unpublish(
-        self,
-        component: AgentComponent,
-    ) -> AgentComponentPublishResponse:
-        """
-        Remove an agent component from Langflow sidebar.
-
-        This deletes the Python component file and marks the component
-        as unpublished. The component will be removed from the sidebar
-        after Langflow restart.
-        """
-        if not component.is_published:
-            return AgentComponentPublishResponse(
-                id=component.id,
-                name=component.name,
-                is_published=False,
-                component_file_path=None,
-                needs_restart=False,
-                message="Component is not published.",
-            )
-
-        old_file_path = component.component_file_path
-
-        # Delete the component file if it exists
-        if old_file_path:
-            try:
-                generator = get_component_generator()
-                generator.delete_component(old_file_path)
-            except Exception as e:
-                logger.warning(f"Failed to delete component file {old_file_path}: {e}")
-
-        component.is_published = False
-        component.component_file_path = None
-        component.component_class_name = None
-
-        await self.session.flush()
-        await self.session.refresh(component)
-
-        logger.info(f"Unpublished agent component {component.id}")
-
-        return AgentComponentPublishResponse(
-            id=component.id,
-            name=component.name,
-            is_published=False,
-            component_file_path=old_file_path,
-            needs_restart=True,
-            message="Component unpublished! Restart AI Canvas to remove it from the sidebar.",
-        )
 
     async def export(self, component: AgentComponent) -> dict:
         """Export agent component as JSON."""

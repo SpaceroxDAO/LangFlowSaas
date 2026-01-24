@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut } from '@clerk/clerk-react'
+import { Sentry } from '@/lib/sentry'
 import { AppShell } from '@/components/AppShell'
 import { HomePage } from '@/pages/HomePage'
 import { SignInPage } from '@/pages/SignInPage'
@@ -11,6 +12,7 @@ import { CreateAgentPage } from '@/pages/CreateAgentPage'
 import { EditAgentPage } from '@/pages/EditAgentPage'
 import { PlaygroundPage } from '@/pages/PlaygroundPage'
 import { FrameworkPage } from '@/pages/FrameworkPage'
+import { PricingPage } from '@/pages/PricingPage'
 import { CanvasViewerPage } from '@/pages/CanvasViewerPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { FilesPage } from '@/pages/FilesPage'
@@ -18,7 +20,6 @@ import { BillingPage } from '@/pages/BillingPage'
 import { AnalyticsDashboardPage } from '@/pages/AnalyticsDashboardPage'
 import { MissionsPage } from '@/pages/MissionsPage'
 import { MissionCanvasPage } from '@/pages/MissionCanvasPage'
-import { ConnectionsPage } from '@/pages/ConnectionsPage'
 import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
 
 // Use dev mode or Clerk components based on environment
@@ -36,8 +37,32 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Error fallback component for when something crashes
+function ErrorFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="text-center p-8 max-w-md">
+        <div className="text-6xl mb-4">😵</div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Something went wrong
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          We've been notified and are working on a fix. Please try refreshing the page.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+        >
+          Refresh Page
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   return (
+    <Sentry.ErrorBoundary fallback={<ErrorFallback />} showDialog>
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
@@ -45,6 +70,7 @@ function App() {
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/framework" element={<FrameworkPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
 
         {/* Protected routes with AppShell (sidebar) */}
         <Route
@@ -73,27 +99,6 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <SettingsPage />
-              </AppShell>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/connections"
-          element={
-            <ProtectedRoute>
-              <AppShell>
-                <ConnectionsPage />
-              </AppShell>
-            </ProtectedRoute>
-          }
-        />
-        {/* Alias route for OAuth callback */}
-        <Route
-          path="/settings/connections/callback"
-          element={
-            <ProtectedRoute>
-              <AppShell>
-                <ConnectionsPage />
               </AppShell>
             </ProtectedRoute>
           }
@@ -210,6 +215,7 @@ function App() {
         />
       </Routes>
     </BrowserRouter>
+    </Sentry.ErrorBoundary>
   )
 }
 

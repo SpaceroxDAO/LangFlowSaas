@@ -5,7 +5,9 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.utils.security import sanitize_flow_data
 
 
 class WorkflowBase(BaseModel):
@@ -119,6 +121,18 @@ class WorkflowResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @model_validator(mode='after')
+    def sanitize_sensitive_data(self) -> 'WorkflowResponse':
+        """
+        Sanitize API keys from flow_data before returning to client.
+
+        This prevents accidental exposure of user API keys in API responses.
+        Keys are masked like: sk-proj-••••••••xyz
+        """
+        if self.flow_data:
+            self.flow_data = sanitize_flow_data(self.flow_data)
+        return self
+
 
 class WorkflowListResponse(BaseModel):
     """Schema for paginated workflow list."""
@@ -142,6 +156,13 @@ class WorkflowExportResponse(BaseModel):
     flow_data: dict
     agent_components: List[Any] = []
     version: str = "1.0"
+
+    @model_validator(mode='after')
+    def sanitize_export_data(self) -> 'WorkflowExportResponse':
+        """Sanitize API keys from exported flow_data."""
+        if self.flow_data:
+            self.flow_data = sanitize_flow_data(self.flow_data)
+        return self
 
 
 class WorkflowImportRequest(BaseModel):

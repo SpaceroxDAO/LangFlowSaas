@@ -1,19 +1,28 @@
 """
 Billing and subscription endpoints.
 
-Handles subscription management, usage tracking, and Stripe webhooks.
+Handles subscription management, usage tracking, AI credits, and Stripe webhooks.
 """
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status, Query
 from pydantic import BaseModel, Field
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
 from app.services.user_service import UserService
 from app.services.billing_service import BillingService, BillingServiceError
-from app.plans import get_all_plans, get_plan
+from app.plans import (
+    get_all_plans,
+    get_plan,
+    get_all_credit_packs,
+    get_credit_pack,
+    get_pricing_comparison,
+    has_feature_access,
+    MODEL_COSTS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -117,12 +126,13 @@ async def list_plans() -> List[PlanResponse]:
             features=p.features,
             limits={
                 "agents": p.limits.agents,
-                "messages_per_month": p.limits.messages_per_month,
-                "tokens_per_month": p.limits.tokens_per_month,
                 "workflows": p.limits.workflows,
                 "mcp_servers": p.limits.mcp_servers,
                 "projects": p.limits.projects,
                 "file_storage_mb": p.limits.file_storage_mb,
+                "monthly_credits": p.limits.monthly_credits,
+                "knowledge_files": p.limits.knowledge_files,
+                "team_members": p.limits.team_members,
             },
         )
         for p in plans
@@ -174,33 +184,31 @@ async def get_usage(
     usage = await billing.get_usage_summary(str(user.id))
     plan = await billing.get_plan_for_user(str(user.id))
 
-    # Calculate usage percentages
-    messages_sent = usage.get("messages_sent", 0)
-    tokens_used = usage.get("llm_tokens", 0)
+    # Calculate usage from credits system
+    credits_used = usage.get("credits_used", 0)
     agents_count = usage.get("agents_created", 0)
     workflows_count = usage.get("workflows_created", 0)
 
     return UsageResponse(
-        messages_sent=messages_sent,
-        tokens_used=tokens_used,
+        messages_sent=usage.get("messages_sent", 0),
+        tokens_used=usage.get("llm_tokens", 0),
         agents_count=agents_count,
         workflows_count=workflows_count,
         limits={
-            "messages_per_month": plan.limits.messages_per_month,
-            "tokens_per_month": plan.limits.tokens_per_month,
+            "monthly_credits": plan.limits.monthly_credits,
             "agents": plan.limits.agents,
             "workflows": plan.limits.workflows,
         },
         usage_percent={
-            "messages": min(
+            "credits": min(
                 100,
-                int(messages_sent / plan.limits.messages_per_month * 100)
-                if plan.limits.messages_per_month > 0 else 0,
+                int(credits_used / plan.limits.monthly_credits * 100)
+                if plan.limits.monthly_credits > 0 else 0,
             ),
-            "tokens": min(
+            "agents": min(
                 100,
-                int(tokens_used / plan.limits.tokens_per_month * 100)
-                if plan.limits.tokens_per_month > 0 else 0,
+                int(agents_count / plan.limits.agents * 100)
+                if plan.limits.agents > 0 else 0,
             ),
         },
     )
@@ -300,3 +308,530 @@ async def stripe_webhook(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+# =============================================================================
+# CREDITS ENDPOINTS
+# =============================================================================
+
+class CreditBalanceResponse(BaseModel):
+    """Credit balance response."""
+    balance: int
+    monthly_credits: int
+    purchased_credits: int
+    credits_used_this_month: int
+    credits_remaining: int
+    reset_date: Optional[str] = None
+    using_byo_key: bool = False
+
+
+class CreditPackResponse(BaseModel):
+    """Credit pack details."""
+    id: str
+    name: str
+    credits: int
+    price_cents: int
+    price_display: str
+    price_per_credit: float
+    popular: bool = False
+
+
+class PurchaseCreditsRequest(BaseModel):
+    """Request to purchase credits."""
+    pack_id: str
+    success_url: str
+    cancel_url: str
+
+
+class PurchaseCreditsResponse(BaseModel):
+    """Response with checkout URL."""
+    checkout_url: str
+    session_id: str
+
+
+class AutoTopUpRequest(BaseModel):
+    """Auto top-up settings request."""
+    enabled: bool
+    threshold_credits: int = Field(default=100, ge=50, le=1000)
+    top_up_pack_id: str = "credits_5000"
+    max_monthly_top_ups: int = Field(default=3, ge=1, le=10)
+
+
+class AutoTopUpResponse(BaseModel):
+    """Auto top-up settings response."""
+    enabled: bool
+    threshold_credits: int
+    top_up_pack_id: str
+    top_up_pack_name: str
+    top_up_credits: int
+    top_up_price_display: str
+    max_monthly_top_ups: int
+    top_ups_this_month: int
+    can_top_up: bool
+
+
+class SpendCapRequest(BaseModel):
+    """Spend cap settings request."""
+    enabled: bool
+    max_monthly_spend_cents: int = Field(default=10000, ge=500, le=100000)
+
+
+class SpendCapResponse(BaseModel):
+    """Spend cap settings response."""
+    enabled: bool
+    max_monthly_spend_cents: int
+    max_monthly_spend_display: str
+    current_month_spend_cents: int
+    current_month_spend_display: str
+    spend_remaining_cents: int
+    spend_remaining_display: str
+    at_limit: bool
+
+
+class ModelCostResponse(BaseModel):
+    """Model credit cost info."""
+    model_id: str
+    display_name: str
+    provider: str
+    credits_per_1k_input: float
+    credits_per_1k_output: float
+    supports_byo_key: bool
+
+
+class PricingComparisonResponse(BaseModel):
+    """Pricing comparison table."""
+    categories: List[Dict[str, Any]]
+    plans: List[Dict[str, Any]]
+
+
+@router.get(
+    "/credits/balance",
+    response_model=CreditBalanceResponse,
+    summary="Get credit balance",
+    description="Get current AI credit balance and usage.",
+)
+async def get_credit_balance(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> CreditBalanceResponse:
+    """Get current credit balance."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    balance = await billing.get_credit_balance(str(user.id))
+    plan = await billing.get_plan_for_user(str(user.id))
+
+    return CreditBalanceResponse(
+        balance=balance.get("balance", 0),
+        monthly_credits=plan.limits.monthly_credits,
+        purchased_credits=balance.get("purchased_credits", 0),
+        credits_used_this_month=balance.get("credits_used", 0),
+        credits_remaining=balance.get("credits_remaining", plan.limits.monthly_credits),
+        reset_date=balance.get("reset_date"),
+        using_byo_key=balance.get("using_byo_key", False),
+    )
+
+
+@router.get(
+    "/credits/packs",
+    response_model=List[CreditPackResponse],
+    summary="List credit packs",
+    description="Get all available credit packs for purchase.",
+)
+async def list_credit_packs(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> List[CreditPackResponse]:
+    """List available credit packs."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    # Check if user can buy credits
+    sub = await billing.get_or_create_subscription(user)
+    if not has_feature_access(sub.plan_id, "buy_credits"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Credit purchases require Individual or Business plan",
+        )
+
+    packs = get_all_credit_packs()
+    return [
+        CreditPackResponse(
+            id=p.id,
+            name=p.name,
+            credits=p.credits,
+            price_cents=p.price_cents,
+            price_display=p.price_display,
+            price_per_credit=p.price_per_credit,
+            popular=p.popular,
+        )
+        for p in packs
+    ]
+
+
+@router.post(
+    "/credits/purchase",
+    response_model=PurchaseCreditsResponse,
+    summary="Purchase credits",
+    description="Create a Stripe checkout session to purchase a credit pack.",
+)
+async def purchase_credits(
+    request: PurchaseCreditsRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> PurchaseCreditsResponse:
+    """Purchase a credit pack."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    # Check if user can buy credits
+    sub = await billing.get_or_create_subscription(user)
+    if not has_feature_access(sub.plan_id, "buy_credits"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Credit purchases require Individual or Business plan",
+        )
+
+    # Validate pack exists
+    pack = get_credit_pack(request.pack_id)
+    if not pack:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid credit pack: {request.pack_id}",
+        )
+
+    try:
+        checkout = await billing.create_credit_checkout(
+            user=user,
+            pack_id=request.pack_id,
+            success_url=request.success_url,
+            cancel_url=request.cancel_url,
+        )
+        await session.commit()
+        return PurchaseCreditsResponse(
+            checkout_url=checkout["url"],
+            session_id=checkout["session_id"],
+        )
+
+    except BillingServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.get(
+    "/credits/auto-top-up",
+    response_model=AutoTopUpResponse,
+    summary="Get auto top-up settings",
+    description="Get current auto top-up configuration.",
+)
+async def get_auto_top_up(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> AutoTopUpResponse:
+    """Get auto top-up settings."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    settings = await billing.get_auto_top_up_settings(str(user.id))
+    pack = get_credit_pack(settings.get("top_up_pack_id", "credits_5000"))
+
+    return AutoTopUpResponse(
+        enabled=settings.get("enabled", False),
+        threshold_credits=settings.get("threshold_credits", 100),
+        top_up_pack_id=settings.get("top_up_pack_id", "credits_5000"),
+        top_up_pack_name=pack.name if pack else "5,000 Credits",
+        top_up_credits=pack.credits if pack else 5000,
+        top_up_price_display=pack.price_display if pack else "$20",
+        max_monthly_top_ups=settings.get("max_monthly_top_ups", 3),
+        top_ups_this_month=settings.get("top_ups_this_month", 0),
+        can_top_up=settings.get("can_top_up", True),
+    )
+
+
+@router.put(
+    "/credits/auto-top-up",
+    response_model=AutoTopUpResponse,
+    summary="Update auto top-up settings",
+    description="Update auto top-up configuration.",
+)
+async def update_auto_top_up(
+    request: AutoTopUpRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> AutoTopUpResponse:
+    """Update auto top-up settings."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    # Check if user can use auto top-up
+    sub = await billing.get_or_create_subscription(user)
+    if not has_feature_access(sub.plan_id, "auto_top_up"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Auto top-up requires Individual or Business plan",
+        )
+
+    # Validate pack exists
+    pack = get_credit_pack(request.top_up_pack_id)
+    if not pack:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid credit pack: {request.top_up_pack_id}",
+        )
+
+    settings = await billing.update_auto_top_up_settings(
+        user_id=str(user.id),
+        enabled=request.enabled,
+        threshold_credits=request.threshold_credits,
+        top_up_pack_id=request.top_up_pack_id,
+        max_monthly_top_ups=request.max_monthly_top_ups,
+    )
+    await session.commit()
+
+    return AutoTopUpResponse(
+        enabled=settings.get("enabled", False),
+        threshold_credits=settings.get("threshold_credits", 100),
+        top_up_pack_id=settings.get("top_up_pack_id", "credits_5000"),
+        top_up_pack_name=pack.name,
+        top_up_credits=pack.credits,
+        top_up_price_display=pack.price_display,
+        max_monthly_top_ups=settings.get("max_monthly_top_ups", 3),
+        top_ups_this_month=settings.get("top_ups_this_month", 0),
+        can_top_up=settings.get("can_top_up", True),
+    )
+
+
+@router.get(
+    "/credits/spend-cap",
+    response_model=SpendCapResponse,
+    summary="Get spend cap settings",
+    description="Get current monthly spend cap configuration.",
+)
+async def get_spend_cap(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> SpendCapResponse:
+    """Get spend cap settings."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    settings = await billing.get_spend_cap_settings(str(user.id))
+
+    max_spend = settings.get("max_monthly_spend_cents", 10000)
+    current_spend = settings.get("current_month_spend_cents", 0)
+    remaining = max(0, max_spend - current_spend)
+
+    return SpendCapResponse(
+        enabled=settings.get("enabled", False),
+        max_monthly_spend_cents=max_spend,
+        max_monthly_spend_display=f"${max_spend / 100:.2f}",
+        current_month_spend_cents=current_spend,
+        current_month_spend_display=f"${current_spend / 100:.2f}",
+        spend_remaining_cents=remaining,
+        spend_remaining_display=f"${remaining / 100:.2f}",
+        at_limit=current_spend >= max_spend if settings.get("enabled", False) else False,
+    )
+
+
+@router.put(
+    "/credits/spend-cap",
+    response_model=SpendCapResponse,
+    summary="Update spend cap settings",
+    description="Update monthly spend cap configuration.",
+)
+async def update_spend_cap(
+    request: SpendCapRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> SpendCapResponse:
+    """Update spend cap settings."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    settings = await billing.update_spend_cap_settings(
+        user_id=str(user.id),
+        enabled=request.enabled,
+        max_monthly_spend_cents=request.max_monthly_spend_cents,
+    )
+    await session.commit()
+
+    max_spend = settings.get("max_monthly_spend_cents", 10000)
+    current_spend = settings.get("current_month_spend_cents", 0)
+    remaining = max(0, max_spend - current_spend)
+
+    return SpendCapResponse(
+        enabled=settings.get("enabled", False),
+        max_monthly_spend_cents=max_spend,
+        max_monthly_spend_display=f"${max_spend / 100:.2f}",
+        current_month_spend_cents=current_spend,
+        current_month_spend_display=f"${current_spend / 100:.2f}",
+        spend_remaining_cents=remaining,
+        spend_remaining_display=f"${remaining / 100:.2f}",
+        at_limit=current_spend >= max_spend if settings.get("enabled", False) else False,
+    )
+
+
+@router.get(
+    "/credits/models",
+    response_model=List[ModelCostResponse],
+    summary="List model costs",
+    description="Get credit costs for all available AI models.",
+)
+async def list_model_costs() -> List[ModelCostResponse]:
+    """List credit costs for all models."""
+    return [
+        ModelCostResponse(
+            model_id=m.model_id,
+            display_name=m.display_name,
+            provider=m.provider,
+            credits_per_1k_input=m.credits_per_1k_input,
+            credits_per_1k_output=m.credits_per_1k_output,
+            supports_byo_key=m.supports_byo_key,
+        )
+        for m in MODEL_COSTS.values()
+    ]
+
+
+@router.get(
+    "/pricing/comparison",
+    response_model=PricingComparisonResponse,
+    summary="Get pricing comparison",
+    description="Get full pricing comparison table for all plans.",
+)
+async def get_pricing_comparison_table() -> PricingComparisonResponse:
+    """Get pricing comparison table."""
+    categories = get_pricing_comparison()
+    plans = get_all_plans()
+
+    return PricingComparisonResponse(
+        categories=categories,
+        plans=[
+            {
+                "id": p.id,
+                "name": p.name,
+                "price_monthly": p.price_monthly,
+                "price_display": p.price_display,
+                "description": p.description,
+                "features": p.features,
+                "is_custom": p.is_custom,
+                "highlight": p.highlight,
+                "limits": {
+                    "agents": p.limits.agents,
+                    "workflows": p.limits.workflows,
+                    "mcp_servers": p.limits.mcp_servers,
+                    "projects": p.limits.projects,
+                    "file_storage_mb": p.limits.file_storage_mb,
+                    "monthly_credits": p.limits.monthly_credits,
+                    "knowledge_files": p.limits.knowledge_files,
+                    "team_members": p.limits.team_members,
+                },
+            }
+            for p in plans
+        ],
+    )
+
+
+@router.get(
+    "/overview",
+    summary="Get billing overview",
+    description="Get complete billing overview including credits, subscription, and usage.",
+)
+async def get_billing_overview(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> Dict[str, Any]:
+    """Get complete billing overview."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    # Get all billing data in parallel-ish manner
+    sub = await billing.get_or_create_subscription(user)
+    plan = get_plan(sub.plan_id)
+    usage = await billing.get_usage_summary(str(user.id))
+    balance = await billing.get_credit_balance(str(user.id))
+    auto_top_up = await billing.get_auto_top_up_settings(str(user.id))
+    spend_cap = await billing.get_spend_cap_settings(str(user.id))
+
+    # Calculate percentages
+    agents_count = usage.get("agents_created", 0)
+    workflows_count = usage.get("workflows_created", 0)
+
+    def calc_percent(used: int, limit: int) -> int:
+        if limit == -1:  # Unlimited
+            return 0
+        if limit == 0:
+            return 100 if used > 0 else 0
+        return min(100, int(used / limit * 100))
+
+    return {
+        "subscription": {
+            "plan_id": sub.plan_id,
+            "plan_name": plan.name,
+            "status": sub.status,
+            "is_paid": sub.is_paid,
+            "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+            "cancel_at_period_end": sub.cancel_at_period_end,
+        },
+        "plan": {
+            "id": plan.id,
+            "name": plan.name,
+            "price_display": plan.price_display,
+            "description": plan.description,
+            "features": plan.features,
+            "is_custom": plan.is_custom,
+            "limits": {
+                "agents": plan.limits.agents,
+                "workflows": plan.limits.workflows,
+                "monthly_credits": plan.limits.monthly_credits,
+                "knowledge_files": plan.limits.knowledge_files,
+                "team_members": plan.limits.team_members,
+            },
+        },
+        "credits": {
+            "balance": balance.get("balance", 0),
+            "monthly_credits": plan.limits.monthly_credits,
+            "purchased_credits": balance.get("purchased_credits", 0),
+            "credits_used_this_month": balance.get("credits_used", 0),
+            "credits_remaining": balance.get("credits_remaining", plan.limits.monthly_credits),
+            "reset_date": balance.get("reset_date"),
+            "using_byo_key": balance.get("using_byo_key", False),
+        },
+        "usage": {
+            "agents": {
+                "used": agents_count,
+                "limit": plan.limits.agents,
+                "percent": calc_percent(agents_count, plan.limits.agents),
+            },
+            "workflows": {
+                "used": workflows_count,
+                "limit": plan.limits.workflows,
+                "percent": calc_percent(workflows_count, plan.limits.workflows),
+            },
+            "credits": {
+                "used": balance.get("credits_used", 0),
+                "limit": plan.limits.monthly_credits,
+                "percent": calc_percent(balance.get("credits_used", 0), plan.limits.monthly_credits),
+            },
+        },
+        "auto_top_up": {
+            "enabled": auto_top_up.get("enabled", False),
+            "threshold_credits": auto_top_up.get("threshold_credits", 100),
+            "top_up_pack_id": auto_top_up.get("top_up_pack_id", "credits_5000"),
+            "top_ups_this_month": auto_top_up.get("top_ups_this_month", 0),
+        },
+        "spend_cap": {
+            "enabled": spend_cap.get("enabled", False),
+            "max_monthly_spend_cents": spend_cap.get("max_monthly_spend_cents", 10000),
+            "current_month_spend_cents": spend_cap.get("current_month_spend_cents", 0),
+        },
+        "feature_access": {
+            "can_buy_credits": has_feature_access(sub.plan_id, "buy_credits"),
+            "can_use_auto_top_up": has_feature_access(sub.plan_id, "auto_top_up"),
+            "canvas_editor": has_feature_access(sub.plan_id, "canvas_editor"),
+            "export_agents": has_feature_access(sub.plan_id, "export_agents"),
+            "team_collaboration": has_feature_access(sub.plan_id, "team_collaboration"),
+            "sso": has_feature_access(sub.plan_id, "sso"),
+        },
+    }

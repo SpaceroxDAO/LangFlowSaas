@@ -639,6 +639,91 @@ Use these tools when appropriate to provide accurate, up-to-date information."""
 
         return flow_data
 
+    def inject_composio_entity_id(
+        self,
+        flow_data: Dict[str, Any],
+        user_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Inject user's entity_id into all Composio components.
+
+        This ensures that Composio tool execution uses the correct
+        connected account - the one the user connected via OAuth.
+
+        Without this, Composio components default to entity_id="default"
+        which doesn't match the user's actual connections.
+
+        Args:
+            flow_data: The flow data to modify
+            user_id: The user's ID to use as entity_id
+
+        Returns:
+            Modified flow_data
+        """
+        # Composio component types that need entity_id injection
+        COMPOSIO_COMPONENT_TYPES = [
+            "ComposioTools",      # My Connected Apps (single app selector)
+            "ComposioAllApps",    # All My Connected Apps
+            "ComposioMultiTools", # My Connected Apps (Custom)
+        ]
+
+        nodes = flow_data.get("data", {}).get("nodes", [])
+
+        for node in nodes:
+            node_data = node.get("data", {})
+            node_type = node_data.get("type", "")
+
+            # Check if this is a Composio component
+            if node_type in COMPOSIO_COMPONENT_TYPES:
+                template_fields = node_data.get("node", {}).get("template", {})
+
+                if template_fields and "entity_id" in template_fields:
+                    # Inject user_id as entity_id
+                    template_fields["entity_id"]["value"] = user_id
+
+        return flow_data
+
+    def build_composio_tweaks(
+        self,
+        flow_data: Dict[str, Any],
+        user_id: str,
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Build Langflow tweaks to inject user's entity_id into Composio components.
+
+        Tweaks are runtime parameter overrides passed to Langflow's run API.
+        This enables multi-user isolation: each user's execution uses their
+        own entity_id to access their own Composio OAuth connections.
+
+        Args:
+            flow_data: The flow data containing component nodes
+            user_id: The user's ID to use as entity_id
+
+        Returns:
+            Tweaks dict: {"ComponentID": {"entity_id": "user_id"}}
+        """
+        # Composio component types that need entity_id injection
+        COMPOSIO_COMPONENT_TYPES = [
+            "ComposioTools",      # My Connected Apps (single app selector)
+            "ComposioAllApps",    # All My Connected Apps
+            "ComposioMultiTools", # My Connected Apps (Custom)
+        ]
+
+        tweaks = {}
+        nodes = flow_data.get("data", {}).get("nodes", [])
+
+        for node in nodes:
+            node_id = node.get("id")
+            node_data = node.get("data", {})
+            node_type = node_data.get("type", "")
+
+            # Check if this is a Composio component
+            if node_type in COMPOSIO_COMPONENT_TYPES and node_id:
+                # Add tweak to override entity_id at runtime
+                tweaks[node_id] = {"entity_id": user_id}
+
+        return tweaks
+
     def inject_system_prompt(
         self,
         template: Dict[str, Any],

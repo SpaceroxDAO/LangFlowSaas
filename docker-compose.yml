@@ -157,8 +157,6 @@ services:
       # Langflow connection
       LANGFLOW_API_URL: http://langflow:7860
       LANGFLOW_API_KEY: ${LANGFLOW_API_KEY:-dev-langflow-api-key}
-      # Custom components path (shared with Langflow)
-      CUSTOM_COMPONENTS_PATH: /app/custom_components
       # Langflow container name for Docker restart
       LANGFLOW_CONTAINER_NAME: teachcharlie-langflow
       # Clerk authentication
@@ -182,8 +180,6 @@ services:
       - "8000:8000"
     volumes:
       - ./src/backend:/app
-      # Shared custom components directory (generated components stored here)
-      - custom_components:/app/custom_components
       # Docker socket for container restart capability
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:

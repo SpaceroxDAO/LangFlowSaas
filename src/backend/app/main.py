@@ -81,49 +81,6 @@ async def sync_mcp_servers():
         logger.warning(f"MCP server sync failed (non-fatal): {e}")
 
 
-async def sync_builtin_components():
-    """Sync built-in custom components to the components directory."""
-    import os
-    import shutil
-    from pathlib import Path
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    # Source: built-in components in the backend package
-    source_dir = Path(__file__).parent.parent / "custom_components"
-
-    # Destination: the shared components directory (Docker volume or local)
-    dest_dir = Path(os.environ.get("CUSTOM_COMPONENTS_PATH", "./custom_components"))
-
-    if not source_dir.exists():
-        logger.debug("No built-in custom components to sync")
-        return
-
-    try:
-        # Ensure destination exists
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
-        # Sync the tools folder specifically
-        tools_source = source_dir / "tools"
-        tools_dest = dest_dir / "tools"
-
-        if tools_source.exists():
-            # Copy tools folder
-            if tools_dest.exists():
-                shutil.rmtree(tools_dest)
-            shutil.copytree(tools_source, tools_dest)
-            logger.info(f"Synced built-in tools components to {tools_dest}")
-
-        # Create/update __init__.py if needed
-        init_file = dest_dir / "__init__.py"
-        if not init_file.exists():
-            init_file.write_text('# Custom components for Teach Charlie\n')
-
-    except Exception as e:
-        logger.warning(f"Failed to sync built-in components (non-fatal): {e}")
-
-
 async def seed_default_missions():
     """Seed default missions, adding or updating as needed."""
     from app.database import async_session_maker
@@ -176,6 +133,72 @@ async def seed_default_missions():
             logger.info("All default missions up to date")
 
 
+def validate_security_settings():
+    """
+    Validate critical security settings on startup.
+
+    This function performs security checks that could prevent the application
+    from starting if critical security issues are detected in production.
+    """
+    import logging
+    import os
+
+    logger = logging.getLogger(__name__)
+    env = settings.environment.lower()
+    is_production = env in {"production", "prod", "staging", "stage", "live"}
+
+    logger.info(f"Security validation for environment: {settings.environment}")
+
+    # Check 1: DEV_MODE should never be true in production
+    # (This is already enforced by config.py, but we double-check here)
+    if settings.dev_mode and is_production:
+        logger.critical(
+            "FATAL SECURITY ERROR: DEV_MODE=true detected in production environment! "
+            "This bypasses all authentication. Shutting down."
+        )
+        raise SystemExit("Cannot start: DEV_MODE enabled in production")
+
+    # Check 2: Encryption key must be set in production
+    if is_production and not settings.encryption_key:
+        logger.critical(
+            "FATAL SECURITY ERROR: ENCRYPTION_KEY not set in production! "
+            "User API keys cannot be encrypted. Shutting down."
+        )
+        raise SystemExit("Cannot start: ENCRYPTION_KEY required in production")
+
+    # Check 3: Warn about test Clerk keys in production
+    clerk_key = settings.clerk_publishable_key or ""
+    if is_production and clerk_key.startswith("pk_test_"):
+        logger.error(
+            "SECURITY WARNING: Using TEST Clerk keys (pk_test_) in production! "
+            "Switch to production keys (pk_live_) before going live."
+        )
+        # Don't exit, but log prominent warning
+
+    # Check 4: Warn about missing Sentry in production
+    if is_production and not settings.sentry_dsn:
+        logger.warning(
+            "SECURITY WARNING: Sentry not configured in production. "
+            "Error monitoring is strongly recommended."
+        )
+
+    # Check 5: Log security status summary
+    if settings.dev_mode:
+        logger.warning(
+            "DEVELOPMENT MODE: Authentication is BYPASSED. "
+            "All requests will use mock user 'dev_user_123'."
+        )
+    else:
+        logger.info("Authentication: Clerk JWT validation ENABLED")
+
+    if settings.encryption_key:
+        logger.info("Encryption: API key encryption ENABLED")
+    else:
+        logger.warning("Encryption: API key encryption DISABLED (no ENCRYPTION_KEY)")
+
+    logger.info("Security validation completed")
+
+
 def init_sentry():
     """Initialize Sentry error monitoring if configured."""
     import logging
@@ -214,6 +237,9 @@ async def lifespan(app: FastAPI):
     Application lifespan handler.
     Runs on startup and shutdown.
     """
+    # SECURITY: Validate security settings FIRST (may exit if critical issues)
+    validate_security_settings()
+
     # Initialize Sentry for error monitoring (before other startup tasks)
     init_sentry()
 
@@ -230,9 +256,6 @@ async def lifespan(app: FastAPI):
     # In production, use Alembic migrations
     if settings.debug:
         await create_tables()
-
-    # Sync built-in custom components (like Composio tools)
-    await sync_builtin_components()
 
     # Seed default presets if needed
     await seed_default_presets()
@@ -264,12 +287,39 @@ app = FastAPI(
 )
 
 # Configure CORS from environment
+# SECURITY: In production, this should be restricted to specific domains
+# The cors_origins_list is loaded from CORS_ORIGINS env var
+cors_origins = settings.cors_origins_list
+
+# Add development origins only in dev mode
+if settings.dev_mode:
+    dev_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5173",
+    ]
+    cors_origins = list(set(cors_origins + dev_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # SECURITY: Restrict methods and headers instead of allowing all
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "X-CSRF-Token",
+    ],
+    # Don't expose all headers
+    expose_headers=["X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    max_age=86400,  # Cache preflight for 24 hours
 )
 
 # Include API routers

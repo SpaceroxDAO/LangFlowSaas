@@ -436,26 +436,31 @@ class BillingService:
 
         usage = await self.get_usage_summary(user_id)
 
-        # Map limit types to plan limits
+        # Map limit types to plan limits (updated for new credits-based model)
         limit_map = {
             "agents": plan.limits.agents,
-            "messages_per_month": plan.limits.messages_per_month,
-            "tokens_per_month": plan.limits.tokens_per_month,
             "workflows": plan.limits.workflows,
             "mcp_servers": plan.limits.mcp_servers,
             "projects": plan.limits.projects,
             "file_storage_mb": plan.limits.file_storage_mb,
+            "monthly_credits": plan.limits.monthly_credits,
+            "knowledge_files": plan.limits.knowledge_files,
+            "team_members": plan.limits.team_members,
         }
 
         # Map limit types to usage keys (from get_usage_summary)
         usage_key_map = {
             "agents": "agents_created",
-            "messages_per_month": "messages_sent",
-            "tokens_per_month": "llm_tokens",
             "workflows": "workflows_created",
+            "monthly_credits": "credits_used",
         }
 
         max_limit = limit_map.get(limit_type, float("inf"))
+
+        # Handle unlimited (-1 means unlimited)
+        if max_limit == -1:
+            return True, 0, -1
+
         usage_key = usage_key_map.get(limit_type, limit_type)
         current = usage.get(usage_key, 0)
 
@@ -466,3 +471,183 @@ class BillingService:
         subscription = await self.get_subscription(user_id)
         plan_id = subscription.plan_id if subscription else "free"
         return get_plan(plan_id)
+
+    # =========================================================================
+    # AI Credits Management
+    # =========================================================================
+
+    async def get_credit_balance(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get current credit balance for a user.
+
+        Returns dict with balance, purchased_credits, credits_used, etc.
+        Note: In this initial implementation, credits are tracked via usage.
+        A full implementation would have a separate credits table.
+        """
+        plan = await self.get_plan_for_user(user_id)
+        usage = await self.get_usage_summary(user_id)
+
+        # Calculate credits used this month (simplified: 1 message = 10 credits)
+        credits_used = usage.get("messages_sent", 0) * 10
+
+        # For now, return plan-based credits
+        monthly_credits = plan.limits.monthly_credits
+        credits_remaining = max(0, monthly_credits - credits_used)
+
+        # Get billing period end for reset date
+        subscription = await self.get_subscription(user_id)
+        reset_date = None
+        if subscription and subscription.current_period_end:
+            reset_date = subscription.current_period_end.isoformat()
+
+        return {
+            "balance": credits_remaining,
+            "monthly_credits": monthly_credits,
+            "purchased_credits": 0,  # TODO: Track purchased credits in DB
+            "credits_used": credits_used,
+            "credits_remaining": credits_remaining,
+            "reset_date": reset_date,
+            "using_byo_key": False,  # TODO: Check if user has BYO API keys
+        }
+
+    async def create_credit_checkout(
+        self,
+        user: User,
+        pack_id: str,
+        success_url: str,
+        cancel_url: str,
+    ) -> Dict[str, str]:
+        """
+        Create a Stripe Checkout session for credit purchase.
+
+        Returns dict with checkout URL and session ID.
+        """
+        from app.plans import get_credit_pack
+
+        stripe = get_stripe()
+        if not stripe:
+            raise BillingServiceError("Stripe is not configured")
+
+        pack = get_credit_pack(pack_id)
+        if not pack:
+            raise BillingServiceError(f"Invalid credit pack: {pack_id}")
+
+        subscription = await self.get_or_create_subscription(user)
+
+        # Get or create Stripe customer
+        if not subscription.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=user.email,
+                name=user.full_name,
+                metadata={"user_id": str(user.id)},
+            )
+            subscription.stripe_customer_id = customer.id
+            await self.session.flush()
+            logger.info(f"Created Stripe customer {customer.id} for user {user.id}")
+
+        # Create one-time checkout session for credit purchase
+        session = stripe.checkout.Session.create(
+            customer=subscription.stripe_customer_id,
+            mode="payment",
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "unit_amount": pack.price_cents,
+                    "product_data": {
+                        "name": pack.name,
+                        "description": f"{pack.credits:,} AI credits for Teach Charlie",
+                    },
+                },
+                "quantity": 1,
+            }],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
+                "user_id": str(user.id),
+                "pack_id": pack_id,
+                "credits": str(pack.credits),
+                "type": "credit_purchase",
+            },
+        )
+
+        logger.info(f"Created credit checkout session for user {user.id} pack {pack_id}")
+        return {
+            "url": session.url,
+            "session_id": session.id,
+        }
+
+    async def get_auto_top_up_settings(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get auto top-up settings for a user.
+
+        Note: In this initial implementation, settings are defaults.
+        A full implementation would store in DB.
+        """
+        # TODO: Fetch from user_settings table or dedicated auto_top_up table
+        return {
+            "enabled": False,
+            "threshold_credits": 100,
+            "top_up_pack_id": "credits_5000",
+            "max_monthly_top_ups": 3,
+            "top_ups_this_month": 0,
+            "can_top_up": True,
+        }
+
+    async def update_auto_top_up_settings(
+        self,
+        user_id: str,
+        enabled: bool,
+        threshold_credits: int,
+        top_up_pack_id: str,
+        max_monthly_top_ups: int,
+    ) -> Dict[str, Any]:
+        """
+        Update auto top-up settings for a user.
+
+        Note: In this initial implementation, changes are not persisted.
+        A full implementation would store in DB.
+        """
+        # TODO: Store in user_settings table or dedicated auto_top_up table
+        logger.info(f"Auto top-up settings updated for user {user_id}: enabled={enabled}")
+        return {
+            "enabled": enabled,
+            "threshold_credits": threshold_credits,
+            "top_up_pack_id": top_up_pack_id,
+            "max_monthly_top_ups": max_monthly_top_ups,
+            "top_ups_this_month": 0,
+            "can_top_up": True,
+        }
+
+    async def get_spend_cap_settings(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get spend cap settings for a user.
+
+        Note: In this initial implementation, settings are defaults.
+        A full implementation would store in DB.
+        """
+        # TODO: Fetch from user_settings table or dedicated spend_cap table
+        return {
+            "enabled": False,
+            "max_monthly_spend_cents": 10000,
+            "current_month_spend_cents": 0,
+        }
+
+    async def update_spend_cap_settings(
+        self,
+        user_id: str,
+        enabled: bool,
+        max_monthly_spend_cents: int,
+    ) -> Dict[str, Any]:
+        """
+        Update spend cap settings for a user.
+
+        Note: In this initial implementation, changes are not persisted.
+        A full implementation would store in DB.
+        """
+        # TODO: Store in user_settings table or dedicated spend_cap table
+        logger.info(f"Spend cap settings updated for user {user_id}: enabled={enabled}")
+        return {
+            "enabled": enabled,
+            "max_monthly_spend_cents": max_monthly_spend_cents,
+            "current_month_spend_cents": 0,
+        }

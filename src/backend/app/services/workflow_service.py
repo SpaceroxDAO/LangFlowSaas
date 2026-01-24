@@ -284,6 +284,9 @@ class WorkflowService:
         flow_id = None
         flow_data = data.flow_data or {"data": {"nodes": [], "edges": []}}
 
+        # Note: Composio components use entity_id="default" by default.
+        # Our Connections page also uses "default" to match. See composio_connection_service.py
+
         try:
             flow_id = await self.langflow.create_flow(
                 name=f"{data.name} - {user.id}",
@@ -612,12 +615,13 @@ class WorkflowService:
             raise WorkflowServiceError("AI Canvas isn't responding.")
 
         name = new_name or f"{workflow.name} (Copy)"
+        flow_data = workflow.flow_data or {"data": {"nodes": [], "edges": []}}
 
         flow_id = None
         try:
             flow_id = await self.langflow.create_flow(
                 name=f"{name} - {workflow.user_id}",
-                data=workflow.flow_data.get("data", {}) if workflow.flow_data else {},
+                data=flow_data.get("data", {}),
                 description=f"Copy of {workflow.name}",
             )
         except Exception as e:
@@ -631,7 +635,7 @@ class WorkflowService:
                 name=name,
                 description=f"Copy of {workflow.name}",
                 langflow_flow_id=flow_id,
-                flow_data=workflow.flow_data,
+                flow_data=flow_data,  # Use the injected flow_data
                 agent_component_ids=workflow.agent_component_ids,
                 is_active=True,
                 is_public=False,
@@ -696,10 +700,19 @@ class WorkflowService:
         response_text = ""
         response_metadata = None
         try:
+            # Build tweaks to inject user's entity_id into Composio components
+            # This enables multi-user isolation for OAuth connections
+            tweaks = {}
+            if workflow.flow_data:
+                tweaks = self.mapper.build_composio_tweaks(
+                    workflow.flow_data, str(user.id)
+                )
+
             response = await self.langflow.run_flow(
                 flow_id=workflow.langflow_flow_id,
                 message=message,
                 session_id=conversation.langflow_session_id,
+                tweaks=tweaks if tweaks else None,
             )
             response_text = response.get("text", "")
             response_metadata = response.get("metadata")
@@ -823,11 +836,20 @@ class WorkflowService:
         accumulated_text = ""
         response_metadata = {}
 
+        # Build tweaks to inject user's entity_id into Composio components
+        # This enables multi-user isolation for OAuth connections
+        tweaks = {}
+        if workflow.flow_data:
+            tweaks = self.mapper.build_composio_tweaks(
+                workflow.flow_data, str(user.id)
+            )
+
         try:
             async for event in self.langflow.run_flow_stream_enhanced(
                 flow_id=workflow.langflow_flow_id,
                 message=message,
                 session_id=conversation.langflow_session_id,
+                tweaks=tweaks if tweaks else None,
             ):
                 # Skip the session_start from langflow client (we sent our own)
                 if event.event == StreamEventType.SESSION_START:

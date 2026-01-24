@@ -22,7 +22,6 @@ import type {
   AgentComponentCreateFromQA,
   AgentComponentUpdate,
   AgentComponentListResponse,
-  AgentComponentPublishResponse,
   Workflow,
   WorkflowCreate,
   WorkflowCreateFromAgent,
@@ -68,6 +67,17 @@ import type {
   CheckoutResponse,
   PortalRequest,
   PortalResponse,
+  CreditBalance,
+  CreditPack,
+  PurchaseCreditsRequest,
+  PurchaseCreditsResponse,
+  AutoTopUpSettings,
+  AutoTopUpRequest,
+  SpendCapSettings,
+  SpendCapRequest,
+  ModelCost,
+  PricingComparison,
+  BillingOverview,
   // Dashboard types
   DashboardStats,
   DashboardTotals,
@@ -363,18 +373,6 @@ class ApiClient {
 
   async deleteAgentComponent(id: string): Promise<void> {
     return this.request(`/api/v1/agent-components/${id}`, { method: 'DELETE' })
-  }
-
-  async publishAgentComponent(id: string): Promise<AgentComponentPublishResponse> {
-    return this.request<AgentComponentPublishResponse>(`/api/v1/agent-components/${id}/publish`, {
-      method: 'POST',
-    })
-  }
-
-  async unpublishAgentComponent(id: string): Promise<AgentComponentPublishResponse> {
-    return this.request<AgentComponentPublishResponse>(`/api/v1/agent-components/${id}/unpublish`, {
-      method: 'POST',
-    })
   }
 
   async duplicateAgentComponent(id: string, newName?: string): Promise<AgentComponent> {
@@ -1040,7 +1038,7 @@ class ApiClient {
   }
 
   // ===========================================================================
-  // Billing (Subscriptions & Usage)
+  // Billing (Subscriptions, Credits & Usage)
   // ===========================================================================
 
   async listPlans(): Promise<Plan[]> {
@@ -1067,6 +1065,63 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     })
+  }
+
+  // Credit Balance
+  async getCreditBalance(): Promise<CreditBalance> {
+    return this.request('/api/v1/billing/credits/balance')
+  }
+
+  // Credit Packs
+  async listCreditPacks(): Promise<CreditPack[]> {
+    return this.request('/api/v1/billing/credits/packs')
+  }
+
+  // Purchase Credits
+  async purchaseCredits(data: PurchaseCreditsRequest): Promise<PurchaseCreditsResponse> {
+    return this.request<PurchaseCreditsResponse>('/api/v1/billing/credits/purchase', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Auto Top-Up Settings
+  async getAutoTopUpSettings(): Promise<AutoTopUpSettings> {
+    return this.request('/api/v1/billing/credits/auto-top-up')
+  }
+
+  async updateAutoTopUpSettings(data: AutoTopUpRequest): Promise<AutoTopUpSettings> {
+    return this.request<AutoTopUpSettings>('/api/v1/billing/credits/auto-top-up', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Spend Cap Settings
+  async getSpendCapSettings(): Promise<SpendCapSettings> {
+    return this.request('/api/v1/billing/credits/spend-cap')
+  }
+
+  async updateSpendCapSettings(data: SpendCapRequest): Promise<SpendCapSettings> {
+    return this.request<SpendCapSettings>('/api/v1/billing/credits/spend-cap', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Model Costs
+  async listModelCosts(): Promise<ModelCost[]> {
+    return this.request('/api/v1/billing/credits/models')
+  }
+
+  // Pricing Comparison
+  async getPricingComparison(): Promise<PricingComparison> {
+    return this.request('/api/v1/billing/pricing/comparison')
+  }
+
+  // Billing Overview (all-in-one)
+  async getBillingOverview(): Promise<BillingOverview> {
+    return this.request('/api/v1/billing/overview')
   }
 
   // ===========================================================================

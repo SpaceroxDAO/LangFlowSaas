@@ -235,14 +235,3 @@ class AgentComponentListResponse(BaseModel):
     total: int
     page: int
     page_size: int
-
-
-class AgentComponentPublishResponse(BaseModel):
-    """Schema for publish operation response."""
-
-    id: uuid.UUID
-    name: str
-    is_published: bool
-    component_file_path: Optional[str]
-    needs_restart: bool = True
-    message: str

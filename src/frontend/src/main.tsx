@@ -7,6 +7,10 @@ import App from './App'
 import { DevModeProvider, isDevMode } from '@/providers/DevModeProvider'
 import { TourProvider } from '@/providers/TourProvider'
 import { ThemeProvider } from '@/providers/ThemeProvider'
+import { initSentry } from '@/lib/sentry'
+
+// Initialize Sentry error monitoring (before anything else)
+initSentry()
 
 // Dev mode check - skips Clerk auth entirely
 const IS_DEV_MODE = isDevMode

@@ -3,16 +3,21 @@ Application configuration using Pydantic Settings.
 Loads environment variables with validation and type coercion.
 """
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import computed_field
 
 logger = logging.getLogger(__name__)
 
 # Find the project root .env file (two levels up from this file)
 _env_file = Path(__file__).parent.parent.parent.parent / ".env"
+
+# Production environment names that should never have DEV_MODE enabled
+PRODUCTION_ENVIRONMENTS = {"production", "prod", "staging", "stage", "live"}
 
 
 class Settings(BaseSettings):
@@ -30,9 +35,74 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
+    # Environment name (development, staging, production)
+    environment: str = "development"
+
     # Development Mode - bypasses Clerk auth when True
-    # Set DEV_MODE=true in .env to enable
-    dev_mode: bool = False
+    # SECURITY: This is protected by multiple safeguards to prevent
+    # accidental enabling in production. See is_dev_mode_safe property.
+    _dev_mode_raw: bool = False
+
+    @computed_field
+    @property
+    def dev_mode(self) -> bool:
+        """
+        Development mode with production safeguards.
+
+        DEV_MODE is only allowed when ALL of the following are true:
+        1. DEV_MODE env var is explicitly set to true
+        2. ENVIRONMENT is not a production-like value
+        3. Database URL points to localhost (not a remote server)
+
+        This prevents accidental auth bypass in production.
+        """
+        # Check the raw env var
+        raw_dev_mode = os.getenv("DEV_MODE", "false").lower() == "true"
+
+        if not raw_dev_mode:
+            return False
+
+        # SAFEGUARD 1: Block in production-like environments
+        env_name = self.environment.lower()
+        if env_name in PRODUCTION_ENVIRONMENTS:
+            logger.critical(
+                "SECURITY: DEV_MODE=true BLOCKED because ENVIRONMENT=%s. "
+                "DEV_MODE cannot be enabled in production environments.",
+                self.environment
+            )
+            return False
+
+        # SAFEGUARD 2: Block if using a remote database
+        db_url = os.getenv("DATABASE_URL", "")
+        is_local_db = (
+            not db_url or
+            "localhost" in db_url or
+            "127.0.0.1" in db_url or
+            "host.docker.internal" in db_url or
+            "@postgres:" in db_url  # Docker Compose container name
+        )
+        if not is_local_db:
+            logger.critical(
+                "SECURITY: DEV_MODE=true BLOCKED because DATABASE_URL appears "
+                "to be a remote server. DEV_MODE only allowed with localhost database."
+            )
+            return False
+
+        # SAFEGUARD 3: Block if Clerk production keys are configured
+        clerk_key = os.getenv("CLERK_PUBLISHABLE_KEY", "")
+        if clerk_key.startswith("pk_live_"):
+            logger.critical(
+                "SECURITY: DEV_MODE=true BLOCKED because production Clerk keys "
+                "(pk_live_) are configured. Remove production keys for local dev."
+            )
+            return False
+
+        # All safeguards passed - allow dev mode
+        logger.warning(
+            "DEV_MODE is ENABLED - authentication is bypassed. "
+            "This message should NEVER appear in production logs."
+        )
+        return True
 
     # Database - PostgreSQL via Docker Compose (REQUIRED)
     # IMPORTANT: Always use Docker Compose for development. Do NOT use standalone SQLite.

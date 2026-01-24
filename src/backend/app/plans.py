@@ -1,41 +1,52 @@
 """
 Pricing plan configuration for Teach Charlie AI.
 
-Defines the subscription tiers, their limits, and features.
-Uses hybrid pricing: base tier + usage overage.
+Defines subscription tiers, AI credits system, and feature gating.
+Uses hybrid pricing: subscription + AI credits (with BYO API key option).
 """
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+from enum import Enum
+
+
+class PlanTier(str, Enum):
+    """Plan tier identifiers."""
+    FREE = "free"
+    INDIVIDUAL = "individual"
+    BUSINESS = "business"
 
 
 @dataclass
 class PlanLimits:
     """Resource limits for a plan."""
-
     agents: int
-    messages_per_month: int
-    tokens_per_month: int
-    file_storage_mb: int
     workflows: int
     mcp_servers: int
     projects: int
+    file_storage_mb: int
+    monthly_credits: int  # AI credits included per month
+    knowledge_files: int  # Number of knowledge base files
+    team_members: int  # Number of team seats
 
 
 @dataclass
 class Plan:
     """Subscription plan definition."""
-
     id: str
     name: str
-    price_monthly: int  # in cents (e.g., 2900 = $29.00)
+    price_monthly: int  # in cents (e.g., 1900 = $19.00)
     stripe_price_id: Optional[str]  # Stripe Price ID for checkout
     limits: PlanLimits
     features: List[str]
     description: str = ""
+    is_custom: bool = False  # For Business/Enterprise plans
+    highlight: bool = False  # Highlight as recommended
 
     @property
     def price_display(self) -> str:
         """Get display price string."""
+        if self.is_custom:
+            return "Custom"
         if self.price_monthly == 0:
             return "Free"
         dollars = self.price_monthly // 100
@@ -45,123 +56,424 @@ class Plan:
         return f"${dollars}.{cents:02d}/mo"
 
 
-# Plan definitions
+# Plan definitions - aligned with user spec
 PLANS: Dict[str, Plan] = {
     "free": Plan(
         id="free",
         name="Free",
         price_monthly=0,
-        stripe_price_id=None,  # No Stripe price for free tier
-        description="Get started with AI agents",
+        stripe_price_id=None,
+        description="Get started building AI agents",
         limits=PlanLimits(
             agents=3,
-            messages_per_month=100,
-            tokens_per_month=50_000,
-            file_storage_mb=50,
-            workflows=1,
+            workflows=2,
             mcp_servers=2,
             projects=1,
+            file_storage_mb=50,
+            monthly_credits=500,
+            knowledge_files=5,
+            team_members=1,
         ),
         features=[
-            "3 agents",
-            "100 messages/month",
+            "3 AI agents",
+            "500 AI credits/month",
             "Basic playground",
             "Community support",
+            "2 workflows",
+            "5 knowledge files",
         ],
     ),
-    "pro": Plan(
-        id="pro",
-        name="Pro",
-        price_monthly=2900,  # $29.00
-        stripe_price_id=None,  # Set via STRIPE_PRO_PRICE_ID env var
-        description="For power users and small teams",
+    "individual": Plan(
+        id="individual",
+        name="Individual",
+        price_monthly=1900,  # $19.00
+        stripe_price_id=None,  # Set via STRIPE_INDIVIDUAL_PRICE_ID env var
+        description="Perfect for creators and solopreneurs",
+        highlight=True,  # Recommended plan
         limits=PlanLimits(
-            agents=20,
-            messages_per_month=2000,
-            tokens_per_month=500_000,
-            file_storage_mb=500,
-            workflows=10,
+            agents=10,
+            workflows=20,
             mcp_servers=10,
             projects=5,
+            file_storage_mb=500,
+            monthly_credits=5000,
+            knowledge_files=50,
+            team_members=1,
         ),
         features=[
-            "20 agents",
-            "2,000 messages/month",
+            "10 AI agents",
+            "5,000 AI credits/month",
+            "Canvas editor unlock",
             "Advanced analytics",
             "Custom components",
-            "Canvas unlock",
-            "Export & embed",
+            "Export & embed agents",
+            "50 knowledge files",
             "Email support",
+            "Buy additional credits",
         ],
     ),
-    "team": Plan(
-        id="team",
-        name="Team",
-        price_monthly=7900,  # $79.00
-        stripe_price_id=None,  # Set via STRIPE_TEAM_PRICE_ID env var
-        description="For growing teams and businesses",
+    "business": Plan(
+        id="business",
+        name="Business",
+        price_monthly=0,  # Custom pricing
+        stripe_price_id=None,
+        description="For teams and organizations",
+        is_custom=True,
         limits=PlanLimits(
-            agents=100,
-            messages_per_month=10_000,
-            tokens_per_month=2_000_000,
-            file_storage_mb=2000,
-            workflows=50,
-            mcp_servers=50,
-            projects=20,
+            agents=-1,  # -1 = unlimited
+            workflows=-1,
+            mcp_servers=-1,
+            projects=-1,
+            file_storage_mb=10000,
+            monthly_credits=50000,
+            knowledge_files=-1,
+            team_members=-1,
         ),
         features=[
-            "100 agents",
-            "10,000 messages/month",
+            "Unlimited agents",
+            "50,000+ AI credits/month",
             "Team collaboration",
+            "SSO (SAML/OIDC)",
+            "Audit logs",
+            "Custom branding",
             "API access",
-            "White-label options",
-            "Priority support",
-            "Custom integrations",
+            "Dedicated support",
+            "Volume discounts",
+            "SLA guarantees",
         ],
     ),
+}
+
+# Legacy plan mapping (for existing subscriptions)
+LEGACY_PLAN_MAPPING = {
+    "pro": "individual",  # Pro users -> Individual
+    "team": "business",   # Team users -> Business
 }
 
 
 def get_plan(plan_id: str) -> Plan:
     """Get plan by ID, defaulting to free if not found."""
+    # Handle legacy plan IDs
+    plan_id = LEGACY_PLAN_MAPPING.get(plan_id, plan_id)
     return PLANS.get(plan_id, PLANS["free"])
 
 
 def get_all_plans() -> List[Plan]:
-    """Get all available plans in order."""
-    return [PLANS["free"], PLANS["pro"], PLANS["team"]]
+    """Get all available plans in display order."""
+    return [PLANS["free"], PLANS["individual"], PLANS["business"]]
 
 
-# Usage overage rates (for hybrid billing)
-# These are charged when users exceed their plan limits
-OVERAGE_RATES = {
-    "messages": 0.01,  # $0.01 per message over limit
-    "tokens": 0.0001,  # $0.0001 per token over limit (=$0.10/1K tokens)
+# =============================================================================
+# AI CREDITS SYSTEM
+# =============================================================================
+
+@dataclass
+class CreditPack:
+    """Credit pack available for purchase."""
+    id: str
+    name: str
+    credits: int
+    price_cents: int  # Price in cents
+    stripe_price_id: Optional[str] = None
+    popular: bool = False
+
+    @property
+    def price_display(self) -> str:
+        """Get display price string."""
+        dollars = self.price_cents // 100
+        cents = self.price_cents % 100
+        if cents == 0:
+            return f"${dollars}"
+        return f"${dollars}.{cents:02d}"
+
+    @property
+    def price_per_credit(self) -> float:
+        """Price per credit in dollars."""
+        return self.price_cents / 100 / self.credits
+
+
+# Credit packs available for purchase
+CREDIT_PACKS: Dict[str, CreditPack] = {
+    "credits_1000": CreditPack(
+        id="credits_1000",
+        name="1,000 Credits",
+        credits=1000,
+        price_cents=500,  # $5 = $0.005/credit
+        stripe_price_id=None,
+    ),
+    "credits_5000": CreditPack(
+        id="credits_5000",
+        name="5,000 Credits",
+        credits=5000,
+        price_cents=2000,  # $20 = $0.004/credit
+        popular=True,
+    ),
+    "credits_15000": CreditPack(
+        id="credits_15000",
+        name="15,000 Credits",
+        credits=15000,
+        price_cents=5000,  # $50 = $0.0033/credit
+    ),
+    "credits_50000": CreditPack(
+        id="credits_50000",
+        name="50,000 Credits",
+        credits=50000,
+        price_cents=15000,  # $150 = $0.003/credit
+    ),
 }
 
 
-def calculate_overage(
-    plan_id: str,
-    messages_used: int,
-    tokens_used: int,
-) -> Dict[str, float]:
+def get_credit_pack(pack_id: str) -> Optional[CreditPack]:
+    """Get credit pack by ID."""
+    return CREDIT_PACKS.get(pack_id)
+
+
+def get_all_credit_packs() -> List[CreditPack]:
+    """Get all available credit packs."""
+    return list(CREDIT_PACKS.values())
+
+
+# =============================================================================
+# MODEL CREDIT COSTS
+# =============================================================================
+
+@dataclass
+class ModelCost:
+    """Credit cost for a model."""
+    model_id: str
+    display_name: str
+    provider: str
+    credits_per_1k_input: float
+    credits_per_1k_output: float
+    supports_byo_key: bool = True  # Can user bring their own API key?
+
+
+# Credit costs per model (credits per 1K tokens)
+# These are internal "Charlie credits" - not tied to provider pricing
+MODEL_COSTS: Dict[str, ModelCost] = {
+    # OpenAI models
+    "gpt-4o": ModelCost(
+        model_id="gpt-4o",
+        display_name="GPT-4o",
+        provider="openai",
+        credits_per_1k_input=5,
+        credits_per_1k_output=15,
+    ),
+    "gpt-4o-mini": ModelCost(
+        model_id="gpt-4o-mini",
+        display_name="GPT-4o Mini",
+        provider="openai",
+        credits_per_1k_input=0.5,
+        credits_per_1k_output=1.5,
+    ),
+    "gpt-4-turbo": ModelCost(
+        model_id="gpt-4-turbo",
+        display_name="GPT-4 Turbo",
+        provider="openai",
+        credits_per_1k_input=10,
+        credits_per_1k_output=30,
+    ),
+    # Anthropic models
+    "claude-3-5-sonnet": ModelCost(
+        model_id="claude-3-5-sonnet",
+        display_name="Claude 3.5 Sonnet",
+        provider="anthropic",
+        credits_per_1k_input=3,
+        credits_per_1k_output=15,
+    ),
+    "claude-3-5-haiku": ModelCost(
+        model_id="claude-3-5-haiku",
+        display_name="Claude 3.5 Haiku",
+        provider="anthropic",
+        credits_per_1k_input=1,
+        credits_per_1k_output=5,
+    ),
+    "claude-3-opus": ModelCost(
+        model_id="claude-3-opus",
+        display_name="Claude 3 Opus",
+        provider="anthropic",
+        credits_per_1k_input=15,
+        credits_per_1k_output=75,
+    ),
+    # Google models
+    "gemini-1.5-pro": ModelCost(
+        model_id="gemini-1.5-pro",
+        display_name="Gemini 1.5 Pro",
+        provider="google",
+        credits_per_1k_input=2,
+        credits_per_1k_output=8,
+    ),
+    "gemini-1.5-flash": ModelCost(
+        model_id="gemini-1.5-flash",
+        display_name="Gemini 1.5 Flash",
+        provider="google",
+        credits_per_1k_input=0.2,
+        credits_per_1k_output=0.8,
+    ),
+}
+
+
+def get_model_cost(model_id: str) -> Optional[ModelCost]:
+    """Get credit cost for a model."""
+    return MODEL_COSTS.get(model_id)
+
+
+def calculate_credit_cost(model_id: str, input_tokens: int, output_tokens: int) -> int:
     """
-    Calculate overage charges for usage beyond plan limits.
+    Calculate credit cost for a model usage.
 
-    Returns dict with overage amounts in dollars.
+    Returns credits consumed (rounded up).
     """
-    plan = get_plan(plan_id)
+    cost = get_model_cost(model_id)
+    if not cost:
+        # Default fallback for unknown models
+        return int((input_tokens + output_tokens) / 1000 * 10)
 
-    message_overage = max(0, messages_used - plan.limits.messages_per_month)
-    token_overage = max(0, tokens_used - plan.limits.tokens_per_month)
+    input_credits = (input_tokens / 1000) * cost.credits_per_1k_input
+    output_credits = (output_tokens / 1000) * cost.credits_per_1k_output
 
-    return {
-        "messages_overage_count": message_overage,
-        "messages_overage_amount": message_overage * OVERAGE_RATES["messages"],
-        "tokens_overage_count": token_overage,
-        "tokens_overage_amount": token_overage * OVERAGE_RATES["tokens"],
-        "total_overage": (
-            message_overage * OVERAGE_RATES["messages"]
-            + token_overage * OVERAGE_RATES["tokens"]
-        ),
-    }
+    # Round up to ensure we always charge at least 1 credit
+    import math
+    return max(1, math.ceil(input_credits + output_credits))
+
+
+# =============================================================================
+# AUTO TOP-UP CONFIGURATION
+# =============================================================================
+
+@dataclass
+class AutoTopUpConfig:
+    """Auto top-up configuration for a user."""
+    enabled: bool = False
+    threshold_credits: int = 100  # Trigger when balance falls below
+    top_up_pack_id: str = "credits_5000"  # Which pack to purchase
+    max_monthly_top_ups: int = 3  # Safety limit
+
+
+# Default auto top-up settings
+DEFAULT_AUTO_TOP_UP = AutoTopUpConfig()
+
+
+# =============================================================================
+# SPEND CAP CONFIGURATION
+# =============================================================================
+
+@dataclass
+class SpendCapConfig:
+    """Monthly spend cap configuration."""
+    enabled: bool = False
+    max_monthly_spend_cents: int = 10000  # $100 default cap
+
+
+# Default spend cap settings
+DEFAULT_SPEND_CAP = SpendCapConfig()
+
+
+# =============================================================================
+# FEATURE GATING
+# =============================================================================
+
+# Features that require specific plans
+FEATURE_REQUIREMENTS: Dict[str, List[str]] = {
+    # Feature name -> list of plan IDs that have access
+    "canvas_editor": ["individual", "business"],
+    "export_agents": ["individual", "business"],
+    "custom_components": ["individual", "business"],
+    "advanced_analytics": ["individual", "business"],
+    "buy_credits": ["individual", "business"],
+    "auto_top_up": ["individual", "business"],
+    "team_collaboration": ["business"],
+    "sso": ["business"],
+    "audit_logs": ["business"],
+    "custom_branding": ["business"],
+    "api_access": ["business"],
+    "sla": ["business"],
+}
+
+
+def has_feature_access(plan_id: str, feature: str) -> bool:
+    """Check if a plan has access to a feature."""
+    plan_id = LEGACY_PLAN_MAPPING.get(plan_id, plan_id)
+    allowed_plans = FEATURE_REQUIREMENTS.get(feature, [])
+
+    # If feature not in requirements, it's available to all
+    if not allowed_plans:
+        return True
+
+    return plan_id in allowed_plans
+
+
+def get_required_plan_for_feature(feature: str) -> Optional[str]:
+    """Get the minimum plan required for a feature."""
+    allowed_plans = FEATURE_REQUIREMENTS.get(feature, [])
+    if not allowed_plans:
+        return None
+
+    # Return the lowest tier that has access
+    tier_order = ["free", "individual", "business"]
+    for tier in tier_order:
+        if tier in allowed_plans:
+            return tier
+
+    return allowed_plans[0] if allowed_plans else None
+
+
+# =============================================================================
+# PRICING PAGE DATA
+# =============================================================================
+
+def get_pricing_comparison() -> List[Dict]:
+    """
+    Get pricing comparison data for the pricing page.
+
+    Returns a list of feature rows with plan availability.
+    """
+    return [
+        {
+            "category": "AI Agents",
+            "features": [
+                {"name": "Number of agents", "free": "3", "individual": "10", "business": "Unlimited"},
+                {"name": "Workflows", "free": "2", "individual": "20", "business": "Unlimited"},
+                {"name": "Knowledge files", "free": "5", "individual": "50", "business": "Unlimited"},
+            ]
+        },
+        {
+            "category": "AI Credits",
+            "features": [
+                {"name": "Monthly included", "free": "500", "individual": "5,000", "business": "50,000+"},
+                {"name": "Buy additional credits", "free": False, "individual": True, "business": True},
+                {"name": "Auto top-up", "free": False, "individual": True, "business": True},
+                {"name": "BYO API keys", "free": True, "individual": True, "business": True},
+            ]
+        },
+        {
+            "category": "Features",
+            "features": [
+                {"name": "Basic playground", "free": True, "individual": True, "business": True},
+                {"name": "Canvas editor", "free": False, "individual": True, "business": True},
+                {"name": "Export & embed", "free": False, "individual": True, "business": True},
+                {"name": "Custom components", "free": False, "individual": True, "business": True},
+                {"name": "Advanced analytics", "free": False, "individual": True, "business": True},
+            ]
+        },
+        {
+            "category": "Team & Enterprise",
+            "features": [
+                {"name": "Team members", "free": "1", "individual": "1", "business": "Unlimited"},
+                {"name": "Team collaboration", "free": False, "individual": False, "business": True},
+                {"name": "SSO (SAML/OIDC)", "free": False, "individual": False, "business": True},
+                {"name": "Audit logs", "free": False, "individual": False, "business": True},
+                {"name": "Custom branding", "free": False, "individual": False, "business": True},
+                {"name": "API access", "free": False, "individual": False, "business": True},
+            ]
+        },
+        {
+            "category": "Support",
+            "features": [
+                {"name": "Community support", "free": True, "individual": True, "business": True},
+                {"name": "Email support", "free": False, "individual": True, "business": True},
+                {"name": "Dedicated support", "free": False, "individual": False, "business": True},
+                {"name": "SLA guarantees", "free": False, "individual": False, "business": True},
+            ]
+        },
+    ]

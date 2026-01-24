@@ -337,15 +337,6 @@ export interface AgentComponentListResponse {
   page_size: number
 }
 
-export interface AgentComponentPublishResponse {
-  id: string
-  name: string
-  is_published: boolean
-  component_file_path?: string
-  needs_restart: boolean
-  message: string
-}
-
 // =============================================================================
 // Workflow Types (Langflow Flows)
 // =============================================================================
@@ -779,52 +770,198 @@ export interface FeaturedPresetsResponse {
 // Billing Types
 // ===========================================================================
 
+export type PlanId = 'free' | 'individual' | 'business'
+
 export interface Plan {
-  id: string
+  id: PlanId
   name: string
   price_monthly: number
   price_display: string
   description: string
   features: string[]
   limits: PlanLimits
+  is_custom: boolean
+  highlight: boolean
 }
 
 export interface PlanLimits {
   agents: number
-  messages_per_month: number
-  tokens_per_month: number
   workflows: number
   mcp_servers: number
   projects: number
   file_storage_mb: number
+  monthly_credits: number
+  knowledge_files: number
+  team_members: number
 }
 
 export interface Subscription {
-  plan_id: string
+  plan_id: PlanId
   plan_name: string
   status: 'active' | 'canceled' | 'past_due' | 'trialing'
+  current_period_start: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
   is_paid: boolean
+  stripe_subscription_id: string | null
+  stripe_customer_id: string | null
+}
+
+// AI Credits Types
+export interface CreditBalance {
+  balance: number
+  monthly_credits: number
+  purchased_credits: number
+  credits_used_this_month: number
+  credits_remaining: number
+  reset_date: string | null
+  using_byo_key: boolean
+}
+
+export interface CreditPack {
+  id: string
+  name: string
+  credits: number
+  price_cents: number
+  price_display: string
+  price_per_credit: number
+  popular: boolean
+}
+
+export interface CreditUsageItem {
+  id: string
+  timestamp: string
+  model: string
+  model_display_name: string
+  input_tokens: number
+  output_tokens: number
+  credits_used: number
+  agent_id: string | null
+  agent_name: string | null
+  workflow_id: string | null
+  workflow_name: string | null
+}
+
+export interface CreditUsageResponse {
+  items: CreditUsageItem[]
+  total_credits_used: number
+  total_items: number
+  page: number
+  page_size: number
+  has_more: boolean
+}
+
+export interface PurchaseCreditsRequest {
+  pack_id: string
+  success_url: string
+  cancel_url: string
+}
+
+export interface PurchaseCreditsResponse {
+  checkout_url: string
+  session_id: string
+}
+
+// Auto Top-Up Types
+export interface AutoTopUpSettings {
+  enabled: boolean
+  threshold_credits: number
+  top_up_pack_id: string
+  top_up_pack_name: string
+  top_up_credits: number
+  top_up_price_display: string
+  max_monthly_top_ups: number
+  top_ups_this_month: number
+  can_top_up: boolean
+}
+
+export interface AutoTopUpRequest {
+  enabled: boolean
+  threshold_credits: number
+  top_up_pack_id: string
+  max_monthly_top_ups: number
+}
+
+// Spend Cap Types
+export interface SpendCapSettings {
+  enabled: boolean
+  max_monthly_spend_cents: number
+  max_monthly_spend_display: string
+  current_month_spend_cents: number
+  current_month_spend_display: string
+  spend_remaining_cents: number
+  spend_remaining_display: string
+  at_limit: boolean
+}
+
+export interface SpendCapRequest {
+  enabled: boolean
+  max_monthly_spend_cents: number
+}
+
+// Model Cost Types
+export interface ModelCost {
+  model_id: string
+  display_name: string
+  provider: string
+  credits_per_1k_input: number
+  credits_per_1k_output: number
+  supports_byo_key: boolean
+}
+
+// Usage Types (updated)
+export interface UsageItem {
+  used: number
+  limit: number
+  percent: number
 }
 
 export interface UsageStats {
-  messages_sent: number
-  tokens_used: number
-  agents_count: number
-  workflows_count: number
-  limits: {
-    messages_per_month: number
-    tokens_per_month: number
-    agents: number
-    workflows: number
-  }
-  usage_percent: {
-    messages: number
-    tokens: number
-  }
+  agents: UsageItem
+  workflows: UsageItem
+  credits: UsageItem
 }
 
+// Feature Access
+export interface FeatureAccess {
+  can_buy_credits: boolean
+  can_use_auto_top_up: boolean
+  canvas_editor: boolean
+  export_agents: boolean
+  team_collaboration: boolean
+  sso: boolean
+}
+
+// Billing Overview (combined response)
+export interface BillingOverview {
+  subscription: Subscription
+  plan: Plan
+  credits: CreditBalance
+  usage: UsageStats
+  auto_top_up: AutoTopUpSettings
+  spend_cap: SpendCapSettings
+  feature_access: FeatureAccess
+}
+
+// Pricing Comparison Types
+export interface PricingFeature {
+  name: string
+  free: boolean | string
+  individual: boolean | string
+  business: boolean | string
+}
+
+export interface PricingCategory {
+  category: string
+  features: PricingFeature[]
+}
+
+export interface PricingComparison {
+  categories: PricingCategory[]
+  plans: Plan[]
+}
+
+// Checkout Types
 export interface CheckoutRequest {
   plan_id: string
   success_url: string

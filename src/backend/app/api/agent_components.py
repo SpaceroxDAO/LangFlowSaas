@@ -14,7 +14,6 @@ from app.schemas.agent_component import (
     AgentComponentResponse,
     AgentComponentUpdate,
     AgentComponentListResponse,
-    AgentComponentPublishResponse,
     GenerateAvatarRequest,
     GenerateAvatarResponse,
 )
@@ -194,65 +193,6 @@ async def delete_agent_component(
 
     await service.delete(component)
     return None
-
-
-@router.post(
-    "/{component_id}/publish",
-    response_model=AgentComponentPublishResponse,
-    summary="Publish agent component",
-    description="Publish an agent component to make it available in the Langflow sidebar.",
-)
-async def publish_agent_component(
-    component_id: uuid.UUID,
-    session: AsyncSessionDep,
-    clerk_user: CurrentUser,
-):
-    """
-    Publish an agent component to the Langflow sidebar.
-
-    After publishing, a Langflow restart is required for the
-    component to appear in the sidebar.
-    """
-    user = await get_user_from_clerk(clerk_user, session)
-    service = AgentComponentService(session)
-
-    component = await service.get_by_id(component_id, user_id=user.id)
-
-    if not component:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent component not found.",
-        )
-
-    result = await service.publish(component)
-    return result
-
-
-@router.post(
-    "/{component_id}/unpublish",
-    response_model=AgentComponentPublishResponse,
-    summary="Unpublish agent component",
-    description="Remove an agent component from the Langflow sidebar.",
-)
-async def unpublish_agent_component(
-    component_id: uuid.UUID,
-    session: AsyncSessionDep,
-    clerk_user: CurrentUser,
-):
-    """Unpublish an agent component from the Langflow sidebar."""
-    user = await get_user_from_clerk(clerk_user, session)
-    service = AgentComponentService(session)
-
-    component = await service.get_by_id(component_id, user_id=user.id)
-
-    if not component:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Agent component not found.",
-        )
-
-    result = await service.unpublish(component)
-    return result
 
 
 @router.post(

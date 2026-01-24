@@ -69,8 +69,17 @@ class ComposioConnectionService:
         """
         Get Composio entity_id for a user.
 
-        CRITICAL: This maps our user ID to Composio's entity system.
-        Each user gets their own isolated set of connections.
+        MULTI-TENANT ISOLATION: Each user gets their own entity_id.
+
+        How it works:
+        - OAuth connections are stored in Composio under user's ID as entity_id
+        - When executing tools, we pass user_id via Langflow tweaks
+        - Tweaks override the component's default entity_id at runtime
+        - This ensures each user's tools access only their own OAuth tokens
+
+        Canvas testing:
+        - Components default to entity_id="default" for canvas playground testing
+        - Production chat endpoints inject the real user ID via tweaks
         """
         return str(user.id)
 

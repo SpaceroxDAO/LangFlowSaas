@@ -224,6 +224,7 @@ class LangflowClient:
         message: str,
         session_id: str = None,
         stream: bool = False,
+        tweaks: Dict[str, Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Execute a flow with a message.
@@ -233,6 +234,9 @@ class LangflowClient:
             message: User message to send
             session_id: Optional session ID for conversation continuity
             stream: Whether to stream the response
+            tweaks: Optional dict of component parameter overrides.
+                    Format: {"ComponentID": {"param_name": "value"}}
+                    Used to inject user-specific values like entity_id at runtime.
 
         Returns:
             Flow execution result
@@ -241,17 +245,24 @@ class LangflowClient:
         if not session_id:
             session_id = str(uuid.uuid4())
 
+        # Build payload
+        payload = {
+            "input_value": message,
+            "input_type": "chat",
+            "output_type": "chat",
+            "session_id": session_id,
+        }
+
+        # Add tweaks if provided (for multi-user isolation)
+        if tweaks:
+            payload["tweaks"] = tweaks
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/v1/run/{flow_id}",
                 headers=await self._get_headers(),
                 params={"stream": str(stream).lower()},
-                json={
-                    "input_value": message,
-                    "input_type": "chat",
-                    "output_type": "chat",
-                    "session_id": session_id,
-                },
+                json=payload,
             )
 
             if response.status_code != 200:
@@ -289,6 +300,7 @@ class LangflowClient:
         flow_id: str,
         message: str,
         session_id: str = None,
+        tweaks: Dict[str, Dict[str, Any]] = None,
     ) -> AsyncGenerator[str, None]:
         """
         Execute a flow with streaming response.
@@ -297,6 +309,7 @@ class LangflowClient:
             flow_id: Flow UUID
             message: User message to send
             session_id: Optional session ID for conversation continuity
+            tweaks: Optional dict of component parameter overrides
 
         Yields:
             Text chunks as they arrive from the model
@@ -305,18 +318,24 @@ class LangflowClient:
         if not session_id:
             session_id = str(uuid.uuid4())
 
+        # Build payload
+        payload = {
+            "input_value": message,
+            "input_type": "chat",
+            "output_type": "chat",
+            "session_id": session_id,
+        }
+
+        if tweaks:
+            payload["tweaks"] = tweaks
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             async with client.stream(
                 "POST",
                 f"{self.base_url}/api/v1/run/{flow_id}",
                 headers=await self._get_headers(),
                 params={"stream": "true"},
-                json={
-                    "input_value": message,
-                    "input_type": "chat",
-                    "output_type": "chat",
-                    "session_id": session_id,
-                },
+                json=payload,
             ) as response:
                 if response.status_code != 200:
                     error_text = await response.aread()
@@ -352,6 +371,7 @@ class LangflowClient:
         flow_id: str,
         message: str,
         session_id: str = None,
+        tweaks: Dict[str, Dict[str, Any]] = None,
     ) -> AsyncGenerator[StreamEvent, None]:
         """
         Execute a flow with streaming response, yielding structured StreamEvent objects.
@@ -367,6 +387,9 @@ class LangflowClient:
             flow_id: Flow UUID
             message: User message to send
             session_id: Optional session ID for conversation continuity
+            tweaks: Optional dict of component parameter overrides.
+                    Format: {"ComponentID": {"param_name": "value"}}
+                    Used to inject user-specific values like entity_id at runtime.
 
         Yields:
             StreamEvent objects representing the streaming response
@@ -374,6 +397,17 @@ class LangflowClient:
         # Generate session ID if not provided
         if not session_id:
             session_id = str(uuid.uuid4())
+
+        # Build payload
+        payload = {
+            "input_value": message,
+            "input_type": "chat",
+            "output_type": "chat",
+            "session_id": session_id,
+        }
+
+        if tweaks:
+            payload["tweaks"] = tweaks
 
         accumulated_text = ""
         event_index = 0
@@ -392,12 +426,7 @@ class LangflowClient:
                     f"{self.base_url}/api/v1/run/{flow_id}",
                     headers=await self._get_headers(),
                     params={"stream": "true"},
-                    json={
-                        "input_value": message,
-                        "input_type": "chat",
-                        "output_type": "chat",
-                        "session_id": session_id,
-                    },
+                    json=payload,
                 ) as response:
                     if response.status_code != 200:
                         error_text = await response.aread()
