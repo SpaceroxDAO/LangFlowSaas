@@ -128,19 +128,32 @@ def validate_clerk_token(token: str) -> dict:
             detail="Invalid token issuer.",
         )
     except jwt.InvalidTokenError as e:
+        # SECURITY: Don't expose token validation details to client
+        # Log the detailed error for debugging but return generic message
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"JWT validation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {str(e)}",
+            detail="Authentication failed. Please sign in again.",
         )
     except PyJWKClientError as e:
+        # SECURITY: Don't expose JWKS client details to client
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"JWKS client error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Authentication service unavailable: {str(e)}",
+            detail="Authentication service temporarily unavailable. Please try again.",
         )
     except Exception as e:
+        # SECURITY: Don't expose internal error details
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected auth error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Authentication failed: {str(e)}",
+            detail="Authentication failed. Please sign in again.",
         )
 
 

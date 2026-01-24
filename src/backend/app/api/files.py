@@ -243,6 +243,25 @@ async def download_file(
         )
 
     file_path = service.get_file_path(user_file)
+
+    # SECURITY: Validate path is within uploads directory to prevent path traversal
+    from app.services.file_service import UPLOADS_DIR
+    try:
+        resolved_path = file_path.resolve()
+        uploads_resolved = UPLOADS_DIR.resolve()
+        if not str(resolved_path).startswith(str(uploads_resolved)):
+            logger.error(f"Path traversal attempt detected: {file_path} -> {resolved_path}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+    except (OSError, ValueError) as e:
+        logger.error(f"Path validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found",
+        )
+
     if not file_path.exists():
         logger.error(f"File not found on disk: {file_path}")
         raise HTTPException(

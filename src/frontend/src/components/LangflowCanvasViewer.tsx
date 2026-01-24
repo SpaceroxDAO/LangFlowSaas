@@ -157,7 +157,14 @@ export function LangflowCanvasViewer({
         </div>
       )}
 
-      {/* Langflow iframe */}
+      {/* Langflow iframe
+          SECURITY NOTE: The sandbox permissions are required for Langflow to function:
+          - allow-same-origin: Required for cookies/storage access (Langflow is our own service)
+          - allow-scripts: Required for Langflow's JavaScript to execute
+          - allow-forms: Required for form submissions in the flow editor
+          - allow-popups: Required for OAuth flows and external links
+          This is acceptable because Langflow is a trusted first-party service, not user-controlled content.
+      */}
       <iframe
         ref={iframeRef}
         src={canvasUrl}

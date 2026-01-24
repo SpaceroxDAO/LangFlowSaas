@@ -111,13 +111,26 @@ export function EmbedModal({ agent, agentComponent, isOpen, onClose }: EmbedModa
 
   if (!isOpen) return null
 
+  // SECURITY: Escape HTML special characters to prevent XSS in embed code
+  const escapeHtml = (str: string): string => {
+    const htmlEscapes: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }
+    return str.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char)
+  }
+
   // Legacy embed code for old Agent type (uses Langflow)
+  // SECURITY: Escape agent name and flow ID to prevent XSS
   const legacyEmbedCode = agent ? `<script
   src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js">
 </script>
 <langflow-chat
-  window_title="${agent.name}"
-  flow_id="${agent.langflow_flow_id}"
+  window_title="${escapeHtml(agent.name || '')}"
+  flow_id="${escapeHtml(agent.langflow_flow_id || '')}"
   host_url="${import.meta.env.VITE_LANGFLOW_HOST || 'http://localhost:7860'}">
 </langflow-chat>` : ''
 

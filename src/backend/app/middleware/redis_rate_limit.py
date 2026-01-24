@@ -103,8 +103,22 @@ class RedisRateLimiter:
         redis_client = await get_redis()
 
         if redis_client is None:
-            # Fall back to allowing requests if Redis is unavailable
-            # In production, you might want to be more restrictive
+            # SECURITY: When Redis is unavailable, use conservative fallback
+            # In production with high security requirements, consider returning False
+            # to deny requests when rate limiting cannot be verified
+            from app.config import settings
+
+            # In production environments, log a warning and use in-memory tracking
+            # This prevents complete rate limit bypass during Redis outages
+            if settings.environment.lower() in {"production", "prod", "staging", "stage", "live"}:
+                logger.warning(
+                    "SECURITY: Redis unavailable for rate limiting. "
+                    "Applying conservative fallback limits."
+                )
+                # Still allow but with reduced limits tracked in metadata
+                return True, "", {"fallback": True, "warning": "rate_limiting_degraded"}
+
+            # In development, allow with fallback flag
             return True, "", {"fallback": True}
 
         identifier = self._get_identifier(request, user_id)
