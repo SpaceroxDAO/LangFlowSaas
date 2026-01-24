@@ -5,7 +5,7 @@ import logging
 import uuid
 from typing import List, Optional, Tuple
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -392,21 +392,36 @@ class AgentComponentService:
         """
         Sync agent component changes to all linked workflows in Langflow.
 
-        This updates the Agent node's system_prompt in each workflow's Langflow flow.
+        This updates:
+        - The Agent node's system_prompt
+        - The Agent node's display_name
+        - Tool nodes (adds/removes based on selected_tools changes)
         """
         # Find workflows that use this agent component
+        # Cast JSON to text and use LIKE since JSON .contains() doesn't work properly
         component_id_str = str(component.id)
         stmt = select(Workflow).where(
-            Workflow.agent_component_ids.contains([component_id_str]),
+            cast(Workflow.agent_component_ids, String).like(f'%{component_id_str}%'),
             Workflow.is_active == True,
         )
         result = await self.session.execute(stmt)
         workflows = list(result.scalars().all())
 
         if not workflows:
+            logger.debug(f"No workflows found for agent {component.id}")
             return
 
         logger.info(f"Syncing agent {component.id} changes to {len(workflows)} workflow(s)")
+
+        # Get the tool type mapping to identify tool nodes
+        from app.services.template_mapping import TOOL_MAPPING
+
+        # Build reverse mapping: component_type -> tool_id
+        tool_type_to_id = {}
+        for tool_id, component_type in TOOL_MAPPING.items():
+            # Handle the component_type being the file name (e.g., "tavily" -> "TavilySearchComponent")
+            # We'll match by checking if the node type contains the tool component type
+            tool_type_to_id[component_type.lower()] = tool_id
 
         for workflow in workflows:
             try:
@@ -414,15 +429,18 @@ class AgentComponentService:
                 langflow_flow = await self.langflow.get_flow(workflow.langflow_flow_id)
                 flow_data = langflow_flow.get("data", {})
 
-                # Find and update the Agent node's system_prompt
                 nodes = flow_data.get("nodes", [])
+                edges = flow_data.get("edges", [])
                 updated = False
+                agent_node_id = None
 
+                # First pass: find Agent node and update system_prompt
                 for node in nodes:
                     node_data = node.get("data", {})
                     node_type = node_data.get("type", "")
 
                     if node_type == "Agent":
+                        agent_node_id = node.get("id")
                         template_fields = node_data.get("node", {}).get("template", {})
                         if "system_prompt" in template_fields:
                             template_fields["system_prompt"]["value"] = component.system_prompt
@@ -432,6 +450,80 @@ class AgentComponentService:
                         # Also update the agent display name if name changed
                         if component.name:
                             node_data["node"]["display_name"] = component.name
+
+                if not agent_node_id:
+                    logger.warning(f"No Agent node found in workflow {workflow.id}")
+                    continue
+
+                # Identify current tool nodes in the flow
+                current_tool_nodes = {}  # node_id -> tool_id
+                tool_node_types = {
+                    "TavilySearchComponent": "web_search",
+                    "CalculatorComponent": "calculator",
+                    "OpenMeteoWeatherComponent": "weather",
+                    "KnowledgeRetrieverComponent": "knowledge_search",
+                    "ComposioAllApps": "composio_all_apps",
+                    # Legacy mappings
+                    "DuckDuckGoSearch": "duckduckgo",
+                    "LangSearchComponent": "langsearch",
+                    "URLReaderComponent": "url_reader",
+                    "GoogleMapsComponent": "google_maps",
+                }
+
+                for node in nodes:
+                    node_id = node.get("id")
+                    node_data = node.get("data", {})
+                    node_type = node_data.get("type", "")
+
+                    if node_type in tool_node_types:
+                        current_tool_nodes[node_id] = tool_node_types[node_type]
+                        logger.debug(f"Found tool node: {node_id} -> {node_type} -> {tool_node_types[node_type]}")
+
+                current_tool_ids = set(current_tool_nodes.values())
+                desired_tool_ids = set(component.selected_tools or [])
+                logger.debug(f"Current tools in flow: {current_tool_ids}, desired tools: {desired_tool_ids}")
+
+                # Calculate tools to add and remove
+                tools_to_add = desired_tool_ids - current_tool_ids
+                tools_to_remove = current_tool_ids - desired_tool_ids
+
+                if tools_to_add or tools_to_remove:
+                    logger.info(f"Workflow {workflow.id}: adding tools {tools_to_add}, removing tools {tools_to_remove}")
+
+                # Remove tool nodes that are no longer selected
+                if tools_to_remove:
+                    nodes_to_remove = [
+                        node_id for node_id, tool_id in current_tool_nodes.items()
+                        if tool_id in tools_to_remove
+                    ]
+
+                    # Remove nodes
+                    flow_data["nodes"] = [
+                        n for n in nodes if n.get("id") not in nodes_to_remove
+                    ]
+
+                    # Remove edges connected to removed nodes
+                    flow_data["edges"] = [
+                        e for e in edges
+                        if e.get("source") not in nodes_to_remove and e.get("target") not in nodes_to_remove
+                    ]
+
+                    updated = True
+                    logger.info(f"Removed {len(nodes_to_remove)} tool nodes from workflow {workflow.id}: {nodes_to_remove}")
+
+                # Add new tool nodes
+                if tools_to_add:
+                    # Use the mapper to inject new tools
+                    wrapped_flow = {"data": flow_data}
+                    wrapped_flow, _ = self.mapper.inject_tools(
+                        flow_data=wrapped_flow,
+                        selected_tools=list(tools_to_add),
+                        agent_node_id=agent_node_id,
+                    )
+                    flow_data = wrapped_flow.get("data", flow_data)
+
+                    updated = True
+                    logger.debug(f"Added {len(tools_to_add)} tool nodes to workflow {workflow.id}")
 
                 if updated:
                     # Push updated flow to Langflow

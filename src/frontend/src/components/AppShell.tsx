@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { UserButton } from '@clerk/clerk-react'
-import { Dog } from 'lucide-react'
+import { Dog, Sun, Moon, Bell } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { Breadcrumbs } from './Breadcrumbs'
 import { isDevMode, DevUserButton } from '@/providers/DevModeProvider'
+import { useTheme } from '@/providers/ThemeProvider'
 import { api } from '@/lib/api'
 
 interface AppShellProps {
@@ -28,7 +29,9 @@ const AuthUserButton = isDevMode ? DevUserButton : UserButton
 
 export function AppShell({ children }: AppShellProps) {
   const queryClient = useQueryClient()
+  const { theme, toggleTheme } = useTheme()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [notificationCount] = useState(0) // Placeholder for future notifications
 
   // Fetch user settings to get sidebar state
   const { data: settings } = useQuery({
@@ -78,21 +81,32 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         {/* Right side actions */}
-        <div className="flex items-center gap-3 shrink-0">
-          {/* Dev mode only: Link to AI Canvas (Langflow) */}
-          {isDevMode && (
-            <a
-              href="http://localhost:7860"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-medium text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 transition-colors flex items-center gap-1"
-            >
-              AI Canvas
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          )}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Notification bell */}
+          <button
+            className="relative p-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            {notificationCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </span>
+            )}
+          </button>
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? (
+              <Moon className="w-5 h-5" />
+            ) : (
+              <Sun className="w-5 h-5" />
+            )}
+          </button>
 
           {/* User button with dropdown */}
           {isDevMode ? <AuthUserButton /> : <UserButton afterSignOutUrl="/" />}

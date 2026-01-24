@@ -4,10 +4,12 @@ import {
   Server, AlertTriangle, CheckCircle, XCircle, RefreshCw, Globe, Terminal,
   Plus, Trash2, Loader2, Copy, Check, ChevronDown, ChevronUp, Info, Key,
   Shield, X, Pencil, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Settings, ArrowRight
+  Settings, ArrowRight, Search, List, LayoutGrid
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { MCPServer, MCPTransportType, MCPServerTemplate, Workflow } from '@/types'
+
+type ViewMode = 'list' | 'grid'
 
 interface MCPServersTabProps {
   projectId: string
@@ -31,6 +33,8 @@ const getGradientColor = (index: number) => {
 export function MCPServersTab({ projectId }: MCPServersTabProps) {
   const queryClient = useQueryClient()
   const [mcpModalOpen, setMcpModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   // Fetch workflows for this project
   const { data: workflowsData } = useQuery({
@@ -56,6 +60,18 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
   const servers = data?.mcp_servers || []
   const pendingChanges = restartStatus?.pending_changes || []
   const hasPendingChanges = pendingChanges.length > 0
+
+  // Filter servers based on search query
+  const filteredServers = useMemo(() => {
+    if (!searchQuery.trim()) return servers
+    const query = searchQuery.toLowerCase()
+    return servers.filter(
+      (server) =>
+        server.name.toLowerCase().includes(query) ||
+        server.description?.toLowerCase().includes(query) ||
+        server.server_type.toLowerCase().includes(query)
+    )
+  }, [servers, searchQuery])
 
   // Sync mutation
   const syncMutation = useMutation({
@@ -147,6 +163,47 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
         </div>
       )}
 
+      {/* Toolbar - always visible */}
+      <div className="px-6 py-3 flex items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-neutral-500" />
+          <input
+            type="text"
+            placeholder="Search MCP servers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border-0 rounded-md text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
+          />
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* View toggle */}
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded transition-colors ${
+              viewMode === 'list'
+                ? 'text-gray-900 dark:text-white'
+                : 'text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300'
+            }`}
+            title="List view"
+          >
+            <List className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded transition-colors ${
+              viewMode === 'grid'
+                ? 'text-gray-900 dark:text-white'
+                : 'text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300'
+            }`}
+            title="Grid view"
+          >
+            <LayoutGrid className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
       {/* Empty state - No MCP servers configured */}
       {servers.length === 0 && (
         <div className="text-center py-16">
@@ -154,7 +211,7 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
           <p className="text-gray-500 dark:text-neutral-400 mb-4">No MCP servers configured yet</p>
           <button
             onClick={() => setMcpModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300"
+            className="inline-flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 hover:shadow-lg hover:shadow-gray-900/25 hover:-translate-y-0.5 transition-all duration-300"
           >
             <Plus className="w-4 h-4" />
             Add your first MCP server
@@ -162,22 +219,45 @@ export function MCPServersTab({ projectId }: MCPServersTabProps) {
         </div>
       )}
 
-      {/* Server list when servers exist */}
-      {servers.length > 0 && (
-        <div className="flex-1 overflow-auto px-6 py-4">
-          <div className="space-y-3">
-            {servers.map((server, index) => (
-              <ExternalServerCard
-                key={server.id}
-                server={server}
-                colorIndex={index}
-                onToggle={() => handleToggleServer(server)}
-                onDelete={() => handleDeleteServer(server)}
-                getHealthIcon={getHealthIcon}
-                isToggling={togglingServerId === server.id}
-              />
-            ))}
-          </div>
+      {/* No search results */}
+      {servers.length > 0 && filteredServers.length === 0 && (
+        <div className="text-center py-12 px-6">
+          <p className="text-gray-500 dark:text-neutral-400">No servers found matching "{searchQuery}"</p>
+        </div>
+      )}
+
+      {/* Server list/grid when servers exist */}
+      {filteredServers.length > 0 && (
+        <div className="flex-1 overflow-auto px-6 pb-4">
+          {viewMode === 'list' ? (
+            <div className="space-y-3">
+              {filteredServers.map((server, index) => (
+                <ExternalServerCard
+                  key={server.id}
+                  server={server}
+                  colorIndex={index}
+                  onToggle={() => handleToggleServer(server)}
+                  onDelete={() => handleDeleteServer(server)}
+                  getHealthIcon={getHealthIcon}
+                  isToggling={togglingServerId === server.id}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredServers.map((server, index) => (
+                <ExternalServerGridCard
+                  key={server.id}
+                  server={server}
+                  colorIndex={index}
+                  onToggle={() => handleToggleServer(server)}
+                  onDelete={() => handleDeleteServer(server)}
+                  getHealthIcon={getHealthIcon}
+                  isToggling={togglingServerId === server.id}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -720,6 +800,112 @@ function ExternalServerCard({
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ================================================================
+// External Server Grid Card (for grid view)
+// ================================================================
+function ExternalServerGridCard({
+  server,
+  colorIndex,
+  onToggle,
+  onDelete,
+  getHealthIcon,
+  isToggling,
+}: {
+  server: MCPServer
+  colorIndex: number
+  onToggle: (server: MCPServer) => void
+  onDelete: (server: MCPServer) => void
+  getHealthIcon: (status: string) => React.ReactNode
+  isToggling: boolean
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const gradientColor = getGradientColor(colorIndex)
+
+  return (
+    <div className={`bg-white dark:bg-neutral-800 border rounded-xl p-5 transition-all hover:shadow-md ${server.is_enabled ? 'border-gray-200 dark:border-neutral-700' : 'border-gray-100 dark:border-neutral-800 opacity-60'}`}>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradientColor} flex items-center justify-center`}>
+          {server.transport === 'sse' || server.transport === 'http' ? (
+            <Globe className="w-6 h-6 text-white" />
+          ) : (
+            <Terminal className="w-6 h-6 text-white" />
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onToggle(server)}
+            disabled={isToggling}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${
+              server.is_enabled ? 'bg-purple-600' : 'bg-gray-200 dark:bg-neutral-700'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                server.is_enabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
+              className="p-1.5 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 rounded transition-colors"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="5" cy="12" r="2" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="19" cy="12" r="2" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg shadow-lg z-10 py-1">
+                <button
+                  onClick={() => { setMenuOpen(false); onDelete(server) }}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-left"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="font-medium text-gray-900 dark:text-white truncate">{server.name}</h3>
+          {getHealthIcon(server.health_status)}
+        </div>
+        {server.needs_sync && (
+          <span className="inline-block px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs rounded-full mb-2">
+            Pending sync
+          </span>
+        )}
+        {server.description && (
+          <p className="text-sm text-gray-500 dark:text-neutral-400 line-clamp-2">{server.description}</p>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="pt-3 border-t border-gray-100 dark:border-neutral-700">
+        <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-neutral-500">
+          <span className="px-2 py-1 bg-gray-100 dark:bg-neutral-700 rounded">
+            {server.server_type}
+          </span>
+          <span className="truncate flex-1">
+            {server.transport === 'sse' || server.transport === 'http' ? server.url : server.command}
+          </span>
         </div>
       </div>
     </div>

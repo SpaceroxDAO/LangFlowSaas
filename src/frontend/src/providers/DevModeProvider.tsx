@@ -9,8 +9,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth as useClerkAuth } from '@clerk/clerk-react'
-import { Settings, LogOut, Sun, Moon } from 'lucide-react'
-import { useTheme } from './ThemeProvider'
+import { Settings, LogOut } from 'lucide-react'
 
 // Dev mode check - available throughout the app
 export const isDevMode = import.meta.env.VITE_DEV_MODE === 'true'
@@ -94,7 +93,6 @@ export function DevSignedOut(_props: { children: ReactNode }) {
 // Mock UserButton component - shows a placeholder avatar with dropdown in dev mode
 export function DevUserButton() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { theme, toggleTheme } = useTheme()
 
   return (
     <div className="relative">
@@ -111,19 +109,6 @@ export function DevUserButton() {
             <p className="text-sm font-medium text-gray-900 dark:text-neutral-100">Dev User</p>
             <p className="text-xs text-gray-500 dark:text-neutral-400">{DEV_USER.email}</p>
           </div>
-          <button
-            onClick={() => {
-              toggleTheme()
-            }}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700 text-left"
-          >
-            {theme === 'light' ? (
-              <Moon className="w-4 h-4" />
-            ) : (
-              <Sun className="w-4 h-4" />
-            )}
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
-          </button>
           <Link
             to="/dashboard/settings"
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-700"

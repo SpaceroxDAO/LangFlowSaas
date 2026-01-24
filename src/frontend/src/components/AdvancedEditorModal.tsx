@@ -91,16 +91,16 @@ export function AdvancedEditorModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
+      <div className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-neutral-700">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Advanced Settings</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Configure LLM behavior and model settings</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Advanced Settings</h2>
+            <p className="text-sm text-gray-500 dark:text-neutral-400 mt-0.5">Configure LLM behavior and model settings</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -112,7 +112,7 @@ export function AdvancedEditorModal({
         <div className="px-6 py-5 overflow-y-auto max-h-[calc(90vh-140px)]">
           {/* Model Selection Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-neutral-300 mb-3 flex items-center gap-2">
               <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
@@ -120,11 +120,11 @@ export function AdvancedEditorModal({
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1.5">Provider</label>
+                <label className="block text-sm text-gray-600 dark:text-neutral-400 mb-1.5">Provider</label>
                 <select
                   value={config.model_provider}
                   onChange={(e) => handleProviderChange(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 >
                   {Object.keys(MODEL_OPTIONS).map((provider) => (
                     <option key={provider} value={provider}>{provider}</option>
@@ -132,11 +132,11 @@ export function AdvancedEditorModal({
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1.5">Model</label>
+                <label className="block text-sm text-gray-600 dark:text-neutral-400 mb-1.5">Model</label>
                 <select
                   value={config.model_name}
                   onChange={(e) => setConfig({ ...config, model_name: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 >
                   {availableModels.map((model) => (
                     <option key={model} value={model}>{model}</option>
@@ -148,7 +148,7 @@ export function AdvancedEditorModal({
 
           {/* Generation Settings Section */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-neutral-300 mb-3 flex items-center gap-2">
               <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
@@ -158,8 +158,8 @@ export function AdvancedEditorModal({
             {/* Temperature Slider */}
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm text-gray-600">Temperature (Creativity)</label>
-                <span className="text-sm font-medium text-violet-600">{config.temperature.toFixed(2)}</span>
+                <label className="text-sm text-gray-600 dark:text-neutral-400">Temperature (Creativity)</label>
+                <span className="text-sm font-medium text-violet-600 dark:text-violet-400">{config.temperature.toFixed(2)}</span>
               </div>
               <input
                 type="range"
@@ -168,9 +168,9 @@ export function AdvancedEditorModal({
                 step="0.01"
                 value={config.temperature}
                 onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                className="w-full h-2 bg-gray-200 dark:bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-violet-500"
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex justify-between text-xs text-gray-400 dark:text-neutral-500 mt-1">
                 <span>Precise (0)</span>
                 <span>Balanced (1)</span>
                 <span>Creative (2)</span>
@@ -179,35 +179,35 @@ export function AdvancedEditorModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1.5">Max Tokens</label>
+                <label className="block text-sm text-gray-600 dark:text-neutral-400 mb-1.5">Max Tokens</label>
                 <input
                   type="number"
                   min="1"
                   max="128000"
                   value={config.max_tokens}
                   onChange={(e) => setConfig({ ...config, max_tokens: parseInt(e.target.value) || 4096 })}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-400 mt-1">Maximum response length</p>
+                <p className="text-xs text-gray-400 dark:text-neutral-500 mt-1">Maximum response length</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1.5">Max Iterations</label>
+                <label className="block text-sm text-gray-600 dark:text-neutral-400 mb-1.5">Max Iterations</label>
                 <input
                   type="number"
                   min="1"
                   max="100"
                   value={config.max_iterations}
                   onChange={(e) => setConfig({ ...config, max_iterations: parseInt(e.target.value) || 10 })}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-400 mt-1">Max reasoning steps</p>
+                <p className="text-xs text-gray-400 dark:text-neutral-500 mt-1">Max reasoning steps</p>
               </div>
             </div>
           </div>
 
           {/* Behavior Settings Section */}
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-neutral-300 mb-3 flex items-center gap-2">
               <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -216,42 +216,42 @@ export function AdvancedEditorModal({
             </h3>
 
             <div className="space-y-3">
-              <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+              <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">
                 <input
                   type="checkbox"
                   checked={config.chat_history_enabled}
                   onChange={(e) => setConfig({ ...config, chat_history_enabled: e.target.checked })}
-                  className="w-4 h-4 text-violet-500 rounded border-gray-300 focus:ring-violet-500"
+                  className="w-4 h-4 text-violet-500 rounded border-gray-300 dark:border-neutral-600 focus:ring-violet-500 bg-white dark:bg-neutral-700"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Enable Chat History</span>
-                  <p className="text-xs text-gray-500">Remember previous messages for context</p>
+                  <span className="text-sm font-medium text-gray-700 dark:text-neutral-200">Enable Chat History</span>
+                  <p className="text-xs text-gray-500 dark:text-neutral-400">Remember previous messages for context</p>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+              <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">
                 <input
                   type="checkbox"
                   checked={config.handle_parsing_errors}
                   onChange={(e) => setConfig({ ...config, handle_parsing_errors: e.target.checked })}
-                  className="w-4 h-4 text-violet-500 rounded border-gray-300 focus:ring-violet-500"
+                  className="w-4 h-4 text-violet-500 rounded border-gray-300 dark:border-neutral-600 focus:ring-violet-500 bg-white dark:bg-neutral-700"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Handle Parsing Errors</span>
-                  <p className="text-xs text-gray-500">Gracefully recover from LLM output errors</p>
+                  <span className="text-sm font-medium text-gray-700 dark:text-neutral-200">Handle Parsing Errors</span>
+                  <p className="text-xs text-gray-500 dark:text-neutral-400">Gracefully recover from LLM output errors</p>
                 </div>
               </label>
 
-              <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+              <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">
                 <input
                   type="checkbox"
                   checked={config.verbose}
                   onChange={(e) => setConfig({ ...config, verbose: e.target.checked })}
-                  className="w-4 h-4 text-violet-500 rounded border-gray-300 focus:ring-violet-500"
+                  className="w-4 h-4 text-violet-500 rounded border-gray-300 dark:border-neutral-600 focus:ring-violet-500 bg-white dark:bg-neutral-700"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Verbose Mode</span>
-                  <p className="text-xs text-gray-500">Show detailed reasoning steps in output</p>
+                  <span className="text-sm font-medium text-gray-700 dark:text-neutral-200">Verbose Mode</span>
+                  <p className="text-xs text-gray-500 dark:text-neutral-400">Show detailed reasoning steps in output</p>
                 </div>
               </label>
             </div>
@@ -259,17 +259,17 @@ export function AdvancedEditorModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800/50">
           <button
             onClick={() => setConfig({ ...DEFAULT_CONFIG })}
-            className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+            className="text-sm text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 font-medium"
           >
             Reset to Defaults
           </button>
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-neutral-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               Cancel
             </button>

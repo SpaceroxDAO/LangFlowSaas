@@ -32,12 +32,12 @@ export function ToolCard({
         }
       `}
     >
-      {/* Gradient blob background for dark mode shine effect */}
+      {/* Gradient blob background for dark mode shine effect - only visible in dark mode */}
       <div
-        className={`absolute -top-16 -right-16 w-32 h-32 rounded-full blur-2xl transition-all duration-500 opacity-0 dark:opacity-40 group-hover:scale-150 group-hover:opacity-60 ${
+        className={`absolute -top-16 -right-16 w-32 h-32 rounded-full blur-2xl transition-all duration-500 opacity-0 dark:opacity-40 dark:group-hover:scale-150 dark:group-hover:opacity-60 ${
           selected
             ? 'bg-gradient-to-br from-purple-500 to-pink-500'
-            : 'bg-gradient-to-br from-gray-400 to-gray-500 dark:from-neutral-500 dark:to-neutral-600'
+            : 'bg-gradient-to-br from-neutral-500 to-neutral-600'
         }`}
       />
 
