@@ -75,7 +75,7 @@ class Conversation(BaseModel):
     messages: Mapped[List["Message"]] = relationship(
         "Message",
         back_populates="conversation",
-        lazy="select",
+        lazy="selectin",
         cascade="all, delete-orphan",
         order_by="Message.created_at",
     )

@@ -10,6 +10,7 @@ import os
 import uuid
 import hashlib
 import httpx
+import aiofiles
 from pathlib import Path
 from typing import List, Optional, Tuple
 from datetime import datetime
@@ -135,8 +136,8 @@ class KnowledgeService:
 
         # Write file to disk
         try:
-            with open(file_path, "wb") as f:
-                f.write(file_content)
+            async with aiofiles.open(file_path, "wb") as f:
+                await f.write(file_content)
         except IOError as e:
             logger.error(f"Failed to write file {file_path}: {e}")
             raise KnowledgeServiceError(f"Failed to save file: {e}")
@@ -233,8 +234,8 @@ class KnowledgeService:
             user_storage = self._get_user_storage_path(user_id_str)
             local_path = user_storage / safe_filename
             try:
-                with open(local_path, "w", encoding="utf-8") as f:
-                    f.write(content)
+                async with aiofiles.open(local_path, "w", encoding="utf-8") as f:
+                    await f.write(content)
                 file_path = str(local_path.relative_to(KNOWLEDGE_STORAGE_DIR.parent))
             except IOError as e:
                 logger.warning(f"Failed to cache URL content: {e}")
@@ -287,8 +288,8 @@ class KnowledgeService:
         file_path = user_storage / safe_filename
 
         try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
+            async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
+                await f.write(content)
         except IOError as e:
             logger.error(f"Failed to write text content: {e}")
             raise KnowledgeServiceError(f"Failed to save content: {e}")
@@ -363,8 +364,8 @@ class KnowledgeService:
             raise KnowledgeServiceError(f"File not found on disk: {user_file.storage_path}")
 
         try:
-            with open(file_full_path, "rb") as f:
-                file_content = f.read()
+            async with aiofiles.open(file_full_path, "rb") as f:
+                file_content = await f.read()
         except IOError as e:
             logger.error(f"Failed to read file {file_full_path}: {e}")
             raise KnowledgeServiceError(f"Failed to read file: {e}")
@@ -475,8 +476,8 @@ class KnowledgeService:
 
                 # Handle different file types
                 if source.mime_type in ["text/plain", "text/markdown", "text/csv", "application/octet-stream"]:
-                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                        content = f.read()
+                    async with aiofiles.open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = await f.read()
 
                 elif source.mime_type == "application/pdf":
                     # For PDFs, try to extract text if pypdf is available
@@ -510,8 +511,8 @@ class KnowledgeService:
                 else:
                     # For other types, try reading as text
                     try:
-                        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                            content = f.read()
+                        async with aiofiles.open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                            content = await f.read()
                     except Exception as e:
                         logger.warning(f"Failed to read file {file_path}: {e}")
                         content = source.content_preview or ""

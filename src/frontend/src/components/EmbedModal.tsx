@@ -37,8 +37,8 @@ export function EmbedModal({ agent, agentComponent, isOpen, onClose }: EmbedModa
   useEffect(() => {
     if (isOpen && agentComponent) {
       setIsEnabled(agentComponent.is_embeddable || false)
-      setEmbedToken((agentComponent as any).embed_token || null)
-      const config = (agentComponent as any).embed_config || {}
+      setEmbedToken(agentComponent.embed_token || null)
+      const config = agentComponent.embed_config || {}
       setWelcomeMessage(config.welcome_message || '')
       setPrimaryColor(config.primary_color || '#7C3AED')
     }

@@ -6,33 +6,11 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { MissionWithProgress } from '@/types'
+import type { MissionWithProgress, MissionStep, StepHighlight } from '@/types'
 
 interface NextMissionInfo {
   id: string
   name: string
-}
-
-interface StepHighlight {
-  element?: string
-  selector?: string
-  title?: string
-  description?: string
-  position?: 'top' | 'bottom' | 'left' | 'right' | 'auto'
-  auto_trigger?: boolean
-  allow_click?: boolean
-}
-
-interface MissionStep {
-  id: number
-  title: string
-  description?: string
-  type: 'info' | 'action'
-  phase?: string
-  highlight?: StepHighlight
-  hints?: string[]
-  show_me_text?: string
-  validation?: Record<string, unknown>
 }
 
 interface MissionSidePanelProps {
@@ -97,7 +75,7 @@ export function MissionSidePanel({
   // Auto-trigger highlight when step becomes active (if auto_trigger is true)
   useEffect(() => {
     if (!isCompleted && m.steps[progress.current_step]) {
-      const currentStepData = m.steps[progress.current_step] as unknown as MissionStep
+      const currentStepData = m.steps[progress.current_step]
       if (currentStepData.highlight?.auto_trigger !== false && currentStepData.highlight?.element) {
         // Small delay to ensure iframe is ready
         const timer = setTimeout(() => {
@@ -268,102 +246,94 @@ export function MissionSidePanel({
                 {/* Expanded content */}
                 {isExpanded && (
                   <div className="px-3 pb-3 pt-0">
-                    {/* Cast step to MissionStep for type safety */}
-                    {(() => {
-                      const stepData = step as unknown as MissionStep
-                      return (
-                        <>
-                          {step.description && (
-                            <p className={`text-xs leading-relaxed ml-10 mb-3 ${
-                              stepIsCompleted ? 'text-green-600 dark:text-green-400' : stepIsCurrent ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 dark:text-neutral-400'
-                            }`}>
-                              {step.description}
-                            </p>
-                          )}
+                    {step.description && (
+                      <p className={`text-xs leading-relaxed ml-10 mb-3 ${
+                        stepIsCompleted ? 'text-green-600 dark:text-green-400' : stepIsCurrent ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 dark:text-neutral-400'
+                      }`}>
+                        {step.description}
+                      </p>
+                    )}
 
-                          {/* Show Me button - triggers highlight */}
-                          {stepIsCurrent && stepData.highlight?.element && iframeRef && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                triggerHighlight(stepData.highlight!)
-                              }}
-                              className="ml-10 mb-3 flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              {stepData.show_me_text || 'Show Me'}
-                            </button>
-                          )}
+                    {/* Show Me button - triggers highlight */}
+                    {stepIsCurrent && step.highlight?.element && iframeRef && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          triggerHighlight(step.highlight!)
+                        }}
+                        className="ml-10 mb-3 flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {step.show_me_text || 'Show Me'}
+                      </button>
+                    )}
 
-                          {/* Hints section */}
-                          {stepData.hints && stepData.hints.length > 0 && stepIsCurrent && (
-                            <div className="ml-10 mb-3">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setShowHints(showHints === step.id ? null : step.id)
-                                }}
-                                className="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
-                              >
-                                <svg className={`w-3 h-3 transition-transform ${showHints === step.id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                                Need a hint?
-                              </button>
-                              {showHints === step.id && (
-                                <div className="mt-2 space-y-1.5">
-                                  {stepData.hints.map((hint, hintIndex) => (
-                                    <p key={hintIndex} className="text-xs text-gray-600 dark:text-neutral-300 bg-gray-50 dark:bg-neutral-800 px-2.5 py-1.5 rounded-lg">
-                                      {hint}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Action buttons */}
-                          <div className="ml-10">
-                            {stepIsCompleted ? (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onUncompleteStep(step.id)
-                                }}
-                                disabled={isLoading}
-                                className="w-full px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 dark:focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                {isLoading ? 'Updating...' : 'Mark as Incomplete'}
-                              </button>
-                            ) : stepIsCurrent ? (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onCompleteStep(step.id)
-                                }}
-                                disabled={isLoading}
-                                className="w-full px-3 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                {isLoading ? (
-                                  <span className="flex items-center justify-center gap-2">
-                                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                    Marking...
-                                  </span>
-                                ) : (
-                                  'Mark as Complete'
-                                )}
-                              </button>
-                            ) : null}
+                    {/* Hints section */}
+                    {step.hints && step.hints.length > 0 && stepIsCurrent && (
+                      <div className="ml-10 mb-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShowHints(showHints === step.id ? null : step.id)
+                          }}
+                          className="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                        >
+                          <svg className={`w-3 h-3 transition-transform ${showHints === step.id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          Need a hint?
+                        </button>
+                        {showHints === step.id && (
+                          <div className="mt-2 space-y-1.5">
+                            {step.hints.map((hint, hintIndex) => (
+                              <p key={hintIndex} className="text-xs text-gray-600 dark:text-neutral-300 bg-gray-50 dark:bg-neutral-800 px-2.5 py-1.5 rounded-lg">
+                                {hint}
+                              </p>
+                            ))}
                           </div>
-                        </>
-                      )
-                    })()}
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="ml-10">
+                      {stepIsCompleted ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onUncompleteStep(step.id)
+                          }}
+                          disabled={isLoading}
+                          className="w-full px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 dark:focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isLoading ? 'Updating...' : 'Mark as Incomplete'}
+                        </button>
+                      ) : stepIsCurrent ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onCompleteStep(step.id)
+                          }}
+                          disabled={isLoading}
+                          className="w-full px-3 py-2 text-sm font-medium bg-violet-600 text-white rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isLoading ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Marking...
+                            </span>
+                          ) : (
+                            'Mark as Complete'
+                          )}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 )}
               </div>

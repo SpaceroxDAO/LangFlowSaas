@@ -104,7 +104,7 @@ class Workflow(BaseModel):
     user: Mapped["User"] = relationship(
         "User",
         back_populates="workflows",
-        lazy="select",
+        lazy="joined",
     )
 
     project: Mapped[Optional["Project"]] = relationship(

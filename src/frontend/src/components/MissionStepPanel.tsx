@@ -6,29 +6,7 @@
  * Supports Walk Me highlights and hints for guided learning.
  */
 import { useState, useEffect } from 'react'
-import type { MissionWithProgress } from '@/types'
-
-interface StepHighlight {
-  element?: string
-  selector?: string
-  title?: string
-  description?: string
-  position?: 'top' | 'bottom' | 'left' | 'right' | 'auto'
-  auto_trigger?: boolean
-  allow_click?: boolean
-}
-
-interface ExtendedMissionStep {
-  id: number
-  title: string
-  description?: string
-  type: 'info' | 'action'
-  phase?: string
-  highlight?: StepHighlight
-  hints?: string[]
-  show_me_text?: string
-  validation?: Record<string, unknown>
-}
+import type { MissionWithProgress, MissionStep, StepHighlight } from '@/types'
 
 interface MissionStepPanelProps {
   mission: MissionWithProgress
@@ -65,7 +43,7 @@ export function MissionStepPanel({
   // Auto-trigger highlight when step becomes active (if auto_trigger is true)
   useEffect(() => {
     if (!isCompleted && m.steps[progress.current_step]) {
-      const currentStepData = m.steps[progress.current_step] as unknown as ExtendedMissionStep
+      const currentStepData = m.steps[progress.current_step]
       if (currentStepData.highlight?.auto_trigger !== false && currentStepData.highlight?.element) {
         // Small delay to ensure iframe is ready
         const timer = setTimeout(() => {

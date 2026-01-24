@@ -12,11 +12,15 @@ Background:
   - workflows: Langflow flow execution
   - conversations: Now links via workflow_id only
 
+SAFETY: This migration has environment checks to prevent accidental data loss.
+To run in production, set ALLOW_DESTRUCTIVE_MIGRATION=true
+
 Revision ID: 20260115_0001
 Revises: embed_fields_001
 Create Date: 2026-01-15
 """
 from typing import Sequence, Union
+import os
 
 from alembic import op
 import sqlalchemy as sa
@@ -35,6 +39,28 @@ def upgrade() -> None:
     This is a DESTRUCTIVE migration - data in these tables will be lost.
     The data being deleted is test/development artifacts only.
     """
+    # SAFETY CHECK: Prevent accidental execution in production
+    # This migration deletes data and should only run when explicitly allowed
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+    allow_destructive = os.getenv("ALLOW_DESTRUCTIVE_MIGRATION", "false").lower() == "true"
+
+    if environment == "production" and not allow_destructive:
+        raise RuntimeError(
+            "\n\n"
+            "⛔ DESTRUCTIVE MIGRATION BLOCKED IN PRODUCTION\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "This migration deletes data from the database.\n"
+            "\n"
+            "If you are CERTAIN you want to proceed, set:\n"
+            "  ALLOW_DESTRUCTIVE_MIGRATION=true\n"
+            "\n"
+            "Then run: alembic upgrade head\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        )
+
+    if environment == "production":
+        print("⚠️  Running destructive migration in PRODUCTION (explicitly allowed)")
+
     # Step 1: Delete legacy conversations that reference the 'agents' table
     # These are test conversations from E2E tests
     op.execute("""

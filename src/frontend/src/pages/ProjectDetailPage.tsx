@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { ShareDeployModal } from '@/components/ShareDeployModal'
 import { WorkflowsTab } from '@/components/WorkflowsTab'
 import { TemplateGalleryModal } from '@/components/TemplateGallery'
-import { MCPServersTab, MCPConfigModal } from '@/components/MCPServersTab'
+import { MCPServersTab, MCPConfigModal } from '@/components/mcp-servers'
 import type { AgentComponent, ProjectTab } from '@/types'
 
 // Persist view mode in localStorage

@@ -76,7 +76,7 @@ class User(BaseModel):
     projects: Mapped[List["Project"]] = relationship(
         "Project",
         back_populates="user",
-        lazy="select",
+        lazy="selectin",
         cascade="all, delete-orphan",
     )
 
@@ -92,14 +92,14 @@ class User(BaseModel):
     agent_components: Mapped[List["AgentComponent"]] = relationship(
         "AgentComponent",
         back_populates="user",
-        lazy="select",
+        lazy="selectin",
         cascade="all, delete-orphan",
     )
 
     workflows: Mapped[List["Workflow"]] = relationship(
         "Workflow",
         back_populates="user",
-        lazy="select",
+        lazy="selectin",
         cascade="all, delete-orphan",
     )
 
