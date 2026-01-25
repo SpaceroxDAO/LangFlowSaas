@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useAuth } from '@/providers/DevModeProvider'
 import { TemplateGalleryModal } from '@/components/TemplateGallery'
 import type { Project } from '@/types'
 import {
@@ -62,7 +63,13 @@ const GETTING_STARTED_CARDS = [
 export function ProjectsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { getToken } = useAuth()
   const [showNewProjectModal, setShowNewProjectModal] = useState(false)
+
+  // Set up auth token getter for API calls
+  useEffect(() => {
+    api.setTokenGetter(getToken)
+  }, [getToken])
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showGettingStarted, setShowGettingStarted] = useState(true)
   const [newProjectName, setNewProjectName] = useState('')
