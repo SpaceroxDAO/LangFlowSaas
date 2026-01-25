@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
+from app.middleware.redis_rate_limit import check_rate_limit_with_user
 from app.services.user_service import UserService
 from app.services.billing_service import BillingService, BillingServiceError
 from app.plans import (
@@ -221,20 +222,24 @@ async def get_usage(
     description="Create a Stripe checkout session for subscription upgrade.",
 )
 async def create_checkout(
-    request: CheckoutRequest,
+    checkout_request: CheckoutRequest,
+    request: Request,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ) -> CheckoutResponse:
     """Create Stripe checkout session for subscription."""
+    # Rate limit billing requests to prevent abuse
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     user = await get_user_from_clerk(clerk_user, session)
     billing = BillingService(session)
 
     try:
         checkout_url = await billing.create_checkout_session(
             user=user,
-            plan_id=request.plan_id,
-            success_url=request.success_url,
-            cancel_url=request.cancel_url,
+            plan_id=checkout_request.plan_id,
+            success_url=checkout_request.success_url,
+            cancel_url=checkout_request.cancel_url,
         )
         await session.commit()
         return CheckoutResponse(checkout_url=checkout_url)
@@ -253,18 +258,22 @@ async def create_checkout(
     description="Create a Stripe customer portal session for subscription management.",
 )
 async def create_portal(
-    request: PortalRequest,
+    portal_request: PortalRequest,
+    request: Request,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ) -> PortalResponse:
     """Create Stripe customer portal session."""
+    # Rate limit billing requests to prevent abuse
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     user = await get_user_from_clerk(clerk_user, session)
     billing = BillingService(session)
 
     try:
         portal_url = await billing.create_portal_session(
             user=user,
-            return_url=request.return_url,
+            return_url=portal_request.return_url,
         )
         return PortalResponse(portal_url=portal_url)
 

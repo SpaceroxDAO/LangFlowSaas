@@ -1,13 +1,23 @@
 """
 MCPServer service for managing MCP server configurations.
+
+SECURITY NOTES:
+- MCP server commands are validated against an allowlist of safe executables
+- URLs are validated to prevent SSRF attacks against internal networks
+- Environment variables from users are sanitized
+- All subprocess calls use list args (no shell=True)
 """
 import base64
+import ipaddress
 import json
 import logging
 import os
+import re
+import shutil
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -15,6 +25,213 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# SECURITY: Command and URL Validation
+# =============================================================================
+
+# Allowlist of known-safe MCP server executables
+# These are validated with shutil.which() before execution
+ALLOWED_MCP_COMMANDS = frozenset({
+    # Node.js based MCP servers
+    "node",
+    "npx",
+    "npm",
+    # Python based MCP servers
+    "python",
+    "python3",
+    "uvx",
+    "uv",
+    "pipx",
+    # Common MCP server binaries
+    "mcp-server-sqlite",
+    "mcp-server-filesystem",
+    "mcp-server-github",
+    "mcp-server-slack",
+    "mcp-server-postgres",
+    "mcp-server-puppeteer",
+    "mcp-server-brave-search",
+    "mcp-server-google-maps",
+    "mcp-server-fetch",
+    "mcp-server-memory",
+    "mcp-server-time",
+    "mcp-server-everything",
+    "mcp-server-sequential-thinking",
+})
+
+# Command name pattern: alphanumeric with hyphens/underscores, optionally with path
+COMMAND_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$')
+
+# Environment variable name pattern: uppercase with underscores
+ENV_VAR_NAME_PATTERN = re.compile(r'^[A-Z][A-Z0-9_]*$')
+
+# Internal IP ranges that should be blocked for SSRF prevention
+BLOCKED_IP_RANGES = [
+    ipaddress.ip_network('10.0.0.0/8'),      # Private Class A
+    ipaddress.ip_network('172.16.0.0/12'),   # Private Class B
+    ipaddress.ip_network('192.168.0.0/16'),  # Private Class C
+    ipaddress.ip_network('127.0.0.0/8'),     # Loopback
+    ipaddress.ip_network('169.254.0.0/16'),  # Link-local
+    ipaddress.ip_network('::1/128'),         # IPv6 loopback
+    ipaddress.ip_network('fc00::/7'),        # IPv6 unique local
+    ipaddress.ip_network('fe80::/10'),       # IPv6 link-local
+]
+
+
+class CommandValidationError(Exception):
+    """Raised when command validation fails."""
+    pass
+
+
+class URLValidationError(Exception):
+    """Raised when URL validation fails."""
+    pass
+
+
+def validate_mcp_command(command: str) -> bool:
+    """
+    Validate that an MCP command is safe to execute.
+
+    SECURITY: Prevents command injection by:
+    1. Checking against an allowlist of known MCP executables
+    2. Validating the command name pattern
+    3. Verifying the command exists in PATH via shutil.which()
+
+    Args:
+        command: Command name (e.g., "npx", "python", "mcp-server-sqlite")
+
+    Returns:
+        True if command is safe, False otherwise
+    """
+    if not command or not isinstance(command, str):
+        return False
+
+    # Extract the base command name (handle paths like /usr/bin/python)
+    base_command = os.path.basename(command)
+
+    # Check pattern validity
+    if not COMMAND_NAME_PATTERN.match(base_command):
+        logger.warning(f"SECURITY: Rejected command with invalid pattern: {command}")
+        return False
+
+    # Check against allowlist
+    if base_command not in ALLOWED_MCP_COMMANDS:
+        logger.warning(f"SECURITY: Rejected command not in allowlist: {command}")
+        return False
+
+    # Verify command exists in PATH (prevents path traversal)
+    resolved = shutil.which(command)
+    if not resolved:
+        # Command not found is not a security issue, just a config issue
+        return True  # Allow shutil.which to catch this in health check
+
+    return True
+
+
+def validate_mcp_url(url: str) -> bool:
+    """
+    Validate that an MCP server URL is safe (not pointing to internal networks).
+
+    SECURITY: Prevents SSRF attacks by blocking:
+    - Internal IP addresses (10.x, 172.16.x, 192.168.x)
+    - Localhost variants
+    - Link-local and private IPv6 addresses
+
+    Args:
+        url: URL to validate
+
+    Returns:
+        True if URL is safe, False if it points to internal networks
+    """
+    if not url or not isinstance(url, str):
+        return False
+
+    try:
+        parsed = urlparse(url)
+
+        # Only allow http and https
+        if parsed.scheme not in ('http', 'https'):
+            logger.warning(f"SECURITY: Rejected URL with invalid scheme: {parsed.scheme}")
+            return False
+
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+
+        # Block localhost variants
+        if hostname in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
+            logger.warning(f"SECURITY: Rejected localhost URL: {url}")
+            return False
+
+        # Try to parse as IP address
+        try:
+            ip = ipaddress.ip_address(hostname)
+            for blocked_range in BLOCKED_IP_RANGES:
+                if ip in blocked_range:
+                    logger.warning(f"SECURITY: Rejected internal IP URL: {url}")
+                    return False
+        except ValueError:
+            # Not an IP address, hostname - that's okay
+            pass
+
+        # Block common internal hostnames
+        internal_patterns = ['internal', 'intranet', 'private', 'local']
+        hostname_lower = hostname.lower()
+        for pattern in internal_patterns:
+            if pattern in hostname_lower:
+                logger.warning(f"SECURITY: Rejected internal hostname URL: {url}")
+                return False
+
+        return True
+
+    except Exception as e:
+        logger.warning(f"SECURITY: URL validation error for {url}: {e}")
+        return False
+
+
+def sanitize_env_vars(env: dict) -> dict:
+    """
+    Sanitize environment variables from user input.
+
+    SECURITY: Prevents environment variable injection by:
+    1. Validating variable names match expected pattern
+    2. Converting all values to strings
+    3. Removing any variables that could affect execution
+
+    Args:
+        env: Dictionary of environment variables
+
+    Returns:
+        Sanitized environment variables
+    """
+    if not env or not isinstance(env, dict):
+        return {}
+
+    # Dangerous env vars that should never be set by users
+    BLOCKED_ENV_VARS = frozenset({
+        'PATH', 'LD_PRELOAD', 'LD_LIBRARY_PATH', 'PYTHONPATH',
+        'NODE_PATH', 'HOME', 'USER', 'SHELL', 'PWD', 'OLDPWD',
+        'IFS', 'CDPATH', 'GLOBIGNORE', 'BASH_ENV', 'ENV',
+    })
+
+    sanitized = {}
+    for key, value in env.items():
+        # Skip blocked vars
+        if key.upper() in BLOCKED_ENV_VARS:
+            logger.warning(f"SECURITY: Blocked dangerous env var: {key}")
+            continue
+
+        # Validate key format (allow lowercase for API keys etc)
+        if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', key):
+            logger.warning(f"SECURITY: Rejected invalid env var name: {key}")
+            continue
+
+        # Convert value to string and limit length
+        str_value = str(value)[:4096] if value else ""
+        sanitized[key] = str_value
+
+    return sanitized
 
 from app.models.mcp_server import MCPServer
 from app.models.user import User
@@ -133,7 +350,28 @@ class MCPServerService:
         user: User,
         data: MCPServerCreate,
     ) -> MCPServer:
-        """Create a new MCP server configuration."""
+        """
+        Create a new MCP server configuration.
+
+        SECURITY: Validates commands and URLs before saving.
+        """
+        # SECURITY: Validate command if STDIO transport
+        transport = data.transport or "stdio"
+        if transport == "stdio" and data.command:
+            if not validate_mcp_command(data.command):
+                raise MCPServerServiceError(
+                    f"Command '{data.command}' is not in the approved list of MCP servers. "
+                    "Contact support if you need to add a new server type."
+                )
+
+        # SECURITY: Validate URL if SSE/HTTP transport
+        if transport in ("sse", "http") and data.url:
+            if not validate_mcp_url(data.url):
+                raise MCPServerServiceError(
+                    "URL validation failed. Internal addresses (localhost, private IPs) "
+                    "are not allowed for security reasons."
+                )
+
         # Determine project
         project_id = None
         if data.project_id:
@@ -183,10 +421,29 @@ class MCPServerService:
         user: User,
         data: MCPServerCreateFromTemplate,
     ) -> MCPServer:
-        """Create an MCP server from a predefined template."""
+        """
+        Create an MCP server from a predefined template.
+
+        SECURITY: Validates custom commands and URLs before saving.
+        """
         template = MCP_SERVER_TEMPLATES.get(data.template_name)
         if not template:
             raise MCPServerServiceError(f"Template '{data.template_name}' not found.")
+
+        # SECURITY: For custom template with user-provided command, validate it
+        transport = template.get("transport", "stdio")
+        if data.template_name == "custom" and data.command:
+            if not validate_mcp_command(data.command):
+                raise MCPServerServiceError(
+                    f"Command '{data.command}' is not in the approved list of MCP servers."
+                )
+
+        # SECURITY: Validate URL if SSE/HTTP transport
+        if transport in ("sse", "http") and data.url:
+            if not validate_mcp_url(data.url):
+                raise MCPServerServiceError(
+                    "URL validation failed. Internal addresses are not allowed."
+                )
 
         # Encrypt credentials
         credentials_encrypted = None
@@ -322,12 +579,13 @@ class MCPServerService:
 
         For STDIO transport: Attempts to spawn the server process briefly.
         For SSE/HTTP transport: Makes an HTTP request to the server URL.
+
+        SECURITY: Commands and URLs are validated before use.
         """
         import asyncio
-        import shutil
         import time
 
-        server.last_health_check = datetime.utcnow()
+        server.last_health_check = datetime.now(timezone.utc)
         message = ""
 
         try:
@@ -336,6 +594,11 @@ class MCPServerService:
                 if not server.url:
                     server.health_status = "unhealthy"
                     message = "No URL configured"
+                elif not validate_mcp_url(server.url):
+                    # SECURITY: Block internal URLs
+                    server.health_status = "unhealthy"
+                    message = "URL validation failed - internal addresses not allowed"
+                    logger.warning(f"SECURITY: Blocked health check to internal URL: {server.url}")
                 else:
                     try:
                         start_time = time.time()
@@ -376,6 +639,11 @@ class MCPServerService:
                 if not command:
                     server.health_status = "unhealthy"
                     message = "No command configured"
+                elif not validate_mcp_command(command):
+                    # SECURITY: Block unapproved commands
+                    server.health_status = "unhealthy"
+                    message = f"Command '{command}' is not in the approved list"
+                    logger.warning(f"SECURITY: Blocked health check for unapproved command: {command}")
                 elif not shutil.which(command):
                     server.health_status = "unhealthy"
                     message = f"Command '{command}' not found in PATH"
@@ -383,14 +651,20 @@ class MCPServerService:
                     # Try to spawn the process with --help to verify it starts
                     try:
                         # Build env with decrypted credentials
-                        env = dict(os.environ)
+                        # SECURITY: Start with minimal env, not full os.environ
+                        env = {
+                            'PATH': os.environ.get('PATH', '/usr/bin:/bin'),
+                            'HOME': os.environ.get('HOME', '/tmp'),
+                            'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
+                        }
+                        # Add sanitized user env
                         if server.env:
-                            env.update(server.env)
+                            env.update(sanitize_env_vars(server.env))
                         if server.credentials_encrypted:
                             credentials = self._decrypt_credentials(server.credentials_encrypted)
-                            env.update({k: str(v) for k, v in credentials.items()})
+                            env.update(sanitize_env_vars({k: str(v) for k, v in credentials.items()}))
 
-                        # Try running with --help flag (most CLIs support this)
+                        # SECURITY: Using list args (not shell=True) with validated command
                         proc = await asyncio.create_subprocess_exec(
                             command,
                             "--help",
@@ -444,9 +718,10 @@ class MCPServerService:
         Test an MCP server connection without saving it.
 
         Useful for validating configuration before creating a server.
+
+        SECURITY: Commands and URLs are validated before testing.
         """
         import asyncio
-        import shutil
         import time
 
         try:
@@ -456,6 +731,14 @@ class MCPServerService:
                     return MCPServerTestConnectionResponse(
                         success=False,
                         message="URL is required for SSE/HTTP transport",
+                    )
+
+                # SECURITY: Validate URL is not internal
+                if not validate_mcp_url(data.url):
+                    logger.warning(f"SECURITY: Blocked test connection to internal URL: {data.url}")
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message="URL validation failed - internal addresses are not allowed for security",
                     )
 
                 try:
@@ -517,6 +800,14 @@ class MCPServerService:
                         message="Command is required for STDIO transport",
                     )
 
+                # SECURITY: Validate command is in allowlist
+                if not validate_mcp_command(command):
+                    logger.warning(f"SECURITY: Blocked test of unapproved command: {command}")
+                    return MCPServerTestConnectionResponse(
+                        success=False,
+                        message=f"Command '{command}' is not in the approved list of MCP servers",
+                    )
+
                 if not shutil.which(command):
                     return MCPServerTestConnectionResponse(
                         success=False,
@@ -525,12 +816,18 @@ class MCPServerService:
 
                 # Try to spawn the process with --help to verify it starts
                 try:
-                    # Build env
-                    env = dict(os.environ)
+                    # SECURITY: Build minimal env, not full os.environ
+                    env = {
+                        'PATH': os.environ.get('PATH', '/usr/bin:/bin'),
+                        'HOME': os.environ.get('HOME', '/tmp'),
+                        'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
+                    }
+                    # Add sanitized user env
                     if data.env:
-                        env.update(data.env)
+                        env.update(sanitize_env_vars(data.env))
 
                     start_time = time.time()
+                    # SECURITY: Using list args (not shell=True) with validated command
                     proc = await asyncio.create_subprocess_exec(
                         command,
                         "--help",

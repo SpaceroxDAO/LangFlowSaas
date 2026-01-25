@@ -6,9 +6,10 @@ Provides endpoints for generating dog avatar variants using GPT Image Edit.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
+from app.middleware.redis_rate_limit import check_rate_limit
 from app.services.dog_avatar_service import dog_avatar_service, JOB_ACCESSORIES
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,11 @@ class ClearCacheResponse(BaseModel):
     summary="Generate dog avatar",
     description="Generate a dog avatar with job-specific accessory using GPT Image Edit.",
 )
-async def generate_dog_avatar(request: GenerateDogAvatarRequest) -> DogAvatarResponse:
+async def generate_dog_avatar(
+    avatar_request: GenerateDogAvatarRequest,
+    request: Request,
+    _: None = Depends(check_rate_limit),
+) -> DogAvatarResponse:
     """
     Generate a dog avatar for the specified job.
 
@@ -102,11 +107,11 @@ async def generate_dog_avatar(request: GenerateDogAvatarRequest) -> DogAvatarRes
     """
     try:
         result = await dog_avatar_service.generate_avatar(
-            job=request.job,
-            size=request.size,
-            background=request.background,
-            regenerate=request.regenerate,
-            description=request.description,
+            job=avatar_request.job,
+            size=avatar_request.size,
+            background=avatar_request.background,
+            regenerate=avatar_request.regenerate,
+            description=avatar_request.description,
         )
         return DogAvatarResponse(**result)
 
@@ -179,6 +184,7 @@ async def clear_avatar_cache(job: Optional[str] = None) -> ClearCacheResponse:
 )
 async def generate_batch_avatars(
     jobs: list[str],
+    _: None = Depends(check_rate_limit),
     size: str = "1024x1024",
     background: str = "transparent",
     regenerate: bool = False,

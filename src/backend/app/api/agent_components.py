@@ -4,10 +4,11 @@ Agent component management endpoints.
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
+from app.middleware.redis_rate_limit import check_rate_limit_with_user
 from app.models.user import User
 from app.schemas.agent_component import (
     AgentComponentCreateFromQA,
@@ -290,7 +291,8 @@ async def import_agent_component(
     description="Generate an AI avatar image based on the agent description using DALL-E.",
 )
 async def generate_avatar(
-    request: GenerateAvatarRequest,
+    avatar_request: GenerateAvatarRequest,
+    request: Request,
     clerk_user: CurrentUser,
 ):
     """
@@ -299,8 +301,11 @@ async def generate_avatar(
     The avatar is styled as a clean Lucide-style icon with subtle
     persona-specific accessories based on the description.
     """
+    # Rate limit avatar generation (expensive API calls)
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     try:
-        avatar_url = await avatar_service.generate_avatar(request.description)
+        avatar_url = await avatar_service.generate_avatar(avatar_request.description)
         return GenerateAvatarResponse(
             avatar_url=avatar_url,
             message="Avatar generated successfully",
@@ -325,6 +330,7 @@ async def generate_avatar(
 )
 async def generate_and_save_avatar(
     component_id: uuid.UUID,
+    request: Request,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ):
@@ -333,6 +339,9 @@ async def generate_and_save_avatar(
 
     Uses the component's qa_who field as the description for avatar generation.
     """
+    # Rate limit avatar generation (expensive API calls)
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     user = await get_user_from_clerk(clerk_user, session)
     service = AgentComponentService(session)
 

@@ -5,11 +5,12 @@ import asyncio
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
+from app.middleware.redis_rate_limit import check_rate_limit_with_user
 from app.models.user import User
 from app.schemas.workflow import (
     WorkflowCreate,
@@ -889,10 +890,14 @@ async def duplicate_workflow(
 async def chat_with_workflow(
     workflow_id: uuid.UUID,
     chat_request: ChatRequest,
+    request: Request,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ):
     """Send a message to a workflow and get a response."""
+    # Rate limit chat requests to prevent abuse
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     user = await get_user_from_clerk(clerk_user, session)
     service = WorkflowService(session)
 
@@ -932,6 +937,7 @@ async def chat_with_workflow(
 async def chat_with_workflow_stream(
     workflow_id: uuid.UUID,
     chat_request: ChatRequest,
+    request: Request,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
 ):
@@ -945,6 +951,9 @@ async def chat_with_workflow_stream(
     - content_block_*: Structured content
     - done: Stream complete
     """
+    # Rate limit chat requests to prevent abuse
+    await check_rate_limit_with_user(request, user_id=clerk_user.user_id)
+
     user = await get_user_from_clerk(clerk_user, session)
     service = WorkflowService(session)
 

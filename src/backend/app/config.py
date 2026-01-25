@@ -120,10 +120,10 @@ class Settings(BaseSettings):
     clerk_secret_key: str = ""
     clerk_jwks_url: str = ""
     clerk_issuer: str = ""
-    clerk_authorized_parties: str = "http://localhost:3000,http://localhost:5173"
+    clerk_authorized_parties: str = "http://localhost:3000,http://localhost:3001,http://localhost:5173"
 
     # CORS Configuration
-    cors_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173"
 
     # Rate Limiting
     rate_limit_per_minute: int = 60

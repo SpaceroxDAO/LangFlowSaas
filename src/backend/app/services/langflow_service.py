@@ -5,8 +5,14 @@ This service provides:
 1. Unified status tracking for pending changes (MCP servers + components)
 2. Langflow health checks
 3. Docker-based restart functionality
+
+SECURITY NOTE:
+This service executes Docker commands with container names from configuration.
+All container names are validated against a strict pattern to prevent command injection.
+See: validate_container_name() function.
 """
 import logging
+import re
 import subprocess
 import uuid
 from typing import List
@@ -22,6 +28,42 @@ from app.schemas.mcp_server import PendingChange, RestartStatusResponse
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# SECURITY: Input Validation for Docker Commands
+# =============================================================================
+
+# Valid container name pattern: alphanumeric, hyphens, underscores only
+# Must start with alphanumeric, max 64 characters
+CONTAINER_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$')
+
+
+def validate_container_name(name: str) -> bool:
+    """
+    Validate that a container name is safe for use in Docker commands.
+
+    SECURITY: Prevents command injection via malicious container names.
+
+    Valid names:
+    - Start with alphanumeric character
+    - Contain only alphanumeric, hyphens, underscores
+    - Maximum 64 characters
+
+    Args:
+        name: Container name to validate
+
+    Returns:
+        True if name is valid, False otherwise
+    """
+    if not name or not isinstance(name, str):
+        return False
+    return bool(CONTAINER_NAME_PATTERN.match(name))
+
+
+class ContainerNameValidationError(Exception):
+    """Raised when container name validation fails."""
+    pass
+
+
 class LangflowServiceError(Exception):
     """Exception raised when Langflow operations fail."""
     pass
@@ -34,6 +76,8 @@ class LangflowService:
     Provides unified status tracking, health checks, and restart functionality.
 
     Configuration is loaded from app.config.settings (single source of truth).
+
+    SECURITY: All Docker commands validate container names before execution.
     """
 
     def __init__(self, session: AsyncSession):
@@ -41,6 +85,18 @@ class LangflowService:
         # Load from centralized config (see config.py and .env.example)
         self.container_name = settings.langflow_container_name
         self.health_url = f"{settings.langflow_api_url}/health"
+
+        # SECURITY: Validate container name at initialization
+        # This prevents command injection via malicious LANGFLOW_CONTAINER_NAME
+        if not validate_container_name(self.container_name):
+            logger.error(
+                f"SECURITY: Invalid container name '{self.container_name}'. "
+                "Container names must be alphanumeric with hyphens/underscores only."
+            )
+            raise ContainerNameValidationError(
+                f"Invalid container name: {self.container_name}. "
+                "Must match pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]{{0,63}}$"
+            )
 
     async def get_pending_component_changes(
         self,
@@ -152,10 +208,21 @@ class LangflowService:
         This is the simplest restart method that works in Docker environments.
         After restart, Langflow will reload all custom components.
 
+        SECURITY: Container name is validated at service initialization.
+        The subprocess.run uses a list (not shell=True) which prevents
+        shell injection even if validation were bypassed.
+
         Returns:
             dict with status and message
         """
         try:
+            # SECURITY: Double-check container name validation
+            if not validate_container_name(self.container_name):
+                logger.error(f"SECURITY: Blocked restart - invalid container name")
+                return {
+                    "success": False,
+                    "message": "Invalid container configuration. Contact support.",
+                }
             # Check if running in Docker environment
             if not self._is_docker_available():
                 logger.warning("Docker not available - cannot restart Langflow")
@@ -226,13 +293,24 @@ class LangflowService:
         Call this at startup to catch configuration mismatches early.
         Returns True if valid, False if container doesn't exist.
         Logs appropriate warnings/errors.
+
+        SECURITY: Container name is validated before use in Docker commands.
         """
+        # SECURITY: Validate container name before any Docker operations
+        if not validate_container_name(self.container_name):
+            logger.error(
+                f"SECURITY: Invalid container name '{self.container_name}' - "
+                "cannot validate. Check LANGFLOW_CONTAINER_NAME in .env"
+            )
+            return False
+
         if not self._is_docker_available():
             logger.info(f"Docker not available - skipping container validation for '{self.container_name}'")
             return True  # Don't fail if Docker isn't available (dev mode)
 
         try:
             # Check if container exists (running or stopped)
+            # SECURITY: Using list args (not shell=True) and validated container name
             result = subprocess.run(
                 ["docker", "ps", "-a", "--filter", f"name=^{self.container_name}$", "--format", "{{.Names}}"],
                 capture_output=True,
@@ -263,8 +341,21 @@ class LangflowService:
         Get recent Langflow container logs.
 
         Useful for debugging component loading issues.
+
+        SECURITY: Container name is validated, lines parameter is sanitized.
         """
+        # SECURITY: Validate container name
+        if not validate_container_name(self.container_name):
+            return "Error: Invalid container configuration"
+
+        # SECURITY: Sanitize lines parameter (must be positive int, max 10000)
         try:
+            lines = max(1, min(int(lines), 10000))
+        except (ValueError, TypeError):
+            lines = 50
+
+        try:
+            # SECURITY: Using list args (not shell=True) with validated inputs
             result = subprocess.run(
                 ["docker", "logs", "--tail", str(lines), self.container_name],
                 capture_output=True,

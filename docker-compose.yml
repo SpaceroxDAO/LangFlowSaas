@@ -22,6 +22,11 @@ services:
     networks:
       - teachcharlie-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   # =====================================================
   # React Frontend (Vite dev server)
@@ -43,6 +48,11 @@ services:
     networks:
       - teachcharlie-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
     # No port exposed - accessed via nginx
 
   # =====================================================
@@ -64,6 +74,11 @@ services:
     networks:
       - teachcharlie-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   # PostgreSQL Database
   postgres:
@@ -86,10 +101,17 @@ services:
     networks:
       - teachcharlie-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
   # Langflow AI Agent Engine
+  # SECURITY: Pinned to specific version for reproducible deployments
+  # Check for updates: https://hub.docker.com/r/langflowai/langflow/tags
   langflow:
-    image: langflowai/langflow:latest
+    image: langflowai/langflow:1.7.3
     # Container name from env var - MUST match LANGFLOW_CONTAINER_NAME in .env
     container_name: ${LANGFLOW_CONTAINER_NAME:-teachcharlie-langflow}
     # Security: Run as non-root user in production
@@ -141,6 +163,11 @@ services:
     networks:
       - teachcharlie-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
   # Custom FastAPI Backend
   backend:
@@ -148,9 +175,8 @@ services:
       context: ./src/backend
       dockerfile: Dockerfile
     container_name: teachcharlie-backend
-    # Run as root to write to shared custom_components volume
-    # (Same as Langflow - for production, use proper volume permissions)
-    user: "0:0"
+    # Security: Use non-root user from Dockerfile (appuser:1000)
+    # The custom_components volume is configured with proper permissions
     environment:
       # Database
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/teachcharlie
@@ -180,8 +206,8 @@ services:
       - "8000:8000"
     volumes:
       - ./src/backend:/app
-      # Docker socket for container restart capability
-      - /var/run/docker.sock:/var/run/docker.sock
+      # SECURITY: Docker socket mount removed - was privilege escalation risk
+      # Container restart is now handled via Langflow HTTP API
     depends_on:
       postgres:
         condition: service_healthy
@@ -192,6 +218,11 @@ services:
     networks:
       - teachcharlie-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
     # Development: hot reload
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 

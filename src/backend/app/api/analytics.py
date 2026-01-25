@@ -45,8 +45,8 @@ class MessagesResponse(BaseModel):
     """Response containing messages list."""
     messages: List[MessageRecord]
     total: int
-    limit: int
-    offset: int
+    page: int
+    page_size: int
 
 
 async def get_user_from_clerk(
@@ -111,14 +111,17 @@ async def get_workflow_messages(
     workflow_id: uuid.UUID,
     session: AsyncSessionDep,
     clerk_user: CurrentUser,
-    limit: int = 50,
-    offset: int = 0,
+    page: int = 1,
+    page_size: int = 50,
 ):
     """
     Get recent messages for a workflow.
 
-    Supports pagination with limit and offset parameters.
+    Supports pagination with page and page_size parameters.
     """
+    # Convert page/page_size to limit/offset for Langflow API
+    limit = page_size
+    offset = (page - 1) * page_size
     user = await get_user_from_clerk(clerk_user, session)
     workflow_service = WorkflowService(session)
 
@@ -167,8 +170,8 @@ async def get_workflow_messages(
         return MessagesResponse(
             messages=message_records,
             total=total,
-            limit=limit,
-            offset=offset,
+            page=page,
+            page_size=page_size,
         )
     except LangflowClientError as e:
         raise HTTPException(
