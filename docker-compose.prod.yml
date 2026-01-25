@@ -193,8 +193,6 @@ services:
     image: langflowai/langflow:1.7.3
     container_name: teachcharlie-langflow
     # NO PORTS EXPOSED - accessed only via nginx proxy
-    # Run as non-root in production
-    user: "1000:1000"
     environment:
       # Database
       LANGFLOW_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langflow
