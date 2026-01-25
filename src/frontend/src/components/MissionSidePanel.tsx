@@ -49,16 +49,12 @@ export function MissionSidePanel({
 
   // Function to trigger highlight in iframe via postMessage
   const triggerHighlight = (highlight: StepHighlight) => {
-    console.log('[MissionSidePanel] Triggering highlight:', highlight)
     if (iframeRef?.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({
         source: 'teach-charlie-parent',
         type: 'highlight',
         highlight,
       }, '*')
-      console.log('[MissionSidePanel] postMessage sent to iframe')
-    } else {
-      console.warn('[MissionSidePanel] No iframe ref available')
     }
   }
 

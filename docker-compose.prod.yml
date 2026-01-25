@@ -51,10 +51,12 @@ services:
       - teachcharlie-internal # Can talk to internal services
     restart: always
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      # nginx:alpine has wget but not curl - use wget with quiet and spider mode
+      test: ["CMD-SHELL", "wget --quiet --spider http://localhost/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
 
   # ===========================================================================
   # React Frontend (Production Build)

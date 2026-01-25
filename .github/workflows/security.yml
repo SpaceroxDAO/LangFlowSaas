@@ -55,14 +55,12 @@ jobs:
       - name: Scan Python dependencies
         working-directory: src/backend
         run: |
-          pip-audit -r requirements.txt --desc on --fix --dry-run || true
-        continue-on-error: true
+          pip-audit -r requirements.txt --desc on --fix --dry-run
 
       - name: Scan Node.js dependencies
         working-directory: src/frontend
         run: |
-          npm audit --audit-level=high || true
-        continue-on-error: true
+          npm audit --audit-level=high
 
   # ===========================================================================
   # Static Application Security Testing (SAST)
@@ -84,14 +82,12 @@ jobs:
             p/typescript
             p/react
           generateSarif: "1"
-        continue-on-error: true
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
         if: always()
-        continue-on-error: true
 
   # ===========================================================================
   # Secret Detection
@@ -105,11 +101,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # CRITICAL: Secret detection must ALWAYS block deploys
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
   # ===========================================================================
   # Container Image Scanning
@@ -133,28 +129,62 @@ jobs:
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
-        continue-on-error: true
+          exit-code: "1"
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-results.sarif"
         if: always()
-        continue-on-error: true
 
   # ===========================================================================
-  # Summary
+  # Security Gate - BLOCKS merge if any scan fails
   # ===========================================================================
-  security-summary:
-    name: Security Summary
+  security-gate:
+    name: Security Gate
     runs-on: ubuntu-latest
-    needs: [dependency-scan, sast, secrets-scan]
+    needs: [dependency-scan, sast, secrets-scan, container-scan]
     if: always()
 
     steps:
-      - name: Check scan results
+      - name: Check security scan results
         run: |
-          echo "Security scanning completed."
+          echo "=== Security Scan Results ==="
           echo ""
-          echo "Review the Security tab in GitHub for detailed findings."
-          echo "Note: Scans are configured to continue on error to provide full visibility."
+          echo "Dependency Scan: ${{ needs.dependency-scan.result }}"
+          echo "SAST (Semgrep): ${{ needs.sast.result }}"
+          echo "Secret Detection: ${{ needs.secrets-scan.result }}"
+          echo "Container Scan: ${{ needs.container-scan.result }}"
+          echo ""
+
+          # Check for failures (excluding skipped jobs like container-scan on PRs)
+          FAILED=false
+
+          if [[ "${{ needs.dependency-scan.result }}" == "failure" ]]; then
+            echo "❌ CRITICAL: Dependency vulnerabilities found!"
+            FAILED=true
+          fi
+
+          if [[ "${{ needs.sast.result }}" == "failure" ]]; then
+            echo "❌ CRITICAL: Static analysis found security issues!"
+            FAILED=true
+          fi
+
+          if [[ "${{ needs.secrets-scan.result }}" == "failure" ]]; then
+            echo "❌ CRITICAL: Secrets detected in code! This MUST be fixed immediately!"
+            FAILED=true
+          fi
+
+          if [[ "${{ needs.container-scan.result }}" == "failure" ]]; then
+            echo "❌ CRITICAL: Container vulnerabilities found!"
+            FAILED=true
+          fi
+
+          if [[ "$FAILED" == "true" ]]; then
+            echo ""
+            echo "⛔ Security gate FAILED. Fix all security issues before merging."
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All security scans passed!"

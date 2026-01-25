@@ -52,8 +52,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  const startTour = useCallback((tourId: string) => {
-    console.log(`Starting tour: ${tourId}`);
+  const startTour = useCallback((_tourId: string) => {
     // Tour logic handled by individual components using Driver.js
   }, []);
 

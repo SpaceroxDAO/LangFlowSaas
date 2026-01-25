@@ -1,46 +1,119 @@
 /**
- * Sentry Error Monitoring Configuration (DISABLED)
+ * Sentry Error Monitoring Configuration
  *
- * Sentry is currently disabled. To enable:
- * 1. Install @sentry/react: npm install @sentry/react
- * 2. Restore the original sentry.ts implementation
- * 3. Set VITE_SENTRY_DSN in your environment
+ * To enable Sentry:
+ * 1. Create a Sentry account and project at https://sentry.io
+ * 2. Set VITE_SENTRY_DSN environment variable to your DSN
+ * 3. Optionally set VITE_SENTRY_ENVIRONMENT (defaults to 'production')
  */
 
-// Stub implementations - no-op when Sentry is disabled
+import * as SentrySDK from '@sentry/react'
+
+const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
+const SENTRY_ENVIRONMENT = import.meta.env.VITE_SENTRY_ENVIRONMENT || 'production'
+const IS_PRODUCTION = import.meta.env.PROD
+
+// Only initialize Sentry if DSN is provided
+const isSentryEnabled = !!SENTRY_DSN
+
+/**
+ * Initialize Sentry error monitoring
+ * Call this once in main.tsx before rendering the app
+ */
 export function initSentry(): void {
-  console.log('[Sentry] Disabled - error monitoring not active')
+  if (!isSentryEnabled) {
+    if (IS_PRODUCTION) {
+      console.warn('[Sentry] DSN not configured - error monitoring disabled. Set VITE_SENTRY_DSN to enable.')
+    }
+    return
+  }
+
+  SentrySDK.init({
+    dsn: SENTRY_DSN,
+    environment: SENTRY_ENVIRONMENT,
+    integrations: [
+      SentrySDK.browserTracingIntegration(),
+      SentrySDK.replayIntegration({
+        // Mask all text and block all media for privacy
+        maskAllText: true,
+        blockAllMedia: true,
+      }),
+    ],
+    // Performance monitoring
+    tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0, // 10% in production, 100% in dev
+    // Session replay
+    replaysSessionSampleRate: 0.1, // 10% of sessions
+    replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors
+    // Release tracking
+    release: import.meta.env.VITE_APP_VERSION || 'unknown',
+    // Filter out non-actionable errors
+    beforeSend(event) {
+      // Don't send errors from browser extensions
+      if (event.exception?.values?.[0]?.stacktrace?.frames?.some(
+        frame => frame.filename?.includes('chrome-extension://')
+      )) {
+        return null
+      }
+      return event
+    },
+  })
 }
 
-export function setSentryUser(_userId: string | null, _email?: string): void {
-  // No-op
+/**
+ * Set the current user for error attribution
+ */
+export function setSentryUser(userId: string | null, email?: string): void {
+  if (!isSentryEnabled) return
+
+  if (userId) {
+    SentrySDK.setUser({ id: userId, email })
+  } else {
+    SentrySDK.setUser(null)
+  }
 }
 
+/**
+ * Add context information for debugging
+ */
 export function setSentryContext(
-  _name: string,
-  _context: Record<string, unknown>
+  name: string,
+  context: Record<string, unknown>
 ): void {
-  // No-op
+  if (!isSentryEnabled) return
+  SentrySDK.setContext(name, context)
 }
 
+/**
+ * Capture an exception with optional context
+ */
 export function captureException(
   error: Error,
   context?: Record<string, unknown>
 ): void {
-  console.error('[Error]', error, context)
+  if (!isSentryEnabled) {
+    console.error('[Error]', error, context)
+    return
+  }
+
+  SentrySDK.captureException(error, {
+    extra: context,
+  })
 }
 
+/**
+ * Capture a message/event
+ */
 export function captureMessage(
   message: string,
   level: 'info' | 'warning' | 'error' = 'info'
 ): void {
-  console.log(`[${level}]`, message)
+  if (!isSentryEnabled) {
+    console.log(`[${level}]`, message)
+    return
+  }
+
+  SentrySDK.captureMessage(message, level)
 }
 
-// Stub Sentry export for ErrorBoundary compatibility
-export const Sentry = {
-  ErrorBoundary: ({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode; showDialog?: boolean }) => {
-    // Simple error boundary implementation
-    return children
-  },
-}
+// Export Sentry for ErrorBoundary usage
+export const Sentry = SentrySDK

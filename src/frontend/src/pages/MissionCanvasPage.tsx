@@ -171,7 +171,6 @@ export function MissionCanvasPage() {
       if (!missionId || !mission) return
 
       const canvasEvent = event.data.event as CanvasEvent
-      console.log('Canvas event received:', canvasEvent)
 
       try {
         // Send event to backend for validation

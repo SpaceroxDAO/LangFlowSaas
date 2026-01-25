@@ -1,0 +1,164 @@
+# =============================================================================
+# Teach Charlie AI - AI-Powered PR Review Workflow
+# =============================================================================
+# Triggers on: Pull request creation and updates
+# Purpose: Automated code review using Claude AI
+#
+# Requirements:
+# - ANTHROPIC_API_KEY secret must be configured
+# =============================================================================
+
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+# Only one review per PR at a time
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    # Skip if PR is from dependabot or has skip-review label
+    if: |
+      !contains(github.event.pull_request.labels.*.name, 'skip-review') &&
+      github.actor != 'dependabot[bot]'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.py
+            **/*.ts
+            **/*.tsx
+            **/*.js
+            **/*.jsx
+          files_ignore: |
+            **/*.test.ts
+            **/*.test.tsx
+            **/*.spec.ts
+            **/test/**
+            **/tests/**
+            **/__mocks__/**
+
+      - name: Generate diff for review
+        if: steps.changed-files.outputs.any_changed == 'true'
+        id: diff
+        run: |
+          # Get the diff for changed files
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- ${{ steps.changed-files.outputs.all_changed_files }} | head -c 50000)
+
+          # Save to file to avoid shell escaping issues
+          echo "$DIFF" > /tmp/pr_diff.txt
+
+          # Get file list
+          echo "files=${{ steps.changed-files.outputs.all_changed_files }}" >> $GITHUB_OUTPUT
+
+      - name: AI Code Review
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/github-script@v7
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read the diff
+            const diff = fs.readFileSync('/tmp/pr_diff.txt', 'utf8');
+            const files = '${{ steps.diff.outputs.files }}'.split(' ').filter(f => f);
+
+            if (!process.env.ANTHROPIC_API_KEY) {
+              console.log('ANTHROPIC_API_KEY not configured, skipping AI review');
+              return;
+            }
+
+            // Call Claude API
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+              },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 4096,
+                messages: [{
+                  role: 'user',
+                  content: `You are a senior code reviewer for Teach Charlie AI, a React + FastAPI application.
+
+            Review this pull request diff and provide feedback in the following format:
+
+            ## Summary
+            Brief description of what the changes do.
+
+            ## Review
+
+            ### Issues Found
+            List any bugs, security issues, or problems. Use format:
+            - **[SEVERITY]** file:line - Description
+
+            Severities: CRITICAL, HIGH, MEDIUM, LOW
+
+            ### Suggestions
+            - Improvement suggestions (non-blocking)
+
+            ### Security Notes
+            - Any security considerations
+
+            ## Verdict
+            One of: APPROVE, REQUEST_CHANGES, COMMENT
+
+            Keep feedback concise and actionable. Focus on:
+            - Security vulnerabilities (XSS, injection, auth bypass)
+            - Data handling issues
+            - Error handling gaps
+            - Performance concerns
+            - TypeScript/Python best practices
+
+            Files changed: ${files.join(', ')}
+
+            Diff:
+            \`\`\`diff
+            ${diff.substring(0, 40000)}
+            \`\`\`
+            `
+                }]
+              })
+            });
+
+            if (!response.ok) {
+              console.log('Claude API error:', await response.text());
+              return;
+            }
+
+            const result = await response.json();
+            const review = result.content[0].text;
+
+            // Post review as comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## AI Code Review\n\n${review}\n\n---\n*Powered by Claude AI*`
+            });
+
+      - name: Skip notice
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: echo "No reviewable files changed, skipping AI review"

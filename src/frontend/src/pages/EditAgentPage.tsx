@@ -335,9 +335,8 @@ export function EditAgentPage() {
       if (existingWorkflowId) {
         try {
           await api.deleteWorkflow(existingWorkflowId)
-          console.log('Deleted existing workflow:', existingWorkflowId)
-        } catch (err) {
-          console.warn('Failed to delete existing workflow (may already be deleted):', err)
+        } catch {
+          // Workflow may already be deleted - continue with creation
         }
       }
 

@@ -236,7 +236,6 @@ export function CanvasViewerPage() {
       if (event.data?.source !== 'langflow-overlay') return
 
       const canvasEvent = event.data.event as CanvasEvent
-      console.log('Canvas event received:', canvasEvent)
 
       try {
         // Send event to backend for validation
