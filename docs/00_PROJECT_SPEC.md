@@ -1,7 +1,7 @@
 # Project Specification: Teach Charlie AI
 
-**Last Updated**: 2026-01-03
-**Status**: Discovery Complete - Ready for MVP Build
+**Last Updated**: 2026-01-24
+**Status**: MVP Complete (Phase 13) - Production Ready
 **Owner**: Adam (Founder)
 
 ## Overview
@@ -88,85 +88,132 @@ The differentiation is **enablement and adoption**, not technical innovation. Le
 
 ## Core Features
 
-### Must Have (MVP - Launch Blockers)
+### Must Have (MVP - Launch Blockers) - ALL COMPLETE ✅
 - [x] **3-Step Q&A Onboarding**
   - Modal walkthrough asking: "Who is Charlie? What's his job? What are his rules? What tricks does he know?"
   - Simple, conversational language (no technical jargon)
   - Collect user inputs, map to template flow
+  - **8 agent presets** for quick start
 
 - [x] **Playground (Chat Interface)**
   - Test created agent in a working chat interface
-  - See agent responses in real-time
-  - Validate that the agent "works" before unlocking flow
+  - See agent responses in real-time (streaming)
+  - Multi-turn conversation memory
+  - Tool execution support
 
 - [x] **Agent Persistence**
   - Save created agents to database
   - Load agents for editing or testing
-  - Users don't lose their work
+  - **JSON export/import** for backup
+  - **Duplicate** agents with one click
 
-- [ ] **Template Mapping Engine**
+- [x] **Template Mapping Engine**
   - Backend logic to convert Q&A answers into Langflow flow
   - Map user text to predefined agent templates
   - Generate working flow without user seeing nodes (initially)
 
-### Should Have (Phase 2 - Post-MVP)
-- [ ] **Flow Canvas "Unlock"**
+### Should Have (Phase 2) - ALL COMPLETE ✅
+- [x] **Flow Canvas "Unlock"**
   - After testing in playground, users can "unlock" and see the real Langflow flow
   - Edit nodes directly for advanced customization
-  - Gradually expose complexity as users gain confidence
+  - **4 progressive disclosure levels** (hidden → preview → limited → full)
 
-- [ ] **Multi-Tenant Auth & Org Management**
-  - Clerk or Supabase Auth integration
+- [x] **Clerk Authentication**
+  - Clerk JWT validation on all endpoints
+  - User management, signup/login
+  - **Dev Mode** for local testing without auth
+
+- [x] **Pre-Built Agent Templates Library**
+  - 8 default presets: Customer Support, Sales, Knowledge Base, Creative Writing, Data Analyst, Code Review, Meeting Facilitator, Learning Coach
+  - Users can start from preset instead of blank slate
+  - Presets auto-populate wizard fields
+
+- [x] **Avatar System**
+  - Auto-inference from 40+ job types
+  - Three-tier generation (known job → description → base)
+  - Displayed in playground and agent cards
+
+### Implemented Beyond Original Scope ✅
+- [x] **Knowledge Sources (RAG)**
+  - Text paste, file upload (PDF/TXT/MD/DOCX/CSV), URL fetch
+  - Keyword-based search with relevance scoring
+  - Content chunking for large documents
+
+- [x] **Embeddable Chat Widget**
+  - JavaScript snippet to embed agent on external websites
+  - Customizable appearance (colors, branding)
+  - Public chat endpoint with embed tokens
+
+- [x] **Composio Integrations (500+ Apps)**
+  - OAuth connections to Gmail, Slack, Notion, and 500+ more
+  - Action execution from agents
+  - Connection management UI
+
+- [x] **Billing & Subscriptions**
+  - Stripe integration for payments
+  - Free/Pro/Team plan tiers
+  - Usage tracking and credit limits
+  - Billing portal for subscription management
+
+- [x] **Analytics Dashboard**
+  - Conversation metrics and counts
+  - Daily aggregated statistics
+  - Agent usage tracking
+
+- [x] **Mission-Based Learning System**
+  - Gamified guided tours
+  - Step-by-step mission completion
+  - XP rewards and achievements (UI ready)
+
+- [x] **Custom Langflow Components**
+  - Publish agents to Langflow sidebar
+  - Auto-generated Python component files
+  - Hot reload after publish
+
+- [x] **MCP Server Management**
+  - Create/configure Model Context Protocol servers
+  - Health monitoring
+  - Sync to .mcp.json configuration
+
+- [x] **Three-Tab Project Organization**
+  - Agents, Workflows, MCP Servers tabs
+  - Project-based organization
+  - Drag-to-reorder support
+
+### Future (V3+) - Deferred
+- [ ] **Multi-Tenant Organizations**
   - Organizations with multiple users/seats
   - Role-based access (admin, member)
-  - Billing/subscription management
-
-- [ ] **Pre-Built Agent Templates Library**
-  - Customer support bot, lead qualification, knowledge assistant, content creator
-  - Users can start from template instead of blank slate
-  - "Remix" templates with their own data/personality
+  - Team collaboration features
 
 - [ ] **Version History / Rollback**
   - See previous versions of agent configuration
   - Revert changes if something breaks
-  - Compare before/after
 
-### Nice to Have (Future - V3+)
-- [ ] **Embeddable Chat Widget**
-  - JavaScript snippet to embed agent on external websites
-  - Customizable appearance (colors, branding)
-  - Analytics on embedded widget usage
+- [ ] **Slack/Discord Integrations**
+  - Deploy agents directly to messaging platforms
+  - Real-time bot responses
 
-- [ ] **Integrations (Slack, Discord, etc.)**
-  - Deploy agents to messaging platforms
-  - Connect to external APIs (Zapier-style)
+- [ ] **Mobile Optimization**
+  - Responsive design for mobile devices
+  - Touch-friendly interface
 
-- [ ] **Analytics Dashboard**
-  - Conversation metrics (# of chats, avg response time, top questions)
-  - Agent performance tracking
-  - User behavior insights
+## Out of Scope (For MVP) - Updated 2026-01-24
 
-- [ ] **Team Collaboration Features**
-  - Comments on flows, shared agents, permissions
-  - Collaborative editing
-
-- [ ] **Advanced Knowledge (RAG)**
-  - Upload documents/FAQs, agents retrieve relevant info
-  - pgvector for embeddings storage
-  - Semantic search over knowledge base
-
-## Out of Scope (For MVP)
-
-Explicitly NOT building these for MVP:
+**Still Deferred** (not building yet):
 - Mobile app or mobile-optimized web UI (desktop-only)
-- Integrations with external platforms (Slack, Discord, etc.)
+- Direct Slack/Discord bot deployment (agents work via embed widget instead)
 - Multi-language support (English only)
 - White-label or agency features
-- Advanced analytics or usage dashboards
-- Custom node creation or Langflow plugin system
 - SSO / Enterprise authentication
 - WCAG AA accessibility compliance (basic accessibility only)
 - Service level agreements (SLAs) or guaranteed uptime
+- Multi-tenant organizations with teams
+
+**Now Implemented** (moved from out of scope):
+- ~~Integrations with external platforms~~ → Composio provides 500+ OAuth integrations
+- ~~Advanced analytics or usage dashboards~~ → Analytics dashboard implemented
+- ~~Custom node creation or Langflow plugin system~~ → Custom component publishing works
 
 ## User Journeys
 

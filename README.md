@@ -14,16 +14,29 @@ Teach Charlie AI is an educational platform that uses a "Dog Trainer" metaphor t
 
 ## Project Status
 
-**Phase**: MVP Complete - Ready for Beta Testing
-**Stack**: React + Vite + TypeScript + Tailwind CSS + Clerk + FastAPI + Langflow + PostgreSQL
+**Phase**: MVP Complete (Phase 13) - Production Ready
+**Stack**: React 19 + Vite + TypeScript + Tailwind CSS 4 + Clerk + FastAPI + Langflow + PostgreSQL + Redis
 
 ### What's Working
 
-- **3-Step Q&A Onboarding**: Create AI agents by answering simple questions (Who? Rules? Tricks?)
-- **Chat Playground**: Test agents in a real-time chat interface with conversation memory
-- **Clerk Authentication**: Secure signup/login with JWT validation
-- **Langflow Integration**: Full flow execution using Anthropic Claude models
-- **Docker Compose**: One-command local development setup
+**Core Features:**
+- **3-Step Q&A Onboarding**: Create AI agents with 8 preset templates and avatar auto-inference
+- **Chat Playground**: Multi-turn conversations with streaming, memory, and tool execution
+- **Progressive Canvas Unlock**: 4 disclosure levels from hidden to full Langflow editor
+- **Knowledge Sources (RAG)**: Text, file upload (PDF/TXT/MD/DOCX/CSV), and URL fetching
+- **Custom Components**: Publish agents to Langflow sidebar as reusable components
+
+**Integrations:**
+- **Composio OAuth**: 500+ app integrations (Gmail, Slack, Notion, etc.)
+- **Billing/Stripe**: Subscription management with Free/Pro/Team plans
+- **Embed Widget**: JavaScript snippet for embedding agents on external websites
+
+**Platform:**
+- **Three-Tab UI**: Agents, Workflows, MCP Servers organization
+- **Missions System**: Gamified learning with guided tours
+- **Analytics Dashboard**: Conversation metrics and usage tracking
+- **Resources/Docs**: GitBook-style documentation with User Guides and Developer Docs
+- **15+ E2E Tests**: Comprehensive test coverage with Playwright
 
 ## Quick Start
 
@@ -77,7 +90,7 @@ Teach Charlie AI is an educational platform that uses a "Dog Trainer" metaphor t
    npm run dev
    ```
 
-   Open http://localhost:3000
+   Open http://localhost:3001
 
 5. **Create your first agent!**
    - Sign in with Clerk
@@ -116,17 +129,23 @@ Teach Charlie AI is an educational platform that uses a "Dog Trainer" metaphor t
 └─────────────────────┘   └─────────────────────┘
 ```
 
-## API Endpoints
+## API Endpoints (140+ Total)
 
+**Core Endpoints:**
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/agents` | GET | List user's agents |
-| `/api/v1/agents/create-from-qa` | POST | Create agent from Q&A |
-| `/api/v1/agents/{id}` | GET | Get agent details |
-| `/api/v1/agents/{id}` | PATCH | Update agent |
-| `/api/v1/agents/{id}` | DELETE | Delete agent |
-| `/api/v1/agents/{id}/chat` | POST | Send message to agent |
+| `/api/v1/agent-components` | GET/POST | List/create agents |
+| `/api/v1/agent-components/create-from-qa` | POST | Create from Q&A wizard |
+| `/api/v1/agent-components/{id}/publish` | POST | Publish to Langflow |
+| `/api/v1/workflows/{id}/chat` | POST | Chat with agent (streaming) |
+| `/api/v1/knowledge-sources` | GET/POST | Manage RAG sources |
+| `/api/v1/billing/subscription` | GET | Get subscription status |
+| `/api/v1/missions` | GET | List learning missions |
+| `/api/v1/connections` | GET | List OAuth connections |
+| `/api/v1/embed/{token}/chat` | POST | Public embed chat |
 | `/health` | GET | Health check |
+
+See `docs/01_ARCHITECTURE.md` for complete API reference (21 routers, 140+ endpoints).
 
 ## Technology Stack
 
@@ -203,6 +222,10 @@ docker compose down -v && docker compose up -d
 
 ## Documentation
 
+**Public Documentation (for users):**
+- **[/resources](/resources)** - User Guides, Developer Docs, and Changelog (GitBook-style)
+
+**Internal Documentation (for developers):**
 - **[docs/00_PROJECT_SPEC.md](docs/00_PROJECT_SPEC.md)** - Product requirements, personas, user journeys
 - **[docs/01_ARCHITECTURE.md](docs/01_ARCHITECTURE.md)** - Technical architecture, database schema
 - **[docs/02_CHANGELOG.md](docs/02_CHANGELOG.md)** - Development history, decisions made
@@ -218,23 +241,34 @@ docker compose down -v && docker compose up -d
 
 ## Roadmap
 
-### Phase 1: MVP (Complete)
+### Phase 1-4: MVP Foundation ✅ Complete
 - [x] 3-Step Q&A onboarding
 - [x] Chat playground with memory
 - [x] Clerk authentication
 - [x] Langflow integration
 - [x] Docker Compose setup
 
-### Phase 2: Beta Testing (Next)
-- [ ] Deploy to production (DataStax)
-- [ ] E2E test suite (Playwright)
-- [ ] Flow canvas unlock feature
-- [ ] Usage analytics
+### Phase 5-9: Core Features ✅ Complete
+- [x] Progressive canvas unlock (4 levels)
+- [x] Multi-turn conversation memory
+- [x] Three-tab UI (Agents, Workflows, MCP Servers)
+- [x] Avatar auto-inference (40+ job types)
+- [x] Custom Langflow components
 
-### Phase 3: Launch
-- [ ] Multi-tenancy (organizations)
-- [ ] Billing integration (Stripe)
-- [ ] Additional templates
+### Phase 10-13: Advanced Features ✅ Complete
+- [x] E2E test suite (15+ Playwright tests)
+- [x] Knowledge sources / RAG
+- [x] Agent presets (8 templates)
+- [x] Billing integration (Stripe)
+- [x] Analytics dashboard
+
+### Phase 14+: Post-MVP (In Progress)
+- [x] Mission-based learning system
+- [x] Composio integrations (500+ apps)
+- [x] Embed widget system
+- [x] Resources/Documentation (GitBook-style public docs)
+- [ ] Production deployment
+- [ ] Multi-tenant organizations
 - [ ] Mobile optimization
 
 ## Contributing

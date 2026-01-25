@@ -426,7 +426,7 @@ npm install
 npm run dev
 
 # 6. Test L001 (Hello Flow)
-open http://localhost:3000/missions/L001
+open http://localhost:3001/missions/L001
 ```
 
 ### First 3 Components to Build

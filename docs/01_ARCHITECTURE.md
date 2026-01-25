@@ -1,7 +1,7 @@
 # Technical Architecture: Teach Charlie AI
 
-**Last Updated**: 2026-01-07
-**Status**: Phase 9 Complete - Three-Tab Architecture Implemented
+**Last Updated**: 2026-01-24
+**Status**: MVP Complete (Phase 13) - Production Hardening Complete
 **Owner**: Claude Code (Technical) + Adam (Product)
 
 ## Executive Summary
@@ -346,6 +346,148 @@ ALTER TABLE conversations ADD COLUMN workflow_id UUID REFERENCES workflows(id);
 CREATE INDEX idx_conversations_workflow ON conversations(workflow_id);
 ```
 
+**Phase 12-17 - Additional Tables (implemented 2026-01-10 to 2026-01-21)**:
+
+```sql
+-- Knowledge Sources (RAG data for agents)
+CREATE TABLE knowledge_sources (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  agent_component_id UUID REFERENCES agent_components(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  source_type VARCHAR(50) NOT NULL, -- 'text', 'file', 'url'
+  content TEXT,
+  file_path VARCHAR(500),
+  url VARCHAR(2000),
+  metadata JSONB DEFAULT '{}',
+  status VARCHAR(50) DEFAULT 'ready', -- 'pending', 'processing', 'ready', 'error'
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Subscriptions (Stripe billing)
+CREATE TABLE subscriptions (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  stripe_customer_id VARCHAR(255),
+  stripe_subscription_id VARCHAR(255),
+  plan_id VARCHAR(50) DEFAULT 'free', -- 'free', 'pro', 'team'
+  status VARCHAR(50) DEFAULT 'active', -- 'active', 'canceled', 'past_due', 'trialing'
+  current_period_start TIMESTAMP,
+  current_period_end TIMESTAMP,
+  credits_used INTEGER DEFAULT 0,
+  credits_limit INTEGER DEFAULT 100,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+-- Billing Events (Stripe webhook audit trail)
+CREATE TABLE billing_events (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  stripe_event_id VARCHAR(255) NOT NULL,
+  event_type VARCHAR(100) NOT NULL,
+  payload JSONB NOT NULL,
+  processed_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Analytics Daily (aggregated metrics)
+CREATE TABLE analytics_daily (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  record_date DATE NOT NULL,
+  conversations_count INTEGER DEFAULT 0,
+  messages_count INTEGER DEFAULT 0,
+  tokens_used INTEGER DEFAULT 0,
+  agents_created INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, record_date)
+);
+
+-- Missions (gamified learning)
+CREATE TABLE missions (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(50), -- 'beginner', 'intermediate', 'advanced'
+  difficulty VARCHAR(50) DEFAULT 'beginner',
+  xp_reward INTEGER DEFAULT 100,
+  badge_name VARCHAR(100),
+  badge_icon VARCHAR(100),
+  steps JSONB NOT NULL, -- Array of step objects
+  prerequisites UUID[], -- Mission IDs that must be completed first
+  ui_config JSONB DEFAULT '{}',
+  is_featured BOOLEAN DEFAULT FALSE,
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- User Mission Progress
+CREATE TABLE user_mission_progress (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  mission_id UUID NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+  status VARCHAR(50) DEFAULT 'not_started', -- 'not_started', 'in_progress', 'completed'
+  current_step INTEGER DEFAULT 0,
+  completed_steps JSONB DEFAULT '[]',
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, mission_id)
+);
+
+-- User Connections (Composio OAuth integrations)
+CREATE TABLE user_connections (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  app_name VARCHAR(255) NOT NULL, -- 'gmail', 'slack', 'notion', etc.
+  account_identifier VARCHAR(500), -- Email or username
+  composio_connection_id VARCHAR(255),
+  status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'connected', 'disconnected', 'error'
+  scopes JSONB DEFAULT '[]',
+  metadata JSONB DEFAULT '{}',
+  connected_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, app_name, account_identifier)
+);
+
+-- Agent Presets (templates for wizard)
+CREATE TABLE agent_presets (
+  id UUID PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(100),
+  icon VARCHAR(50),
+  color VARCHAR(7),
+  qa_who TEXT NOT NULL,
+  qa_rules TEXT NOT NULL,
+  qa_tricks TEXT,
+  suggested_tools JSONB DEFAULT '[]',
+  is_featured BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Composite Indexes for Performance (20260124_0001 migration)
+CREATE INDEX ix_messages_conversation_created ON messages(conversation_id, created_at);
+CREATE INDEX ix_conversations_user_created ON conversations(user_id, created_at);
+CREATE INDEX ix_workflows_user_created ON workflows(user_id, created_at);
+CREATE INDEX ix_workflows_user_langflow ON workflows(user_id, langflow_flow_id);
+CREATE INDEX ix_agent_components_user_created ON agent_components(user_id, created_at);
+CREATE INDEX ix_agent_components_user_published ON agent_components(user_id, is_published);
+CREATE INDEX ix_knowledge_sources_user_created ON knowledge_sources(user_id, created_at);
+CREATE INDEX ix_billing_events_user_created ON billing_events(user_id, created_at);
+CREATE INDEX ix_projects_user_sort ON projects(user_id, sort_order);
+CREATE INDEX ix_mcp_servers_user_created ON mcp_servers(user_id, created_at);
+CREATE INDEX ix_user_connections_user_status ON user_connections(user_id, status);
+```
+
 #### 5. Hosting & Deployment (DataStax)
 
 **Infrastructure**:
@@ -519,31 +661,140 @@ Start with **3 templates**:
 **Authentication**:
 - All endpoints require Clerk JWT in `Authorization: Bearer <token>` header
 - Middleware validates JWT and extracts `user_id`
+- Public endpoints (embed widget) use embed tokens instead
 
-**Endpoints**:
+### Complete API Endpoint Reference (21 Routers, 140+ Endpoints)
 
+#### Agent Components (`/api/v1/agent-components`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/auth/signup` | Create new user (Clerk handles) |
-| POST | `/auth/login` | Login (Clerk handles) |
-| GET | `/auth/me` | Get current user info |
-| POST | `/agents/create-from-qa` | Create agent from Q&A answers |
-| GET | `/agents` | List user's agents |
-| GET | `/agents/{agent_id}` | Get specific agent |
-| PUT | `/agents/{agent_id}` | Update agent |
-| DELETE | `/agents/{agent_id}` | Delete agent |
-| POST | `/agents/{agent_id}/chat` | Send message to agent (playground) |
-| GET | `/agents/{agent_id}/conversations` | List conversations |
-| GET | `/conversations/{conv_id}/messages` | Get messages in conversation |
+| POST | `/create-from-qa` | Create from Q&A wizard |
+| GET | `/` | List components (paginated) |
+| GET | `/{id}` | Get single component |
+| PATCH | `/{id}` | Update component |
+| DELETE | `/{id}` | Delete component |
+| POST | `/{id}/publish` | Publish to Langflow sidebar |
+| POST | `/{id}/unpublish` | Remove from Langflow sidebar |
+| POST | `/{id}/duplicate` | Duplicate component |
+| GET | `/{id}/export` | Export as JSON |
+| POST | `/import` | Import from JSON |
+
+#### Agent Presets (`/api/v1/agent-presets`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | List all presets |
+| GET | `/{id}` | Get preset by ID |
+| GET | `/category/{category}` | List by category |
+| POST | `/` | Create preset (admin) |
+
+#### Workflows (`/api/v1/workflows`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/` | Create workflow |
+| POST | `/from-agent` | Create from agent component |
+| POST | `/from-template` | Create from template |
+| GET | `/` | List workflows (paginated) |
+| GET | `/{id}` | Get workflow details |
+| PATCH | `/{id}` | Update workflow |
+| DELETE | `/{id}` | Delete workflow |
+| POST | `/{id}/duplicate` | Duplicate workflow |
+| GET | `/{id}/export` | Export as JSON |
+| POST | `/{id}/chat` | Chat with workflow (streaming) |
+| GET | `/{id}/conversations` | List conversations |
+| POST | `/{id}/repair` | Repair Langflow sync |
+
+#### MCP Servers (`/api/v1/mcp-servers`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/templates` | List server templates |
+| POST | `/` | Create MCP server |
+| POST | `/from-template` | Create from template |
+| GET | `/` | List MCP servers |
+| GET | `/{id}` | Get single server |
+| PATCH | `/{id}` | Update server |
+| DELETE | `/{id}` | Delete server |
+| POST | `/{id}/enable` | Enable server |
+| POST | `/{id}/disable` | Disable server |
+| GET | `/{id}/health` | Check health |
+| POST | `/sync` | Sync to .mcp.json |
+| POST | `/sync-and-restart` | Sync and restart Langflow |
+
+#### Billing (`/api/v1/billing`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/subscription` | Get current subscription |
+| POST | `/checkout` | Create Stripe checkout session |
+| POST | `/portal` | Create billing portal session |
+| POST | `/webhook` | Stripe webhook handler |
+| GET | `/usage` | Get usage statistics |
+| GET | `/plans` | List available plans |
+
+#### Missions (`/api/v1/missions`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | List all missions |
+| GET | `/{id}` | Get mission details |
+| GET | `/progress` | Get user's progress |
+| POST | `/{id}/start` | Start a mission |
+| POST | `/{id}/steps/{step}/complete` | Complete a step |
+| POST | `/{id}/complete` | Complete entire mission |
+
+#### Connections (Composio OAuth) (`/api/v1/connections`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | List user connections |
+| GET | `/apps` | List available apps (500+) |
+| POST | `/initiate` | Start OAuth flow |
+| GET | `/callback` | OAuth callback |
+| DELETE | `/{id}` | Disconnect app |
+| GET | `/{id}/actions` | List available actions |
+
+#### Knowledge Sources (`/api/v1/knowledge-sources`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | List knowledge sources |
+| POST | `/text` | Add text source |
+| POST | `/file` | Upload file source |
+| POST | `/url` | Add URL source |
+| DELETE | `/{id}` | Delete source |
+| GET | `/{id}/search` | Search within source |
+
+#### Embed Widget (`/api/v1/embed`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/widget.js` | Get embed widget script |
+| GET | `/{token}` | Get embed config |
+| POST | `/{token}/chat` | Public chat endpoint |
+| GET | `/{token}/conversations` | List embed conversations |
+
+#### Analytics (`/api/v1/analytics`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/overview` | Dashboard overview |
+| GET | `/conversations` | Conversation metrics |
+| GET | `/agents` | Agent usage metrics |
+| GET | `/daily` | Daily aggregated stats |
+
+#### Additional Routers
+- **Projects** (`/api/v1/projects`): Project CRUD, organization
+- **Settings** (`/api/v1/settings`): User preferences, API keys
+- **Avatars** (`/api/v1/avatars`): Avatar generation, caching
+- **Files** (`/api/v1/files`): File upload, storage management
+- **Chat Files** (`/api/v1/chat-files`): In-chat file handling
+- **Dashboard** (`/api/v1/dashboard`): Dashboard data aggregation
+- **Langflow** (`/api/v1/langflow`): Direct Langflow operations
+- **Health** (`/health`): Health check endpoints
 
 **Error Handling**:
-- Standard HTTP status codes (200, 400, 401, 404, 500)
-- Friendly error messages (not technical jargon)
+- Standardized ErrorResponse schema with error codes
+- Global exception handlers for consistent formatting
+- User-friendly messages (not technical jargon)
 - Example:
   ```json
   {
     "error": "Charlie couldn't understand that. Can you try again?",
-    "code": "INVALID_INPUT"
+    "code": "VALIDATION_ERROR",
+    "details": {}
   }
   ```
 
@@ -638,18 +889,25 @@ Start with **3 templates**:
 
 | Layer | Technology | Rationale |
 |-------|------------|-----------|
-| **Frontend** | React + React Flow | Inherit from Langflow, proven for node-based UIs |
-| **State Management** | Zustand or Jotai | Lightweight, easy to learn for AI-assisted dev |
-| **Backend** | FastAPI (Python) | Langflow's existing backend, great docs |
-| **Database** | PostgreSQL + pgvector | Production-ready, supports vectors for future RAG |
-| **Auth** | Clerk | Best DX, org management built-in |
-| **Hosting** | DataStax | Langflow-optimized, low ops overhead |
-| **LLM Providers** | OpenAI, Anthropic, etc. | Inherit Langflow's multi-provider support |
-| **Payment** | Stripe | Industry standard, great docs |
-| **Email** | SendGrid or Resend | Reliable transactional email |
-| **Analytics** | PostHog or Mixpanel | Open-source option, good free tier |
-| **Error Tracking** | Sentry | Free tier, easy integration |
-| **Testing** | Playwright | E2E testing, works with CI/CD |
+| **Frontend** | React 19 + Vite + TypeScript | Fast builds, type safety, modern React features |
+| **UI Framework** | Tailwind CSS 4 | Utility-first, consistent styling |
+| **State Management** | TanStack Query | Server state caching, optimistic updates |
+| **Backend** | FastAPI (Python 3.11) | Async-first, auto OpenAPI docs, great performance |
+| **Database** | PostgreSQL 16 + pgvector | Production-ready, vector search for RAG |
+| **ORM** | SQLAlchemy 2.0 (async) | Modern async support, type hints |
+| **Migrations** | Alembic | Schema versioning, rollback support |
+| **Auth** | Clerk | JWT validation, user management, orgs |
+| **AI Engine** | Langflow | Flow-based agent execution, multi-provider |
+| **LLM Providers** | OpenAI, Anthropic, Ollama | Multi-provider via Langflow |
+| **Tool Integrations** | Composio | 500+ OAuth app integrations |
+| **Payment** | Stripe | Subscriptions, usage billing, webhooks |
+| **Vector DB** | Chroma (via Langflow) | Embeddings storage for RAG |
+| **Caching** | Redis | Rate limiting, session data |
+| **Hosting** | Docker Compose / DataStax | Containerized, production-ready |
+| **Reverse Proxy** | nginx | SSL termination, Langflow overlay |
+| **Error Tracking** | Sentry | Error monitoring, performance tracing |
+| **Testing** | Playwright + Vitest + Pytest | E2E, component, and unit testing |
+| **CI/CD** | GitHub Actions (planned) | Automated testing and deployment |
 
 ## Migration Path (Langflow to Custom)
 

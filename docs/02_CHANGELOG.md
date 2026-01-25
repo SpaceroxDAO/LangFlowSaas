@@ -4,6 +4,185 @@
 
 ---
 
+## 2026-01-24 - Resources Section: GitBook-Style Documentation
+
+### Summary
+Implemented a comprehensive public documentation section with GitBook-style experience. The Resources section provides User Guides, Developer Documentation, and Changelog - all publicly accessible (no login required) for SEO benefits.
+
+### Features Implemented
+- **Public Routes**: `/resources/*` accessible without authentication
+- **GitBook-Style Layout**: Collapsible sidebar with navigation, dark mode support
+- **User Guides (10 pages)**: Introduction, Quick Start, Dog Trainer Metaphor, Playground, Knowledge Sources, Workflows, Publishing, Embedding, MCP Servers, Billing
+- **Developer Docs (10 pages)**: Architecture Overview, Authentication, API Reference, Webhooks, Embed API, Custom Components, Langflow Integration, Composio Integration, MCP Protocol, Self-Hosting Guide
+- **Changelog Page**: Version history with release notes
+- **Markdown Rendering**: react-markdown with GitHub Flavored Markdown, code syntax highlighting
+- **Responsive Design**: Mobile-friendly with collapsible sidebar
+
+### Files Created
+
+**React Components (9 files)**:
+- `src/frontend/src/pages/resources/ResourcesLayout.tsx` - Main layout
+- `src/frontend/src/pages/resources/ResourcesHomePage.tsx` - Landing page
+- `src/frontend/src/pages/resources/GuidesPage.tsx` - Guides index
+- `src/frontend/src/pages/resources/GuidePage.tsx` - Individual guide viewer
+- `src/frontend/src/pages/resources/DevelopersPage.tsx` - Developer docs index
+- `src/frontend/src/pages/resources/DeveloperDocPage.tsx` - Individual doc viewer
+- `src/frontend/src/pages/resources/ChangelogPage.tsx` - Changelog viewer
+- `src/frontend/src/components/docs/DocSidebar.tsx` - Navigation sidebar
+- `src/frontend/src/components/docs/DocContent.tsx` - Markdown renderer
+
+**Markdown Content (21 files)**:
+- `src/frontend/public/docs/guides/*.md` - 10 user guide files
+- `src/frontend/public/docs/developers/*.md` - 10 developer doc files
+- `src/frontend/public/docs/changelog/index.md` - Changelog content
+
+**Files Modified**:
+- `src/frontend/src/App.tsx` - Added public /resources routes
+- `src/frontend/src/components/Sidebar.tsx` - Added Resources link
+
+**Dependencies Added**:
+- `react-markdown` - Markdown rendering
+- `remark-gfm` - GitHub Flavored Markdown
+- `rehype-highlight` - Syntax highlighting
+- `highlight.js` - Highlighting themes
+
+### URL Structure
+```
+/resources                    → Landing page
+/resources/guides             → User Guides index
+/resources/guides/:slug       → Individual guide
+/resources/developers         → Developer Docs index
+/resources/developers/:slug   → Individual doc
+/resources/changelog          → Changelog page
+```
+
+### Design Decisions
+1. **Public Access**: No authentication required - improves SEO and allows potential users to browse docs before signing up
+2. **Markdown Files**: Content stored as `.md` files in `public/docs/` - easy to edit without code changes
+3. **Dog Trainer Metaphor**: User guides consistently use the educational metaphor throughout
+4. **Similar to Langflow Docs**: Developer documentation structure mirrors Langflow's approach since we're built on it
+
+---
+
+## 2026-01-24 - Best Practices Audit: Complete (100%)
+
+### Summary
+Completed all remaining best practices fixes. Final item was setting up frontend component testing with Vitest and React Testing Library (45 tests across 3 components). Also implemented composite database indexes, standardized API error responses, rate limiting on critical endpoints, and pagination standardization.
+
+### Fix 16: Composite Database Indexes
+**Files**: `src/backend/alembic/versions/20260124_0001_add_composite_indexes.py`
+
+Added 11 composite indexes for query performance optimization:
+- `ix_messages_conversation_created` - Message ordering by conversation
+- `ix_conversations_user_created` - User's conversation list
+- `ix_workflows_user_created` - User's workflow list
+- `ix_workflows_user_langflow` - Flow lookups
+- `ix_agent_components_user_created` - User's agent list
+- `ix_agent_components_user_published` - Published agent filtering
+- `ix_knowledge_sources_user_created` - Knowledge source list
+- `ix_billing_events_user_created` - Audit trail queries
+- `ix_projects_user_sort` - Project ordering
+- `ix_mcp_servers_user_created` - MCP server list
+- `ix_user_connections_user_status` - Connection filtering
+
+### Fix 13: Standardized API Error Responses
+**Files**: `src/backend/app/schemas/error.py`, `src/backend/app/exceptions.py`, `src/backend/app/main.py`
+
+Implemented comprehensive error handling system:
+- `ErrorResponse` schema with consistent structure (error, message, status_code, details)
+- `ErrorCode` constants for machine-readable error types
+- Custom exceptions: `NotFoundError`, `ValidationError`, `RateLimitError`, `LangflowError`, etc.
+- Global exception handlers for `AppException`, `RequestValidationError`, and unhandled exceptions
+- Production-safe: detailed error messages only in debug mode
+
+**Example Response**:
+```json
+{
+  "error": "not_found",
+  "message": "Agent not found",
+  "status_code": 404
+}
+```
+
+### Fix 14: Rate Limiting on Critical Endpoints
+**Files**: `src/backend/app/api/workflows.py`, `billing.py`, `avatars.py`, `agent_components.py`
+
+Added rate limiting to prevent abuse on expensive/sensitive endpoints:
+- `chat_with_workflow` and `chat_with_workflow_stream` (LLM costs)
+- `create_checkout` and `create_portal` (billing security)
+- `generate_avatar` and `generate_dog_avatar` (API costs)
+- Uses existing Redis-based rate limiter with per-user tracking
+
+### Fix 15: Pagination Standardization
+**Files**: `src/backend/app/api/analytics.py`
+
+Standardized all list endpoints to use `page/page_size` pattern:
+- Converted `get_workflow_messages` from `limit/offset` to `page/page_size`
+- Internal conversion to `limit/offset` for Langflow API calls
+- All other endpoints already used `page/page_size`
+
+### Fix 12: Frontend Component Testing
+**Files**: `vitest.config.ts`, `src/test/setup.ts`, `src/test/test-utils.tsx`
+
+Set up Vitest 4.0 with React Testing Library for frontend component testing:
+- `vitest.config.ts` - Test configuration with jsdom environment
+- `src/test/setup.ts` - Browser API mocks (matchMedia, IntersectionObserver, etc.)
+- `src/test/test-utils.tsx` - Custom render with React Query and Router providers
+- 45 tests across 3 components:
+  - `MessageBubble.test.tsx` - 26 tests (rendering, copy, edit, delete, feedback, regenerate)
+  - `Pagination.test.tsx` - 11 tests (rendering, navigation, dropdown)
+  - `ProgressBar.test.tsx` - 8 tests (step rendering, coloring)
+
+**New npm scripts**:
+- `npm test` - Run tests in watch mode
+- `npm run test:run` - Run tests once
+- `npm run test:ui` - Run tests with Vitest UI
+- `npm run test:coverage` - Generate coverage report
+
+### Progress Summary
+| Category | Completed | Total |
+|----------|-----------|-------|
+| Critical (Security) | 5 | 5 |
+| High Priority | 6 | 6 |
+| Medium Priority | 5 | 5 |
+| **Overall** | **15** | **15** |
+
+**Best practices audit complete!** All security, high-priority, and medium-priority fixes implemented.
+
+---
+
+## 2026-01-21 - Best Practices Audit: Phases 1-3 (Critical & High Priority)
+
+### Summary
+Comprehensive security audit and best practices remediation. Completed all critical security fixes and high-priority improvements to prepare the platform for production deployment.
+
+### Security Fixes (5 Critical)
+1. **Input Validation**: Added Pydantic constraints (min/max length, regex patterns) to all request schemas
+2. **File Upload Security**: Implemented file type validation, size limits, and secure storage paths
+3. **CORS Hardening**: Restricted allowed origins, methods, and headers
+4. **Security Headers**: Added middleware for CSP, X-Frame-Options, X-Content-Type-Options, etc.
+5. **Rate Limiting**: Implemented Redis-based rate limiting with per-user tracking
+
+### High-Priority Fixes (6 Items)
+6. **Environment Validation**: Startup checks for required environment variables
+7. **Structured Logging**: JSON logging format with correlation IDs
+8. **Error Sanitization**: Removed internal details from error messages in production
+9. **Database Transactions**: Proper transaction boundaries and rollback handling
+10. **Graceful Shutdown**: Signal handling for clean service termination
+11. **Health Checks**: Comprehensive health endpoints with dependency checks
+
+### Files Created
+- `src/backend/app/middleware/security_headers.py` - Security headers middleware
+- `src/backend/app/middleware/redis_rate_limit.py` - Redis-based rate limiter
+
+### Files Modified
+- 15+ schema files with input validation
+- `src/backend/app/main.py` - Middleware registration, exception handlers
+- `src/backend/app/config.py` - Environment validation
+- Multiple API files for error handling improvements
+
+---
+
 ## 2026-01-10 - Phase 12: Knowledge Sources & RAG Foundation
 
 ### Summary
