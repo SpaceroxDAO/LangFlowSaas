@@ -66,17 +66,22 @@ function useDevAuth() {
 /**
  * useAuth wrapper - use this instead of importing from @clerk/clerk-react
  *
- * In dev mode: returns mock auth values
- * In production: returns Clerk's useAuth values
+ * In dev mode: returns mock auth values (no ClerkProvider exists)
+ * In production: returns Clerk's useAuth values (ClerkProvider wraps app)
+ *
+ * NOTE: This uses conditional hooks, which normally violates Rules of Hooks.
+ * However, this is SAFE here because:
+ * 1. isDevMode is evaluated at MODULE LOAD TIME from import.meta.env
+ * 2. It NEVER changes during the app lifecycle
+ * 3. The condition is effectively a compile-time constant
+ * 4. We CANNOT call useClerkAuth() in dev mode (no ClerkProvider context)
  */
 export function useAuth() {
-  // In dev mode, use the dev auth context
   if (isDevMode) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- isDevMode is compile-time constant
     return useDevAuth()
   }
-  // In production, use Clerk's auth
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- isDevMode is compile-time constant
   return useClerkAuth()
 }
 
