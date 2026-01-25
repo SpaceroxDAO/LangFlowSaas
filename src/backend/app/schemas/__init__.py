@@ -1,6 +1,7 @@
 """
 Pydantic schemas for request/response validation.
 """
+from app.schemas.error import ErrorResponse, ErrorDetail, ErrorCode, FRIENDLY_MESSAGES
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.schemas.agent import (
     AgentCreate,
@@ -100,6 +101,12 @@ from app.schemas.credits import (
 )
 
 __all__ = [
+    # Error handling
+    "ErrorResponse",
+    "ErrorDetail",
+    "ErrorCode",
+    "FRIENDLY_MESSAGES",
+    # User
     "UserCreate",
     "UserResponse",
     "UserUpdate",
