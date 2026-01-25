@@ -223,14 +223,14 @@ export function EditAgentPage() {
         regenerate: !!avatarUrl,
         description: fullDescription,  // Pass for fallback when job is "default"
       })
-      // Convert relative URL to full URL for the backend
-      const fullUrl = `${window.location.protocol}//${window.location.hostname}:8000${result.image_url}`
-      setAvatarUrl(fullUrl)
+      // Use relative URL - nginx proxies /static/ to backend in production
+      // (Port 8000 is not exposed to the internet in production)
+      setAvatarUrl(result.image_url)
 
       // Auto-save the avatar to the database immediately
       if (agentId) {
         await api.updateAgentComponent(agentId, {
-          avatar_url: fullUrl,
+          avatar_url: result.image_url,
         })
         // Invalidate the agent-components cache so ProjectDetailPage shows updated avatar
         queryClient.invalidateQueries({ queryKey: ['agent-components'] })

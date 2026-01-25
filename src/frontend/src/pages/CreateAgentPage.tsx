@@ -376,9 +376,9 @@ export function CreateAgentPage() {
         regenerate: !!formData.avatarUrl,
         description: fullDescription,  // Pass for fallback when job is "default"
       })
-      // Convert relative URL to full URL for the backend
-      const fullUrl = `${window.location.protocol}//${window.location.hostname}:8000${result.image_url}`
-      dispatch({ type: 'AVATAR_GENERATE_SUCCESS', avatarUrl: fullUrl })
+      // Use relative URL - nginx proxies /static/ to backend in production
+      // (Port 8000 is not exposed to the internet in production)
+      dispatch({ type: 'AVATAR_GENERATE_SUCCESS', avatarUrl: result.image_url })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate avatar. Please try again.'
       dispatch({ type: 'AVATAR_GENERATE_ERROR', message: errorMessage })
