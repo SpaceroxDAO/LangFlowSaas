@@ -1,6 +1,7 @@
 /**
  * Pricing Table component.
  * Full-featured pricing comparison with plan selection.
+ * Supports monthly/yearly billing toggle.
  */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -13,8 +14,11 @@ interface PricingTableProps {
   compact?: boolean
 }
 
+type BillingCycle = 'monthly' | 'yearly'
+
 export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = false }: PricingTableProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
 
   const { data: comparison, isLoading: comparisonLoading } = useQuery({
     queryKey: ['pricing-comparison'],
@@ -39,6 +43,7 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
         plan_id: planId,
         success_url: `${window.location.origin}/dashboard/billing?success=true`,
         cancel_url: `${window.location.origin}/dashboard/billing?canceled=true`,
+        billing_cycle: billingCycle,
       })
       window.location.href = checkout_url
     } catch (error) {
@@ -47,6 +52,16 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
     } finally {
       setIsLoading(null)
     }
+  }
+
+  // Helper to get display price based on billing cycle
+  const getDisplayPrice = (plan: { price_display: string; yearly_price_display: string; price_yearly: number }) => {
+    if (billingCycle === 'yearly' && plan.price_yearly > 0) {
+      // Show monthly equivalent for yearly billing
+      const monthlyEquivalent = Math.round(plan.price_yearly / 12 / 100)
+      return `$${monthlyEquivalent}/mo`
+    }
+    return plan.price_display
   }
 
   const renderFeatureValue = (value: boolean | string) => {
@@ -82,32 +97,69 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
   if (compact) {
     // Compact version for embedded use
     return (
-      <div className="grid grid-cols-3 gap-4">
-        {plans.map((plan) => {
-          const isCurrent = plan.id === currentPlanId
-          const isHighlight = plan.highlight
-
-          return (
-            <div
-              key={plan.id}
-              className={`relative p-5 rounded-2xl border-2 transition-all ${
-                isHighlight
-                  ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/20'
-                  : isCurrent
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
-                  : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-900'
+      <div>
+        {/* Billing cycle toggle for compact view */}
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex items-center gap-2 p-1 bg-slate-100 dark:bg-neutral-800 rounded-lg text-sm">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-3 py-1.5 font-medium rounded-md transition-all ${
+                billingCycle === 'monthly'
+                  ? 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-neutral-400'
               }`}
             >
-              {isHighlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold rounded-full">
-                  RECOMMENDED
-                </div>
-              )}
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('yearly')}
+              className={`px-3 py-1.5 font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                billingCycle === 'yearly'
+                  ? 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-neutral-400'
+              }`}
+            >
+              Yearly
+              <span className="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded">
+                -21%
+              </span>
+            </button>
+          </div>
+        </div>
 
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-              <div className="mt-2 mb-4">
-                <span className="text-3xl font-bold text-slate-900 dark:text-white">{plan.price_display}</span>
-              </div>
+        <div className="grid grid-cols-3 gap-4">
+          {plans.map((plan) => {
+            const isCurrent = plan.id === currentPlanId
+            const isHighlight = plan.highlight
+
+            return (
+              <div
+                key={plan.id}
+                className={`relative p-5 rounded-2xl border-2 transition-all ${
+                  isHighlight
+                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/20'
+                    : isCurrent
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20'
+                    : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-900'
+                }`}
+              >
+                {isHighlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold rounded-full">
+                    RECOMMENDED
+                  </div>
+                )}
+
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.name}</h3>
+                <div className="mt-2 mb-4">
+                  <span className="text-3xl font-bold text-slate-900 dark:text-white">
+                    {plan.is_custom ? 'Custom' : plan.id === 'free' ? 'Free' : getDisplayPrice(plan)}
+                  </span>
+                  {billingCycle === 'yearly' && plan.price_yearly > 0 && plan.yearly_savings_display && (
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                      {plan.yearly_savings_display}
+                    </div>
+                  )}
+                </div>
 
               <button
                 onClick={() => handleSelectPlan(plan.id as PlanId)}
@@ -124,9 +176,10 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
               >
                 {isLoading === plan.id ? 'Loading...' : isCurrent ? 'Current Plan' : plan.is_custom ? 'Contact Sales' : 'Upgrade'}
               </button>
-            </div>
-          )
-        })}
+              </div>
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -134,8 +187,37 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
   // Full pricing table
   return (
     <div className="relative mt-4">
+      {/* Billing cycle toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex items-center gap-3 p-1.5 bg-slate-100 dark:bg-neutral-800 rounded-xl">
+          <button
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+              billingCycle === 'monthly'
+                ? 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setBillingCycle('yearly')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-2 ${
+              billingCycle === 'yearly'
+                ? 'bg-white dark:bg-neutral-900 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Yearly
+            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full">
+              Save 21%
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Most Popular badge - positioned outside the overflow container */}
-      <div className="absolute -top-3 left-1/2 ml-[12.5%] -translate-x-1/2 z-10 px-4 py-1.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold rounded-full shadow-lg">
+      <div className="absolute top-[52px] left-1/2 ml-[12.5%] -translate-x-1/2 z-10 px-4 py-1.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold rounded-full shadow-lg">
         MOST POPULAR
       </div>
 
@@ -162,7 +244,19 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
               <p className="text-sm text-slate-500 dark:text-neutral-400 mt-1">{plan.description}</p>
 
               <div className="mt-4 mb-4">
-                <span className="text-4xl font-bold text-slate-900 dark:text-white">{plan.price_display}</span>
+                <span className="text-4xl font-bold text-slate-900 dark:text-white">
+                  {plan.is_custom ? 'Custom' : plan.id === 'free' ? 'Free' : getDisplayPrice(plan)}
+                </span>
+                {billingCycle === 'yearly' && plan.price_yearly > 0 && plan.yearly_savings_display && (
+                  <div className="mt-1">
+                    <span className="text-xs text-slate-500 dark:text-neutral-400">
+                      Billed {plan.yearly_price_display}
+                    </span>
+                    <span className="ml-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      {plan.yearly_savings_display}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <button

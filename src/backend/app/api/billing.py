@@ -39,11 +39,16 @@ class PlanResponse(BaseModel):
 
     id: str
     name: str
-    price_monthly: int = Field(..., description="Price in cents")
+    price_monthly: int = Field(..., description="Monthly price in cents")
     price_display: str
+    price_yearly: int = Field(default=0, description="Yearly price in cents")
+    yearly_price_display: str = ""
+    yearly_savings_display: str = ""
     description: str
     features: List[str]
     limits: dict
+    highlight: bool = False
+    is_custom: bool = False
 
 
 class SubscriptionResponse(BaseModel):
@@ -74,6 +79,7 @@ class CheckoutRequest(BaseModel):
     plan_id: str
     success_url: str
     cancel_url: str
+    billing_cycle: str = Field(default="monthly", description="Billing cycle: 'monthly' or 'yearly'")
 
 
 class CheckoutResponse(BaseModel):
@@ -123,6 +129,9 @@ async def list_plans() -> List[PlanResponse]:
             name=p.name,
             price_monthly=p.price_monthly,
             price_display=p.price_display,
+            price_yearly=p.price_yearly,
+            yearly_price_display=p.yearly_price_display,
+            yearly_savings_display=p.yearly_savings_display,
             description=p.description,
             features=p.features,
             limits={
@@ -135,6 +144,8 @@ async def list_plans() -> List[PlanResponse]:
                 "knowledge_files": p.limits.knowledge_files,
                 "team_members": p.limits.team_members,
             },
+            highlight=p.highlight,
+            is_custom=p.is_custom,
         )
         for p in plans
     ]
@@ -240,6 +251,7 @@ async def create_checkout(
             plan_id=checkout_request.plan_id,
             success_url=checkout_request.success_url,
             cancel_url=checkout_request.cancel_url,
+            billing_cycle=checkout_request.billing_cycle,
         )
         await session.commit()
         return CheckoutResponse(checkout_url=checkout_url)

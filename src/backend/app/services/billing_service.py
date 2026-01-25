@@ -82,9 +82,17 @@ class BillingService:
         plan_id: str,
         success_url: str,
         cancel_url: str,
+        billing_cycle: str = "monthly",
     ) -> str:
         """
         Create a Stripe Checkout session for subscription.
+
+        Args:
+            user: The user to create checkout for
+            plan_id: The plan ID (e.g., 'individual')
+            success_url: URL to redirect to on success
+            cancel_url: URL to redirect to on cancel
+            billing_cycle: 'monthly' or 'yearly'
 
         Returns the checkout URL.
         """
@@ -93,7 +101,13 @@ class BillingService:
             raise BillingServiceError("Stripe is not configured")
 
         plan = get_plan(plan_id)
-        if not plan.stripe_price_id:
+
+        # Select the appropriate price ID based on billing cycle
+        if billing_cycle == "yearly" and plan.stripe_yearly_price_id:
+            price_id = plan.stripe_yearly_price_id
+        elif plan.stripe_price_id:
+            price_id = plan.stripe_price_id
+        else:
             raise BillingServiceError(f"Plan {plan_id} is not a paid plan")
 
         subscription = await self.get_or_create_subscription(user)
@@ -113,16 +127,24 @@ class BillingService:
         session = stripe.checkout.Session.create(
             customer=subscription.stripe_customer_id,
             mode="subscription",
-            line_items=[{"price": plan.stripe_price_id, "quantity": 1}],
+            line_items=[{"price": price_id, "quantity": 1}],
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"user_id": str(user.id), "plan_id": plan_id},
+            metadata={
+                "user_id": str(user.id),
+                "plan_id": plan_id,
+                "billing_cycle": billing_cycle,
+            },
             subscription_data={
-                "metadata": {"user_id": str(user.id), "plan_id": plan_id},
+                "metadata": {
+                    "user_id": str(user.id),
+                    "plan_id": plan_id,
+                    "billing_cycle": billing_cycle,
+                },
             },
         )
 
-        logger.info(f"Created checkout session for user {user.id} plan {plan_id}")
+        logger.info(f"Created checkout session for user {user.id} plan {plan_id} ({billing_cycle})")
         return session.url
 
     async def create_portal_session(

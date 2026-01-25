@@ -777,6 +777,9 @@ export interface Plan {
   name: string
   price_monthly: number
   price_display: string
+  price_yearly: number
+  yearly_price_display: string
+  yearly_savings_display: string
   description: string
   features: string[]
   limits: PlanLimits
@@ -966,6 +969,7 @@ export interface CheckoutRequest {
   plan_id: string
   success_url: string
   cancel_url: string
+  billing_cycle?: 'monthly' | 'yearly'
 }
 
 export interface CheckoutResponse {
