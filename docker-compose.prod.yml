@@ -51,8 +51,8 @@ services:
       - teachcharlie-internal # Can talk to internal services
     restart: always
     healthcheck:
-      # nginx:alpine has wget but not curl - use wget with quiet and spider mode
-      test: ["CMD-SHELL", "wget --quiet --spider http://localhost/health || exit 1"]
+      # Use curl for reliable health checking
+      test: ["CMD", "curl", "-sf", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
