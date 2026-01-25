@@ -62,7 +62,6 @@ services:
     build:
       context: ./src/frontend
       dockerfile: Dockerfile
-      target: production  # Use production build stage
     container_name: teachcharlie-frontend
     environment:
       - NODE_ENV=production
@@ -80,7 +79,6 @@ services:
     build:
       context: ./src/backend
       dockerfile: Dockerfile
-      target: production  # Use production build stage if available
     container_name: teachcharlie-backend
     environment:
       # Environment
@@ -153,7 +151,7 @@ services:
     # NO PORTS EXPOSED - internal only
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -188,9 +186,11 @@ services:
 
   # ===========================================================================
   # Langflow AI Agent Engine
+  # SECURITY: Pinned to specific version for reproducible deployments
+  # Check for updates: https://hub.docker.com/r/langflowai/langflow/tags
   # ===========================================================================
   langflow:
-    image: langflowai/langflow:latest
+    image: langflowai/langflow:1.7.3
     container_name: teachcharlie-langflow
     # NO PORTS EXPOSED - accessed only via nginx proxy
     # Run as non-root in production
