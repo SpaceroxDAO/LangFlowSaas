@@ -76,3 +76,6 @@ src/backend/static/avatars/*.png
 # Local stash backups
 .stash-backup/
 src/backend/.venv.bak.py39/
+
+# User uploaded knowledge files (user data)
+src/backend/app/uploads/knowledge/
