@@ -67,6 +67,7 @@ services:
         VITE_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
         VITE_API_URL: /api
         VITE_LANGFLOW_HOST: /langflow
+        VITE_LANGFLOW_URL: /langflow
     container_name: teachcharlie-frontend
     networks:
       - teachcharlie-internal

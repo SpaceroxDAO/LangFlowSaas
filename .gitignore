@@ -75,3 +75,4 @@ src/backend/static/avatars/*.png
 
 # Local stash backups
 .stash-backup/
+src/backend/.venv.bak.py39/
