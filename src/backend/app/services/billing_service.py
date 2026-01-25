@@ -5,7 +5,7 @@ Handles subscriptions, usage metering, and billing webhooks.
 """
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -650,20 +650,29 @@ class BillingService:
         }
 
     async def get_auto_top_up_settings(self, user_id: str) -> Dict[str, Any]:
-        """
-        Get auto top-up settings for a user.
+        """Get auto top-up settings for a user from database."""
+        subscription = await self.get_subscription(user_id)
 
-        Note: In this initial implementation, settings are defaults.
-        A full implementation would store in DB.
-        """
-        # TODO: Fetch from user_settings table or dedicated auto_top_up table
+        if not subscription:
+            # Return defaults for users without subscription
+            return {
+                "enabled": False,
+                "threshold_credits": 100,
+                "top_up_pack_id": "credits_5500",
+                "max_monthly_top_ups": 3,
+                "top_ups_this_month": 0,
+                "can_top_up": True,
+            }
+
+        can_top_up = subscription.auto_top_ups_this_month < subscription.auto_top_up_max_monthly
+
         return {
-            "enabled": False,
-            "threshold_credits": 100,
-            "top_up_pack_id": "credits_5500",
-            "max_monthly_top_ups": 3,
-            "top_ups_this_month": 0,
-            "can_top_up": True,
+            "enabled": subscription.auto_top_up_enabled,
+            "threshold_credits": subscription.auto_top_up_threshold,
+            "top_up_pack_id": subscription.auto_top_up_pack_id,
+            "max_monthly_top_ups": subscription.auto_top_up_max_monthly,
+            "top_ups_this_month": subscription.auto_top_ups_this_month,
+            "can_top_up": can_top_up,
         }
 
     async def update_auto_top_up_settings(
@@ -674,35 +683,48 @@ class BillingService:
         top_up_pack_id: str,
         max_monthly_top_ups: int,
     ) -> Dict[str, Any]:
-        """
-        Update auto top-up settings for a user.
+        """Update auto top-up settings for a user in database."""
+        subscription = await self.get_subscription(user_id)
 
-        Note: In this initial implementation, changes are not persisted.
-        A full implementation would store in DB.
-        """
-        # TODO: Store in user_settings table or dedicated auto_top_up table
+        if not subscription:
+            raise BillingServiceError("No subscription found for user")
+
+        # Update settings
+        subscription.auto_top_up_enabled = enabled
+        subscription.auto_top_up_threshold = threshold_credits
+        subscription.auto_top_up_pack_id = top_up_pack_id
+        subscription.auto_top_up_max_monthly = max_monthly_top_ups
+        await self.session.flush()
+
         logger.info(f"Auto top-up settings updated for user {user_id}: enabled={enabled}")
+
+        can_top_up = subscription.auto_top_ups_this_month < max_monthly_top_ups
+
         return {
             "enabled": enabled,
             "threshold_credits": threshold_credits,
             "top_up_pack_id": top_up_pack_id,
             "max_monthly_top_ups": max_monthly_top_ups,
-            "top_ups_this_month": 0,
-            "can_top_up": True,
+            "top_ups_this_month": subscription.auto_top_ups_this_month,
+            "can_top_up": can_top_up,
         }
 
     async def get_spend_cap_settings(self, user_id: str) -> Dict[str, Any]:
-        """
-        Get spend cap settings for a user.
+        """Get spend cap settings for a user from database."""
+        subscription = await self.get_subscription(user_id)
 
-        Note: In this initial implementation, settings are defaults.
-        A full implementation would store in DB.
-        """
-        # TODO: Fetch from user_settings table or dedicated spend_cap table
+        if not subscription:
+            # Return defaults for users without subscription
+            return {
+                "enabled": False,
+                "max_monthly_spend_cents": 10000,
+                "current_month_spend_cents": 0,
+            }
+
         return {
-            "enabled": False,
-            "max_monthly_spend_cents": 10000,
-            "current_month_spend_cents": 0,
+            "enabled": subscription.spend_cap_enabled,
+            "max_monthly_spend_cents": subscription.spend_cap_amount_cents,
+            "current_month_spend_cents": subscription.spend_this_month_cents,
         }
 
     async def update_spend_cap_settings(
@@ -711,16 +733,60 @@ class BillingService:
         enabled: bool,
         max_monthly_spend_cents: int,
     ) -> Dict[str, Any]:
-        """
-        Update spend cap settings for a user.
+        """Update spend cap settings for a user in database."""
+        subscription = await self.get_subscription(user_id)
 
-        Note: In this initial implementation, changes are not persisted.
-        A full implementation would store in DB.
-        """
-        # TODO: Store in user_settings table or dedicated spend_cap table
-        logger.info(f"Spend cap settings updated for user {user_id}: enabled={enabled}")
+        if not subscription:
+            raise BillingServiceError("No subscription found for user")
+
+        # Update settings
+        subscription.spend_cap_enabled = enabled
+        subscription.spend_cap_amount_cents = max_monthly_spend_cents
+        await self.session.flush()
+
+        logger.info(f"Spend cap settings updated for user {user_id}: enabled={enabled}, max={max_monthly_spend_cents}")
+
         return {
             "enabled": enabled,
             "max_monthly_spend_cents": max_monthly_spend_cents,
-            "current_month_spend_cents": 0,
+            "current_month_spend_cents": subscription.spend_this_month_cents,
         }
+
+    async def get_invoices(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get invoice history for a user from Stripe.
+
+        Returns list of invoices with id, date, amount, status, and PDF URL.
+        """
+        stripe = get_stripe()
+        if not stripe:
+            return []
+
+        subscription = await self.get_subscription(user_id)
+        if not subscription or not subscription.stripe_customer_id:
+            return []
+
+        try:
+            invoices = stripe.Invoice.list(
+                customer=subscription.stripe_customer_id,
+                limit=limit,
+            )
+
+            return [
+                {
+                    "id": inv.id,
+                    "number": inv.number,
+                    "date": datetime.fromtimestamp(inv.created).isoformat(),
+                    "amount_cents": inv.amount_paid,
+                    "amount_display": f"${inv.amount_paid / 100:.2f}",
+                    "status": inv.status,
+                    "description": inv.lines.data[0].description if inv.lines.data else "Subscription",
+                    "pdf_url": inv.invoice_pdf,
+                    "hosted_invoice_url": inv.hosted_invoice_url,
+                }
+                for inv in invoices.data
+                if inv.status == "paid"  # Only show paid invoices
+            ]
+        except Exception as e:
+            logger.error(f"Failed to fetch invoices for user {user_id}: {e}")
+            return []

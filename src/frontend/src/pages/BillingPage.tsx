@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useAuth } from '@/providers/DevModeProvider'
 import { UsageBar } from '@/components/UsageBar'
-import { CreditBalance, BuyCreditsModal, AutoTopUpSettings, SpendCapSettings, PricingTable } from '@/components/billing'
+import { CreditBalance, BuyCreditsModal, AutoTopUpSettings, SpendCapSettings, PricingTable, InvoiceHistory } from '@/components/billing'
 import type { PlanId, BillingOverview, CreditBalance as CreditBalanceType, AutoTopUpSettings as AutoTopUpSettingsType, SpendCapSettings as SpendCapSettingsType } from '@/types'
 
 export function BillingPage() {
@@ -312,13 +312,16 @@ export function BillingPage() {
           </div>
 
           {/* Spending controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <AutoTopUpSettings
               settings={autoTopUpSettings}
               canUse={overview?.feature_access?.can_use_auto_top_up ?? false}
             />
             <SpendCapSettings settings={spendCapSettings} />
           </div>
+
+          {/* Invoice History */}
+          <InvoiceHistory limit={10} />
         </>
       )}
 

@@ -425,6 +425,25 @@ class PricingComparisonResponse(BaseModel):
     plans: List[Dict[str, Any]]
 
 
+class InvoiceResponse(BaseModel):
+    """Invoice details."""
+    id: str
+    number: Optional[str] = None
+    date: str
+    amount_cents: int
+    amount_display: str
+    status: str
+    description: str
+    pdf_url: Optional[str] = None
+    hosted_invoice_url: Optional[str] = None
+
+
+class InvoiceListResponse(BaseModel):
+    """List of invoices."""
+    invoices: List[InvoiceResponse]
+    has_more: bool = False
+
+
 @router.get(
     "/credits/balance",
     response_model=CreditBalanceResponse,
@@ -691,6 +710,42 @@ async def update_spend_cap(
         spend_remaining_cents=remaining,
         spend_remaining_display=f"${remaining / 100:.2f}",
         at_limit=current_spend >= max_spend if settings.get("enabled", False) else False,
+    )
+
+
+@router.get(
+    "/invoices",
+    response_model=InvoiceListResponse,
+    summary="Get invoice history",
+    description="Get billing invoice history from Stripe.",
+)
+async def get_invoice_history(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+    limit: int = Query(default=10, ge=1, le=100, description="Number of invoices to return"),
+) -> InvoiceListResponse:
+    """Get invoice history."""
+    user = await get_user_from_clerk(clerk_user, session)
+    billing = BillingService(session)
+
+    invoices = await billing.get_invoices(str(user.id), limit=limit)
+
+    return InvoiceListResponse(
+        invoices=[
+            InvoiceResponse(
+                id=inv.get("id", ""),
+                number=inv.get("number"),
+                date=inv.get("date", ""),
+                amount_cents=inv.get("amount_cents", 0),
+                amount_display=inv.get("amount_display", "$0.00"),
+                status=inv.get("status", ""),
+                description=inv.get("description", ""),
+                pdf_url=inv.get("pdf_url"),
+                hosted_invoice_url=inv.get("hosted_invoice_url"),
+            )
+            for inv in invoices
+        ],
+        has_more=len(invoices) == limit,
     )
 
 

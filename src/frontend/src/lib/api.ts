@@ -78,6 +78,7 @@ import type {
   ModelCost,
   PricingComparison,
   BillingOverview,
+  InvoiceListResponse,
   // Dashboard types
   DashboardStats,
   DashboardTotals,
@@ -1122,6 +1123,11 @@ class ApiClient {
   // Billing Overview (all-in-one)
   async getBillingOverview(): Promise<BillingOverview> {
     return this.request('/api/v1/billing/overview')
+  }
+
+  // Invoice History
+  async getInvoices(limit: number = 10): Promise<InvoiceListResponse> {
+    return this.request(`/api/v1/billing/invoices?limit=${limit}`)
   }
 
   // ===========================================================================

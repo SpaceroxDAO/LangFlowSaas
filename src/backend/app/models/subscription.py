@@ -61,6 +61,18 @@ class Subscription(BaseModel):
     # These are in addition to monthly plan credits and don't reset
     purchased_credits: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
+    # Auto top-up settings
+    auto_top_up_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    auto_top_up_threshold: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+    auto_top_up_pack_id: Mapped[str] = mapped_column(String(50), default="credits_5500", nullable=False)
+    auto_top_up_max_monthly: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    auto_top_ups_this_month: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Spend cap settings
+    spend_cap_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    spend_cap_amount_cents: Mapped[int] = mapped_column(Integer, default=10000, nullable=False)  # $100 default
+    spend_this_month_cents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     # Relationship to user
     user = relationship("User", back_populates="subscription")
 

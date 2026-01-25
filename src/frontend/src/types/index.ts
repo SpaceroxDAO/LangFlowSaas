@@ -984,6 +984,24 @@ export interface PortalResponse {
   portal_url: string
 }
 
+// Invoice Types
+export interface Invoice {
+  id: string
+  number: string | null
+  date: string
+  amount_cents: number
+  amount_display: string
+  status: string
+  description: string
+  pdf_url: string | null
+  hosted_invoice_url: string | null
+}
+
+export interface InvoiceListResponse {
+  invoices: Invoice[]
+  has_more: boolean
+}
+
 // ===========================================================================
 // Dashboard Analytics Types
 // ===========================================================================
