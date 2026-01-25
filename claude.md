@@ -1,9 +1,9 @@
 # Claude Code Instructions for Teach Charlie AI
 
 **Project**: Teach Charlie AI - Educational AI Agent Builder
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-01-25
 **Architecture**: Lightweight wrapper around Langflow (NOT a deep fork)
-**Status**: MVP Complete (Phase 13) - Ready for Production Deploy
+**Status**: MVP Complete - Production Live at https://app.teachcharlie.ai
 
 ## 🎯 Project Philosophy
 
@@ -154,11 +154,108 @@ alembic downgrade -1
 git add .
 git commit -m "feat: Add 3-step Q&A onboarding"
 git push origin main
-
-# Deploy to DataStax (future)
-# Follow RAGStack AI Langflow deployment guide
-# https://github.com/datastax/ragstack-ai-langflow
 ```
+
+## 🚀 CI/CD Workflows (IMPORTANT)
+
+> **Claude Code: READ THIS SECTION** - These workflows run automatically. Understand them to help the user effectively.
+
+### Production Server
+- **IP**: 138.197.92.153 (DigitalOcean)
+- **URL**: https://app.teachcharlie.ai
+- **SSH**: `ssh root@138.197.92.153`
+- **App Directory**: `/root/teachcharlie-app`
+
+### Workflow Files (in `.github/workflows/`)
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `test.yml` | Every push/PR | Runs linting, type checks, unit tests, E2E tests |
+| `security.yml` | Every push/PR + weekly | Scans for vulnerabilities, secrets, SAST |
+| `ai-review.yml` | Every PR | Claude AI reviews code and posts comments |
+| `deploy.yml` | Manual or Release | Deploys to production server via SSH |
+| `backup.yml` | Daily 3am UTC | Backs up PostgreSQL database |
+
+### Development Flow (Claude Code should follow this)
+
+```
+1. Make changes locally
+2. Test locally (npm run dev, pytest, etc.)
+3. Commit and push to GitHub
+   └── Automated: test.yml + security.yml run
+   └── If PR: ai-review.yml posts review comment
+4. If checks pass → merge to main
+5. Deploy to production (two options):
+   a. Manual: Go to GitHub Actions → "Deploy to Production" → Run workflow
+   b. Or SSH: ssh root@138.197.92.153 'cd /root/teachcharlie-app && git pull && docker compose -f docker-compose.prod.yml up -d --build'
+```
+
+### When User Asks to Deploy
+
+**DO THIS:**
+```bash
+# 1. Commit changes
+git add -A && git commit -m "feat: description" && git push origin main
+
+# 2. Deploy via SSH (faster than GitHub Actions)
+ssh root@138.197.92.153 'cd /root/teachcharlie-app && git pull && docker compose -f docker-compose.prod.yml up -d --build frontend backend'
+
+# 3. Verify deployment
+curl -sf https://app.teachcharlie.ai/health && echo "✓ Deployed successfully"
+```
+
+### When User Reports Production Issue
+
+**DO THIS:**
+```bash
+# 1. Check service status
+ssh root@138.197.92.153 'docker compose -f /root/teachcharlie-app/docker-compose.prod.yml ps'
+
+# 2. Check logs
+ssh root@138.197.92.153 'docker compose -f /root/teachcharlie-app/docker-compose.prod.yml logs --tail=50 backend'
+
+# 3. Check nginx logs for errors
+ssh root@138.197.92.153 'docker compose -f /root/teachcharlie-app/docker-compose.prod.yml logs --tail=50 nginx'
+```
+
+### Database Backup & Restore
+
+```bash
+# Manual backup
+ssh root@138.197.92.153 '/root/teachcharlie-app/scripts/backup-db.sh'
+
+# List backups
+ssh root@138.197.92.153 'ls -lh /root/backups/postgres/'
+
+# Restore from backup (DESTRUCTIVE - confirms before running)
+ssh root@138.197.92.153 '/root/teachcharlie-app/scripts/restore-db.sh /root/backups/postgres/teachcharlie_YYYYMMDD_HHMMSS.sql.gz'
+```
+
+### Rebuilding Specific Services
+
+```bash
+# Rebuild and restart frontend only
+ssh root@138.197.92.153 'cd /root/teachcharlie-app && git pull && docker compose -f docker-compose.prod.yml up -d --build frontend'
+
+# Rebuild and restart backend only
+ssh root@138.197.92.153 'cd /root/teachcharlie-app && git pull && docker compose -f docker-compose.prod.yml up -d --build backend'
+
+# Restart nginx (after config changes)
+ssh root@138.197.92.153 'cd /root/teachcharlie-app && docker compose -f docker-compose.prod.yml up -d nginx'
+
+# Full rebuild (slow - only if needed)
+ssh root@138.197.92.153 'cd /root/teachcharlie-app && git pull && docker compose -f docker-compose.prod.yml up -d --build'
+```
+
+### Security Workflow Behavior
+
+The security workflow **BLOCKS merges** if it finds:
+- Vulnerable dependencies (pip-audit, npm audit)
+- Security bugs in code (Semgrep SAST)
+- **Committed secrets** (Gitleaks) - ALWAYS blocks
+- Container vulnerabilities (Trivy)
+
+If user's PR is blocked by security, help them fix the issue before merging.
 
 ## 💻 Code Style Guidelines
 
