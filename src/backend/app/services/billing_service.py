@@ -207,13 +207,33 @@ class BillingService:
         return {"status": "success", "event_type": event_type}
 
     async def _handle_checkout_completed(self, session: Dict) -> None:
-        """Handle successful checkout."""
-        user_id = session.get("metadata", {}).get("user_id")
-        plan_id = session.get("metadata", {}).get("plan_id")
+        """Handle successful checkout (subscriptions and credit purchases)."""
+        metadata = session.get("metadata", {})
+        user_id = metadata.get("user_id")
+        checkout_type = metadata.get("type", "subscription")
+
+        if not user_id:
+            logger.warning("Checkout completed without user_id in metadata")
+            return
+
+        # Handle credit purchase
+        if checkout_type == "credit_purchase":
+            pack_id = metadata.get("pack_id")
+            credits = int(metadata.get("credits", 0))
+
+            if credits > 0:
+                await self._add_purchased_credits(user_id, credits, pack_id)
+                logger.info(f"User {user_id} purchased {credits} credits (pack: {pack_id})")
+            else:
+                logger.warning(f"Credit purchase for user {user_id} has 0 credits")
+            return
+
+        # Handle subscription upgrade
+        plan_id = metadata.get("plan_id")
         stripe_subscription_id = session.get("subscription")
 
-        if not user_id or not plan_id:
-            logger.warning("Checkout completed without user_id or plan_id")
+        if not plan_id:
+            logger.warning("Subscription checkout completed without plan_id")
             return
 
         subscription = await self.get_subscription(user_id)
@@ -481,21 +501,24 @@ class BillingService:
         Get current credit balance for a user.
 
         Returns dict with balance, purchased_credits, credits_used, etc.
-        Note: In this initial implementation, credits are tracked via usage.
-        A full implementation would have a separate credits table.
+        Credits = monthly plan credits + purchased credits - credits used this month.
         """
         plan = await self.get_plan_for_user(user_id)
         usage = await self.get_usage_summary(user_id)
+        subscription = await self.get_subscription(user_id)
 
         # Calculate credits used this month (simplified: 1 message = 10 credits)
         credits_used = usage.get("messages_sent", 0) * 10
 
-        # For now, return plan-based credits
+        # Get purchased credits from subscription
+        purchased_credits = subscription.purchased_credits if subscription else 0
+
+        # Total available = monthly + purchased - used
         monthly_credits = plan.limits.monthly_credits
-        credits_remaining = max(0, monthly_credits - credits_used)
+        total_credits = monthly_credits + purchased_credits
+        credits_remaining = max(0, total_credits - credits_used)
 
         # Get billing period end for reset date
-        subscription = await self.get_subscription(user_id)
         reset_date = None
         if subscription and subscription.current_period_end:
             reset_date = subscription.current_period_end.isoformat()
@@ -503,12 +526,29 @@ class BillingService:
         return {
             "balance": credits_remaining,
             "monthly_credits": monthly_credits,
-            "purchased_credits": 0,  # TODO: Track purchased credits in DB
+            "purchased_credits": purchased_credits,
             "credits_used": credits_used,
             "credits_remaining": credits_remaining,
             "reset_date": reset_date,
             "using_byo_key": False,  # TODO: Check if user has BYO API keys
         }
+
+    async def _add_purchased_credits(
+        self, user_id: str, credits: int, pack_id: str
+    ) -> None:
+        """
+        Add purchased credits to a user's account.
+
+        Called after successful credit pack checkout.
+        """
+        subscription = await self.get_subscription(user_id)
+        if subscription:
+            subscription.purchased_credits = (subscription.purchased_credits or 0) + credits
+            await self.session.flush()
+            logger.info(
+                f"Added {credits} purchased credits to user {user_id} "
+                f"(total: {subscription.purchased_credits})"
+            )
 
     async def create_credit_checkout(
         self,
@@ -546,10 +586,16 @@ class BillingService:
             logger.info(f"Created Stripe customer {customer.id} for user {user.id}")
 
         # Create one-time checkout session for credit purchase
-        session = stripe.checkout.Session.create(
-            customer=subscription.stripe_customer_id,
-            mode="payment",
-            line_items=[{
+        # Use the pre-configured Stripe Price ID if available, otherwise fall back to price_data
+        if pack.stripe_price_id:
+            line_items = [{
+                "price": pack.stripe_price_id,
+                "quantity": 1,
+            }]
+        else:
+            # Fallback to dynamic price_data (for testing/development only)
+            logger.warning(f"Credit pack {pack_id} has no stripe_price_id, using dynamic price_data")
+            line_items = [{
                 "price_data": {
                     "currency": "usd",
                     "unit_amount": pack.price_cents,
@@ -559,7 +605,12 @@ class BillingService:
                     },
                 },
                 "quantity": 1,
-            }],
+            }]
+
+        session = stripe.checkout.Session.create(
+            customer=subscription.stripe_customer_id,
+            mode="payment",
+            line_items=line_items,
             success_url=success_url,
             cancel_url=cancel_url,
             metadata={

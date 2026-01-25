@@ -4,7 +4,7 @@ Subscription model for billing and plan management.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Boolean, DateTime, ForeignKey
+from sqlalchemy import String, Boolean, DateTime, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import BaseModel
@@ -39,7 +39,7 @@ class Subscription(BaseModel):
     # Plan details
     plan_id: Mapped[str] = mapped_column(
         String(50), default="free", nullable=False
-    )  # free, pro, team
+    )  # free, individual, business
 
     # Subscription status
     status: Mapped[str] = mapped_column(
@@ -57,6 +57,10 @@ class Subscription(BaseModel):
     # Cancel at period end flag
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Purchased credits (from credit pack purchases)
+    # These are in addition to monthly plan credits and don't reset
+    purchased_credits: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     # Relationship to user
     user = relationship("User", back_populates="subscription")
 
@@ -71,4 +75,4 @@ class Subscription(BaseModel):
     @property
     def is_paid(self) -> bool:
         """Check if this is a paid plan."""
-        return self.plan_id in ("pro", "team")
+        return self.plan_id in ("individual", "business", "pro", "team")
