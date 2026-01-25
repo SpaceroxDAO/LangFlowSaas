@@ -1,0 +1,7 @@
+export { ResourcesLayout } from './ResourcesLayout'
+export { ResourcesHomePage } from './ResourcesHomePage'
+export { GuidesPage } from './GuidesPage'
+export { GuidePage } from './GuidePage'
+export { DevelopersPage } from './DevelopersPage'
+export { DeveloperDocPage } from './DeveloperDocPage'
+export { ChangelogPage } from './ChangelogPage'
