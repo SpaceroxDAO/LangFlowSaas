@@ -1,5 +1,5 @@
 """
-Middleware for authentication and request processing.
+Middleware for authentication, security, and request processing.
 """
 from app.middleware.clerk_auth import (
     ClerkUser,
@@ -8,6 +8,7 @@ from app.middleware.clerk_auth import (
     require_user,
 )
 from app.middleware.rate_limit import check_rate_limit, rate_limiter
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 __all__ = [
     "ClerkUser",
@@ -16,4 +17,5 @@ __all__ = [
     "require_user",
     "check_rate_limit",
     "rate_limiter",
+    "SecurityHeadersMiddleware",
 ]
