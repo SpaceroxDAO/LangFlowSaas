@@ -21,6 +21,14 @@ import { AnalyticsDashboardPage } from '@/pages/AnalyticsDashboardPage'
 import { MissionsPage } from '@/pages/MissionsPage'
 import { MissionCanvasPage } from '@/pages/MissionCanvasPage'
 import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
+// Resources pages (public documentation)
+import { ResourcesLayout } from '@/pages/resources/ResourcesLayout'
+import { ResourcesHomePage } from '@/pages/resources/ResourcesHomePage'
+import { GuidesPage } from '@/pages/resources/GuidesPage'
+import { GuidePage } from '@/pages/resources/GuidePage'
+import { DevelopersPage } from '@/pages/resources/DevelopersPage'
+import { DeveloperDocPage } from '@/pages/resources/DeveloperDocPage'
+import { ChangelogPage } from '@/pages/resources/ChangelogPage'
 
 // Use dev mode or Clerk components based on environment
 const AuthSignedIn = isDevMode ? DevSignedIn : SignedIn
@@ -71,6 +79,16 @@ function App() {
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/framework" element={<FrameworkPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+
+        {/* Resources - Public Documentation (GitBook-style) */}
+        <Route path="/resources" element={<ResourcesLayout />}>
+          <Route index element={<ResourcesHomePage />} />
+          <Route path="guides" element={<GuidesPage />} />
+          <Route path="guides/:slug" element={<GuidePage />} />
+          <Route path="developers" element={<DevelopersPage />} />
+          <Route path="developers/:slug" element={<DeveloperDocPage />} />
+          <Route path="changelog" element={<ChangelogPage />} />
+        </Route>
 
         {/* Protected routes with AppShell (sidebar) */}
         <Route
