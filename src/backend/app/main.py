@@ -3,16 +3,22 @@ Teach Charlie AI - FastAPI Backend Application
 
 This is the main entry point for the backend API.
 """
+import logging
 from contextlib import asynccontextmanager
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from app.config import settings
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.database import create_tables
+from app.exceptions import AppException
+from app.schemas.error import ErrorResponse, ErrorCode, ErrorDetail
 from app.api import (
     health_router,
     chat_router,
@@ -246,6 +252,11 @@ async def lifespan(app: FastAPI):
     # Startup: Validate environment configuration
     settings.validate_startup()
 
+    # CONNECTIVITY: Validate external service connectivity
+    # This catches network configuration issues (like missing public network access)
+    from app.startup_checks import run_startup_checks
+    await run_startup_checks(fail_on_error=False)  # Log errors but don't block startup
+
     # Validate Langflow container configuration (warns if misconfigured)
     # This catches container name mismatches early at startup
     from app.services.langflow_service import LangflowService
@@ -287,21 +298,11 @@ app = FastAPI(
 )
 
 # Configure CORS from environment
-# SECURITY: In production, this should be restricted to specific domains
-# The cors_origins_list is loaded from CORS_ORIGINS env var
+# SECURITY: CORS_ORIGINS env var is the single source of truth
+# For development, add localhost origins to CORS_ORIGINS in .env
+# Example: CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:5173
+# This prevents accidental CORS weakening if DEV_MODE is left enabled
 cors_origins = settings.cors_origins_list
-
-# Add development origins only in dev mode
-if settings.dev_mode:
-    dev_origins = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://127.0.0.1:5173",
-    ]
-    cors_origins = list(set(cors_origins + dev_origins))
 
 app.add_middleware(
     CORSMiddleware,
@@ -321,6 +322,104 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Remaining", "X-RateLimit-Reset"],
     max_age=86400,  # Cache preflight for 24 hours
 )
+
+# SECURITY: Add security headers to all responses
+# Protects against XSS, clickjacking, MIME sniffing, etc.
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# =============================================================================
+# EXCEPTION HANDLERS
+# =============================================================================
+# Standardized error responses for all API errors.
+# See app/schemas/error.py for the ErrorResponse schema.
+
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    """
+    Handle custom application exceptions.
+
+    Converts AppException to standardized ErrorResponse JSON.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ErrorResponse(
+            error=exc.error,
+            message=exc.message,
+            status_code=exc.status_code,
+            details=exc.details,
+        ).model_dump(exclude_none=True),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """
+    Handle Pydantic validation errors.
+
+    Converts validation errors to standardized ErrorResponse format
+    with field-level error details.
+    """
+    details = []
+    for error in exc.errors():
+        # Extract field name from location tuple
+        loc = error.get("loc", ())
+        field = ".".join(str(x) for x in loc[1:]) if len(loc) > 1 else str(loc[0]) if loc else "unknown"
+
+        details.append(
+            ErrorDetail(
+                field=field,
+                message=error.get("msg", "Invalid value"),
+                code=error.get("type", ErrorCode.INVALID_VALUE),
+            )
+        )
+
+    return JSONResponse(
+        status_code=422,
+        content=ErrorResponse(
+            error=ErrorCode.VALIDATION_ERROR,
+            message="Please check your input and try again.",
+            status_code=422,
+            details=details,
+        ).model_dump(exclude_none=True),
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Handle all unhandled exceptions.
+
+    In production, returns a generic error message.
+    In development, includes the actual error message for debugging.
+    """
+    # Log the actual error for debugging
+    logger.exception(f"Unhandled exception: {exc}")
+
+    # In development, include the error message
+    if settings.debug:
+        message = f"Internal error: {str(exc)}"
+    else:
+        message = "Something went wrong. Please try again."
+
+    return JSONResponse(
+        status_code=500,
+        content=ErrorResponse(
+            error=ErrorCode.INTERNAL_ERROR,
+            message=message,
+            status_code=500,
+        ).model_dump(exclude_none=True),
+    )
+
+
+# =============================================================================
+# API ROUTERS
+# =============================================================================
 
 # Include API routers
 app.include_router(health_router)

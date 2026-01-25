@@ -239,21 +239,37 @@ services:
       start_period: 60s
     networks:
       - teachcharlie-internal
+      - teachcharlie-public  # Needed to reach LLM APIs (OpenAI, Anthropic, etc.)
     restart: always
 
 # =============================================================================
 # Networks
 # =============================================================================
+# IMPORTANT: Network configuration for security and connectivity
+#
+# Services that need EXTERNAL internet access (public network):
+#   - nginx: None needed (only proxies to internal services)
+#   - backend: YES - needs to reach Clerk JWKS, OpenAI, Anthropic, Stripe APIs
+#   - langflow: YES - needs to reach LLM APIs (OpenAI, Anthropic, etc.)
+#   - frontend: None (static files only)
+#   - postgres: None (database should never reach internet)
+#   - redis: None (cache should never reach internet)
+#
+# If you see "Temporary failure in name resolution" errors, a service
+# that needs external access is missing from teachcharlie-public network.
+# =============================================================================
 networks:
-  # Public network - only nginx should be on this
+  # Public network - services that need external internet access
+  # WARNING: Adding a service here allows it to make outbound connections
   teachcharlie-public:
     driver: bridge
 
   # Internal network - all services communicate here
-  # No external access
+  # SECURITY: internal=true prevents containers from reaching the internet
+  # Only add services to teachcharlie-public if they NEED external access
   teachcharlie-internal:
     driver: bridge
-    internal: true  # SECURITY: No external access
+    internal: true  # SECURITY: No external access from this network
 
 # =============================================================================
 # Volumes

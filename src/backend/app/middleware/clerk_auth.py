@@ -141,7 +141,23 @@ def validate_clerk_token(token: str) -> dict:
         # SECURITY: Don't expose JWKS client details to client
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"JWKS client error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"JWKS client error: {error_msg}")
+
+        # Log additional diagnostic info for common issues
+        if "name resolution" in error_msg.lower() or "getaddrinfo" in error_msg.lower():
+            logger.error(
+                "DNS RESOLUTION FAILURE: Cannot reach Clerk JWKS endpoint. "
+                "This usually means the backend container is missing from the public network. "
+                f"Check docker-compose.prod.yml - backend needs 'teachcharlie-public' network. "
+                f"JWKS URL: {settings.clerk_jwks_url}"
+            )
+        elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+            logger.error(
+                "CONNECTION FAILURE: Cannot connect to Clerk JWKS endpoint. "
+                f"Check network connectivity and firewall rules. JWKS URL: {settings.clerk_jwks_url}"
+            )
+
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication service temporarily unavailable. Please try again.",
