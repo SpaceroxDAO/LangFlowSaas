@@ -128,7 +128,7 @@ class AutoTopUpSettingsRequest(BaseModel):
         description="Trigger when balance falls below this"
     )
     top_up_pack_id: str = Field(
-        default="credits_5000",
+        default="credits_5500",
         description="Credit pack to purchase on trigger"
     )
     max_monthly_top_ups: int = Field(
@@ -141,7 +141,7 @@ class AutoTopUpSettingsRequest(BaseModel):
     @field_validator('top_up_pack_id')
     @classmethod
     def validate_pack_id(cls, v: str) -> str:
-        valid_packs = ["credits_1000", "credits_5000", "credits_15000", "credits_50000"]
+        valid_packs = ["credits_2000", "credits_5500", "credits_12500"]
         if v not in valid_packs:
             raise ValueError(f"Invalid pack_id. Must be one of: {valid_packs}")
         return v

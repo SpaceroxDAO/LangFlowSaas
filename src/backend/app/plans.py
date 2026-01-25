@@ -4,6 +4,7 @@ Pricing plan configuration for Teach Charlie AI.
 Defines subscription tiers, AI credits system, and feature gating.
 Uses hybrid pricing: subscription + AI credits (with BYO API key option).
 """
+import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from enum import Enum
@@ -35,12 +36,14 @@ class Plan:
     id: str
     name: str
     price_monthly: int  # in cents (e.g., 1900 = $19.00)
-    stripe_price_id: Optional[str]  # Stripe Price ID for checkout
+    stripe_price_id: Optional[str]  # Stripe Price ID for monthly checkout
     limits: PlanLimits
     features: List[str]
     description: str = ""
     is_custom: bool = False  # For Business/Enterprise plans
     highlight: bool = False  # Highlight as recommended
+    price_yearly: int = 0  # in cents (e.g., 18000 = $180.00)
+    stripe_yearly_price_id: Optional[str] = None  # Stripe Price ID for yearly checkout
 
     @property
     def price_display(self) -> str:
@@ -54,6 +57,25 @@ class Plan:
         if cents == 0:
             return f"${dollars}/mo"
         return f"${dollars}.{cents:02d}/mo"
+
+    @property
+    def yearly_price_display(self) -> str:
+        """Get yearly display price string."""
+        if self.price_yearly == 0:
+            return ""
+        dollars = self.price_yearly // 100
+        return f"${dollars}/yr"
+
+    @property
+    def yearly_savings_display(self) -> str:
+        """Get savings for yearly vs monthly."""
+        if self.price_yearly == 0 or self.price_monthly == 0:
+            return ""
+        monthly_total = self.price_monthly * 12
+        savings = monthly_total - self.price_yearly
+        if savings > 0:
+            return f"Save ${savings // 100}"
+        return ""
 
 
 # Plan definitions - aligned with user spec
@@ -87,9 +109,11 @@ PLANS: Dict[str, Plan] = {
         id="individual",
         name="Individual",
         price_monthly=1900,  # $19.00
-        stripe_price_id=None,  # Set via STRIPE_INDIVIDUAL_PRICE_ID env var
+        stripe_price_id=os.getenv("STRIPE_INDIVIDUAL_MONTHLY_PRICE_ID"),
         description="Perfect for creators and solopreneurs",
         highlight=True,  # Recommended plan
+        price_yearly=18000,  # $180.00/year (save $48)
+        stripe_yearly_price_id=os.getenv("STRIPE_INDIVIDUAL_YEARLY_PRICE_ID"),
         limits=PlanLimits(
             agents=10,
             workflows=20,
@@ -193,32 +217,29 @@ class CreditPack:
 
 
 # Credit packs available for purchase
+# Aligned with Stripe products: $10, $25, $50 packs
 CREDIT_PACKS: Dict[str, CreditPack] = {
-    "credits_1000": CreditPack(
-        id="credits_1000",
-        name="1,000 Credits",
-        credits=1000,
-        price_cents=500,  # $5 = $0.005/credit
-        stripe_price_id=None,
+    "credits_2000": CreditPack(
+        id="credits_2000",
+        name="2,000 Credits",
+        credits=2000,
+        price_cents=1000,  # $10 = $0.005/credit
+        stripe_price_id=os.getenv("STRIPE_CREDITS_10_PRICE_ID"),
     ),
-    "credits_5000": CreditPack(
-        id="credits_5000",
-        name="5,000 Credits",
-        credits=5000,
-        price_cents=2000,  # $20 = $0.004/credit
+    "credits_5500": CreditPack(
+        id="credits_5500",
+        name="5,500 Credits",
+        credits=5500,
+        price_cents=2500,  # $25 = $0.0045/credit (10% bonus)
+        stripe_price_id=os.getenv("STRIPE_CREDITS_25_PRICE_ID"),
         popular=True,
     ),
-    "credits_15000": CreditPack(
-        id="credits_15000",
-        name="15,000 Credits",
-        credits=15000,
-        price_cents=5000,  # $50 = $0.0033/credit
-    ),
-    "credits_50000": CreditPack(
-        id="credits_50000",
-        name="50,000 Credits",
-        credits=50000,
-        price_cents=15000,  # $150 = $0.003/credit
+    "credits_12500": CreditPack(
+        id="credits_12500",
+        name="12,500 Credits",
+        credits=12500,
+        price_cents=5000,  # $50 = $0.004/credit (25% bonus)
+        stripe_price_id=os.getenv("STRIPE_CREDITS_50_PRICE_ID"),
     ),
 }
 
@@ -346,7 +367,7 @@ class AutoTopUpConfig:
     """Auto top-up configuration for a user."""
     enabled: bool = False
     threshold_credits: int = 100  # Trigger when balance falls below
-    top_up_pack_id: str = "credits_5000"  # Which pack to purchase
+    top_up_pack_id: str = "credits_5500"  # Which pack to purchase ($25 pack)
     max_monthly_top_ups: int = 3  # Safety limit
 
 

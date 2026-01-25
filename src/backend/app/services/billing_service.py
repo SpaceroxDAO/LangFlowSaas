@@ -587,7 +587,7 @@ class BillingService:
         return {
             "enabled": False,
             "threshold_credits": 100,
-            "top_up_pack_id": "credits_5000",
+            "top_up_pack_id": "credits_5500",
             "max_monthly_top_ups": 3,
             "top_ups_this_month": 0,
             "can_top_up": True,

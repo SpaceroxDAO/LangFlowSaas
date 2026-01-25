@@ -362,7 +362,7 @@ class AutoTopUpRequest(BaseModel):
     """Auto top-up settings request."""
     enabled: bool
     threshold_credits: int = Field(default=100, ge=50, le=1000)
-    top_up_pack_id: str = "credits_5000"
+    top_up_pack_id: str = "credits_5500"
     max_monthly_top_ups: int = Field(default=3, ge=1, le=10)
 
 
@@ -544,15 +544,15 @@ async def get_auto_top_up(
     billing = BillingService(session)
 
     settings = await billing.get_auto_top_up_settings(str(user.id))
-    pack = get_credit_pack(settings.get("top_up_pack_id", "credits_5000"))
+    pack = get_credit_pack(settings.get("top_up_pack_id", "credits_5500"))
 
     return AutoTopUpResponse(
         enabled=settings.get("enabled", False),
         threshold_credits=settings.get("threshold_credits", 100),
-        top_up_pack_id=settings.get("top_up_pack_id", "credits_5000"),
-        top_up_pack_name=pack.name if pack else "5,000 Credits",
-        top_up_credits=pack.credits if pack else 5000,
-        top_up_price_display=pack.price_display if pack else "$20",
+        top_up_pack_id=settings.get("top_up_pack_id", "credits_5500"),
+        top_up_pack_name=pack.name if pack else "5,500 Credits",
+        top_up_credits=pack.credits if pack else 5500,
+        top_up_price_display=pack.price_display if pack else "$25",
         max_monthly_top_ups=settings.get("max_monthly_top_ups", 3),
         top_ups_this_month=settings.get("top_ups_this_month", 0),
         can_top_up=settings.get("can_top_up", True),
@@ -602,7 +602,7 @@ async def update_auto_top_up(
     return AutoTopUpResponse(
         enabled=settings.get("enabled", False),
         threshold_credits=settings.get("threshold_credits", 100),
-        top_up_pack_id=settings.get("top_up_pack_id", "credits_5000"),
+        top_up_pack_id=settings.get("top_up_pack_id", "credits_5500"),
         top_up_pack_name=pack.name,
         top_up_credits=pack.credits,
         top_up_price_display=pack.price_display,
@@ -827,7 +827,7 @@ async def get_billing_overview(
         "auto_top_up": {
             "enabled": auto_top_up.get("enabled", False),
             "threshold_credits": auto_top_up.get("threshold_credits", 100),
-            "top_up_pack_id": auto_top_up.get("top_up_pack_id", "credits_5000"),
+            "top_up_pack_id": auto_top_up.get("top_up_pack_id", "credits_5500"),
             "top_ups_this_month": auto_top_up.get("top_ups_this_month", 0),
         },
         "spend_cap": {

@@ -141,8 +141,19 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""  # sk_test_xxx or sk_live_xxx
     stripe_publishable_key: str = ""  # pk_test_xxx or pk_live_xxx
     stripe_webhook_secret: str = ""  # whsec_xxx
-    stripe_pro_price_id: str = ""  # price_xxx for Pro plan
-    stripe_team_price_id: str = ""  # price_xxx for Team plan
+
+    # Subscription price IDs
+    stripe_individual_monthly_price_id: str = ""  # price_xxx for Individual monthly
+    stripe_individual_yearly_price_id: str = ""   # price_xxx for Individual yearly
+
+    # Credit pack price IDs
+    stripe_credits_10_price_id: str = ""   # $10 credit pack
+    stripe_credits_25_price_id: str = ""   # $25 credit pack
+    stripe_credits_50_price_id: str = ""   # $50 credit pack
+
+    # Legacy (kept for backwards compatibility)
+    stripe_pro_price_id: str = ""  # Deprecated - use stripe_individual_monthly_price_id
+    stripe_team_price_id: str = ""  # Deprecated - use business contact form
 
     # Encryption key for sensitive data (API keys, credentials)
     # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
