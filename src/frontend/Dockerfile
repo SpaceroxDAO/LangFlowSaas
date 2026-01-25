@@ -30,12 +30,22 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build arguments for Vite (must be available at build time)
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_API_URL=/api
+ARG VITE_LANGFLOW_HOST=/langflow
+
+# Set as environment variables for the build
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_LANGFLOW_HOST=$VITE_LANGFLOW_HOST
+
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
 
-# Build for production
+# Build for production (Vite embeds VITE_* env vars at build time)
 RUN npm run build
 
 # =====================================================
