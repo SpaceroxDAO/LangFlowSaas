@@ -126,6 +126,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-https://teachcharlie.ai,https://www.teachcharlie.ai}
     networks:
       - teachcharlie-internal
+      - teachcharlie-public  # Needed to fetch Clerk JWKS for JWT validation
     depends_on:
       postgres:
         condition: service_healthy
