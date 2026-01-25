@@ -448,53 +448,44 @@ def get_pricing_comparison() -> List[Dict]:
     Get pricing comparison data for the pricing page.
 
     Returns a list of feature rows with plan availability.
+    Aligned with marketing site at teachcharlie.ai/pricing
     """
     return [
         {
-            "category": "AI Agents",
+            "category": "Accounts",
             "features": [
-                {"name": "Number of agents", "free": "3", "individual": "10", "business": "Unlimited"},
-                {"name": "Workflows", "free": "2", "individual": "20", "business": "Unlimited"},
-                {"name": "Knowledge files", "free": "5", "individual": "50", "business": "Unlimited"},
+                {"name": "Agents", "free": "1 Live Agent", "individual": "Unlimited", "business": "Unlimited"},
+                {"name": "Runs / month", "free": "1,000 Runs", "individual": "Unlimited", "business": "Unlimited"},
+                {"name": "Team / users", "free": "1 User", "individual": "1 User", "business": "Team workspace + collaborators"},
             ]
         },
         {
-            "category": "AI Credits",
+            "category": "AI & Tool Access",
             "features": [
-                {"name": "Monthly included", "free": "500", "individual": "5,000", "business": "50,000+"},
-                {"name": "Buy additional credits", "free": False, "individual": True, "business": True},
-                {"name": "Auto top-up", "free": False, "individual": True, "business": True},
-                {"name": "BYO API keys", "free": True, "individual": True, "business": True},
+                {"name": "1000+ tools & models", "free": True, "individual": True, "business": True},
+                {"name": "Bring your own API key", "free": True, "individual": True, "business": True},
             ]
         },
         {
-            "category": "Features",
+            "category": "Learning & Community",
             "features": [
-                {"name": "Basic playground", "free": True, "individual": True, "business": True},
-                {"name": "Canvas editor", "free": False, "individual": True, "business": True},
-                {"name": "Export & embed", "free": False, "individual": True, "business": True},
-                {"name": "Custom components", "free": False, "individual": True, "business": True},
-                {"name": "Advanced analytics", "free": False, "individual": True, "business": True},
+                {"name": "Prebuilt templates", "free": True, "individual": True, "business": True},
+                {"name": "Guided lessons", "free": True, "individual": True, "business": True},
+                {"name": "Community access", "free": False, "individual": True, "business": True},
+                {"name": "AI agent academy", "free": False, "individual": True, "business": True},
+                {"name": "Live weekly workshops", "free": False, "individual": False, "business": True},
+                {"name": "Custom lessons", "free": False, "individual": False, "business": True},
+                {"name": "Custom onboarding", "free": False, "individual": False, "business": True},
             ]
         },
         {
-            "category": "Team & Enterprise",
+            "category": "Team, Admin & Support",
             "features": [
-                {"name": "Team members", "free": "1", "individual": "1", "business": "Unlimited"},
-                {"name": "Team collaboration", "free": False, "individual": False, "business": True},
-                {"name": "SSO (SAML/OIDC)", "free": False, "individual": False, "business": True},
-                {"name": "Audit logs", "free": False, "individual": False, "business": True},
-                {"name": "Custom branding", "free": False, "individual": False, "business": True},
-                {"name": "API access", "free": False, "individual": False, "business": True},
-            ]
-        },
-        {
-            "category": "Support",
-            "features": [
-                {"name": "Community support", "free": True, "individual": True, "business": True},
-                {"name": "Email support", "free": False, "individual": True, "business": True},
-                {"name": "Dedicated support", "free": False, "individual": False, "business": True},
-                {"name": "SLA guarantees", "free": False, "individual": False, "business": True},
+                {"name": "Team workspace", "free": False, "individual": False, "business": True},
+                {"name": "Collaborators", "free": False, "individual": False, "business": True},
+                {"name": "Granular permissions", "free": False, "individual": False, "business": True},
+                {"name": "Priority support", "free": False, "individual": False, "business": True},
+                {"name": "Custom SLAs / MSAs", "free": False, "individual": False, "business": True},
             ]
         },
     ]
