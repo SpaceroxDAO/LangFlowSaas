@@ -2,9 +2,10 @@
 Mission service for guided learning system.
 
 Handles mission listing, progress tracking, and step completion.
+Plan-based gating: See docs/19_PRICING_STRATEGY.md for gating strategy.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple
 
 from sqlalchemy import select, func
@@ -12,8 +13,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.mission import Mission
 from app.models.user_mission_progress import UserMissionProgress
+from app.models.subscription import Subscription
 
 logger = logging.getLogger(__name__)
+
+
+# Plan hierarchy for mission access
+# Higher plans have access to all missions from lower plans
+PLAN_HIERARCHY = {
+    "free": 0,
+    "individual": 1,
+    "business": 2,
+}
+
+
+def can_access_mission_by_plan(user_plan: str, required_plan: str) -> bool:
+    """
+    Check if a user's plan has access to a mission.
+
+    Higher tier plans have access to all missions from lower tiers.
+    e.g., "individual" can access "free" missions, "business" can access all.
+    """
+    user_level = PLAN_HIERARCHY.get(user_plan, 0)
+    required_level = PLAN_HIERARCHY.get(required_plan, 0)
+    return user_level >= required_level
 
 
 class MissionServiceError(Exception):
@@ -28,6 +51,32 @@ class MissionService:
         self.session = session
 
     # =========================================================================
+    # Plan Access
+    # =========================================================================
+
+    async def get_user_plan(self, user_id: str) -> str:
+        """Get the user's current plan. Defaults to 'free' if no subscription."""
+        stmt = select(Subscription).where(Subscription.user_id == user_id)
+        result = await self.session.execute(stmt)
+        subscription = result.scalar_one_or_none()
+
+        if subscription and subscription.status in ("active", "trialing"):
+            return subscription.plan_id
+
+        return "free"
+
+    async def can_access_mission(self, user_id: str, mission_id: str) -> bool:
+        """Check if a user can access a specific mission based on their plan."""
+        user_plan = await self.get_user_plan(user_id)
+
+        mission = await self.get_mission(mission_id)
+        if not mission:
+            return False
+
+        required_plan = getattr(mission, 'required_plan', 'free')
+        return can_access_mission_by_plan(user_plan, required_plan)
+
+    # =========================================================================
     # Mission Listing
     # =========================================================================
 
@@ -35,8 +84,13 @@ class MissionService:
         self,
         category: Optional[str] = None,
         active_only: bool = True,
+        user_id: Optional[str] = None,
     ) -> List[Mission]:
-        """List all available missions."""
+        """
+        List all available missions, optionally filtered by user's plan.
+
+        If user_id is provided, only returns missions the user has access to.
+        """
         stmt = select(Mission)
 
         if category:
@@ -48,7 +102,17 @@ class MissionService:
         stmt = stmt.order_by(Mission.sort_order)
 
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        missions = list(result.scalars().all())
+
+        # Filter by user's plan if user_id provided
+        if user_id:
+            user_plan = await self.get_user_plan(user_id)
+            missions = [
+                m for m in missions
+                if can_access_mission_by_plan(user_plan, getattr(m, 'required_plan', 'free'))
+            ]
+
+        return missions
 
     async def get_mission(self, mission_id: str) -> Optional[Mission]:
         """Get a single mission by ID."""
@@ -60,9 +124,19 @@ class MissionService:
         self,
         user_id: str,
         category: Optional[str] = None,
+        include_locked: bool = True,
     ) -> List[Dict[str, Any]]:
-        """Get missions with user's progress status."""
-        missions = await self.list_missions(category=category)
+        """
+        Get missions with user's progress status and access information.
+
+        If include_locked is True, returns all missions but marks locked ones.
+        If False, only returns missions the user has access to.
+        """
+        # Get user's plan
+        user_plan = await self.get_user_plan(user_id)
+
+        # Get all missions (not filtered by plan yet)
+        missions = await self.list_missions(category=category, user_id=None)
 
         # Get user's progress for all missions
         stmt = select(UserMissionProgress).where(
@@ -73,6 +147,13 @@ class MissionService:
 
         missions_with_progress = []
         for mission in missions:
+            required_plan = getattr(mission, 'required_plan', 'free')
+            has_access = can_access_mission_by_plan(user_plan, required_plan)
+
+            # Skip locked missions if include_locked is False
+            if not include_locked and not has_access:
+                continue
+
             progress = progress_records.get(mission.id)
             missions_with_progress.append({
                 "mission": mission,
@@ -82,6 +163,11 @@ class MissionService:
                     "completed_steps": progress.completed_steps if progress else [],
                     "started_at": progress.started_at.isoformat() if progress and progress.started_at else None,
                     "completed_at": progress.completed_at.isoformat() if progress and progress.completed_at else None,
+                },
+                "access": {
+                    "has_access": has_access,
+                    "required_plan": required_plan,
+                    "user_plan": user_plan,
                 }
             })
 
@@ -114,6 +200,15 @@ class MissionService:
         mission = await self.get_mission(mission_id)
         if not mission:
             raise MissionServiceError(f"Mission {mission_id} not found")
+
+        # Check plan access
+        has_access = await self.can_access_mission(user_id, mission_id)
+        if not has_access:
+            user_plan = await self.get_user_plan(user_id)
+            required_plan = getattr(mission, 'required_plan', 'free')
+            raise MissionServiceError(
+                f"Upgrade to {required_plan.title()} plan to access this mission"
+            )
 
         # Check prerequisites
         if mission.prerequisites:
@@ -292,6 +387,131 @@ class MissionService:
             "in_progress": in_progress,
             "not_started": total - completed - in_progress,
             "completion_percent": int((completed / total * 100)) if total > 0 else 0,
+        }
+
+    async def get_learning_progress(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get comprehensive learning progress for analytics.
+
+        Returns:
+        - missions_completed: Number of missions completed
+        - total_missions_available: Total missions in library
+        - skills_acquired: Skills learned from completed missions
+        - learning_streak_days: Consecutive days of activity
+        - estimated_capability_level: beginner/intermediate/advanced
+        - next_recommended_mission: ID of next suggested mission
+        """
+
+        # Get basic stats
+        stats = await self.get_user_stats(user_id)
+
+        # Get all missions and user progress
+        missions = await self.list_missions(user_id=None)  # All missions
+        progress_records = {}
+        stmt = select(UserMissionProgress).where(
+            UserMissionProgress.user_id == user_id
+        )
+        result = await self.session.execute(stmt)
+        for p in result.scalars().all():
+            progress_records[p.mission_id] = p
+
+        # Calculate skills from completed missions
+        skills_acquired = set()
+        completed_missions = []
+        for mission in missions:
+            progress = progress_records.get(mission.id)
+            if progress and progress.status == "completed":
+                completed_missions.append(mission)
+                # Extract skills from mission outcomes
+                if mission.outcomes:
+                    for outcome in mission.outcomes:
+                        # Extract skill keywords from outcomes
+                        skills_acquired.add(outcome)
+
+        # Map outcomes to skill categories
+        skill_keywords = {
+            "prompt": "Prompt Engineering",
+            "rag": "RAG & Knowledge",
+            "tool": "Tool Integration",
+            "agent": "Agent Design",
+            "workflow": "Workflow Automation",
+            "embed": "Embedding & Deployment",
+        }
+        mapped_skills = set()
+        for skill in skills_acquired:
+            skill_lower = skill.lower()
+            for keyword, display_name in skill_keywords.items():
+                if keyword in skill_lower:
+                    mapped_skills.add(display_name)
+
+        # If no mapped skills but has completed missions, add generic skill
+        if not mapped_skills and completed_missions:
+            mapped_skills.add("AI Agent Basics")
+
+        # Calculate learning streak (consecutive days with activity)
+        learning_streak_days = 0
+        recent_activity = []
+        for progress in progress_records.values():
+            if progress.started_at:
+                recent_activity.append(progress.started_at.date())
+            if progress.completed_at:
+                recent_activity.append(progress.completed_at.date())
+
+        if recent_activity:
+            today = datetime.utcnow().date()
+            recent_activity = sorted(set(recent_activity), reverse=True)
+
+            # Count consecutive days
+            current_date = today
+            for activity_date in recent_activity:
+                if activity_date == current_date or activity_date == current_date - timedelta(days=1):
+                    learning_streak_days += 1
+                    current_date = activity_date
+                else:
+                    break
+
+        # Determine capability level
+        completion_ratio = stats["completed"] / stats["total_missions"] if stats["total_missions"] > 0 else 0
+        if completion_ratio >= 0.7:
+            estimated_capability_level = "advanced"
+        elif completion_ratio >= 0.3 or stats["completed"] >= 3:
+            estimated_capability_level = "intermediate"
+        else:
+            estimated_capability_level = "beginner"
+
+        # Find next recommended mission
+        # Prefer: in_progress > not_started by sort_order > locked missions
+        next_recommended_mission = None
+        user_plan = await self.get_user_plan(user_id)
+
+        # First check in-progress missions
+        for mission in missions:
+            progress = progress_records.get(mission.id)
+            if progress and progress.status == "in_progress":
+                next_recommended_mission = mission.id
+                break
+
+        # Then check not-started missions user has access to
+        if not next_recommended_mission:
+            for mission in missions:
+                progress = progress_records.get(mission.id)
+                if not progress or progress.status == "not_started":
+                    required_plan = getattr(mission, 'required_plan', 'free')
+                    if can_access_mission_by_plan(user_plan, required_plan):
+                        next_recommended_mission = mission.id
+                        break
+
+        return {
+            "missions_completed": stats["completed"],
+            "total_missions_available": stats["total_missions"],
+            "skills_acquired": list(mapped_skills),
+            "learning_streak_days": learning_streak_days,
+            "estimated_capability_level": estimated_capability_level,
+            "next_recommended_mission": next_recommended_mission,
+            # Additional useful stats
+            "missions_in_progress": stats["in_progress"],
+            "completion_percent": stats["completion_percent"],
+            "user_plan": user_plan,
         }
 
     # =========================================================================

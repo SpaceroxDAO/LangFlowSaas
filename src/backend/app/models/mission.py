@@ -46,6 +46,11 @@ class Mission(Base):
     # Active flag
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    # Plan gating - which plan is required to access this mission
+    # "free" = available to all, "individual" = paid only, "business" = business only
+    # See docs/19_PRICING_STRATEGY.md for gating strategy
+    required_plan: Mapped[str] = mapped_column(String(20), default="free", nullable=False)
+
     # Canvas integration fields
     template_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     component_pack: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
@@ -63,8 +68,10 @@ class Mission(Base):
 
 
 # Default missions to seed
+# Plan gating: "free" = starter missions (available to all), "individual" = full library
+# See docs/19_PRICING_STRATEGY.md for gating strategy
 DEFAULT_MISSIONS = [
-    # ===== L001: Hello Charlie =====
+    # ===== L001: Hello Charlie ===== (STARTER MISSION - FREE)
     # First mission - introduces the canvas and basic agent creation
     {
         "id": "L001-hello-charlie",
@@ -75,6 +82,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 10,
         "icon": "bot",
         "sort_order": 1,
+        "required_plan": "free",  # STARTER MISSION
         "canvas_mode": True,
         "template_id": "agent_base",
         # UI Config - removed hiding, show full canvas
@@ -149,7 +157,7 @@ DEFAULT_MISSIONS = [
             "Chat with your first AI agent",
         ],
     },
-    # ===== L002: FAQ Bot v1 =====
+    # ===== L002: FAQ Bot v1 ===== (STARTER MISSION - FREE)
     # Second mission - teaches specialized agents, guardrails, and escalation
     {
         "id": "L002-faq-bot-v1",
@@ -160,6 +168,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 20,
         "icon": "help-circle",
         "sort_order": 2,
+        "required_plan": "free",  # STARTER MISSION
         "canvas_mode": True,
         "template_id": "agent_base",
         # UI Config - show full canvas (same as L001)
@@ -299,6 +308,7 @@ DEFAULT_MISSIONS = [
             "Set up escalation to human support",
         ],
     },
+    # ===== L003+ : FULL LIBRARY (INDIVIDUAL PLAN) =====
     {
         "id": "L003",
         "name": "Daily Co-Pilot",
@@ -308,6 +318,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 45,
         "icon": "calendar",
         "sort_order": 3,
+        "required_plan": "individual",  # PAID MISSION
         "steps": [
             {"id": 1, "title": "Define Your Needs", "description": "List 3-5 tasks you do regularly that an AI could help with.", "type": "info"},
             {"id": 2, "title": "Create the Agent", "description": "Build an agent with a helpful assistant personality.", "type": "action"},
@@ -327,6 +338,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 30,
         "icon": "tool",
         "sort_order": 4,
+        "required_plan": "individual",  # PAID MISSION
         "steps": [
             {"id": 1, "title": "What are MCP Servers?", "description": "Learn how MCP servers extend your agent's abilities.", "type": "info"},
             {"id": 2, "title": "Browse Available Tools", "description": "Explore the MCP Server library.", "type": "action"},
@@ -345,6 +357,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 25,
         "icon": "link",
         "sort_order": 5,
+        "required_plan": "individual",  # PAID MISSION
         "steps": [
             {"id": 1, "title": "Choose a Service", "description": "Pick a service you already use (calendar, notes, etc.).", "type": "info"},
             {"id": 2, "title": "Find the MCP Server", "description": "Search for an MCP server that connects to your service.", "type": "action"},
@@ -363,6 +376,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 60,
         "icon": "inbox",
         "sort_order": 6,
+        "required_plan": "individual",  # PAID MISSION
         "steps": [
             {"id": 1, "title": "Plan Your Concierge", "description": "Define what tasks you want automated.", "type": "info"},
             {"id": 2, "title": "Connect Email", "description": "Set up an MCP server for email access.", "type": "action"},
@@ -383,6 +397,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 30,
         "icon": "book-open",
         "sort_order": 7,
+        "required_plan": "individual",  # PAID MISSION
         "steps": [
             {"id": 1, "title": "What is RAG?", "description": "Learn about Retrieval Augmented Generation.", "type": "info"},
             {"id": 2, "title": "Upload a Document", "description": "Add a document to the Knowledge Sources.", "type": "action"},
@@ -401,6 +416,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 90,
         "icon": "brain",
         "sort_order": 8,
+        "required_plan": "individual",  # PAID MISSION
         "steps": [
             {"id": 1, "title": "Gather Your Knowledge", "description": "Collect documents, notes, and files you want to include.", "type": "info"},
             {"id": 2, "title": "Upload to Knowledge Base", "description": "Add your documents to Knowledge Sources.", "type": "action"},
@@ -422,6 +438,7 @@ DEFAULT_MISSIONS = [
         "estimated_minutes": 20,
         "icon": "bot",
         "sort_order": 10,
+        "required_plan": "individual",  # PAID MISSION
         "canvas_mode": True,
         "template_id": "agent_base",
         "component_pack": {

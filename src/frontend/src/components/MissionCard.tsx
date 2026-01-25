@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import type { MissionWithProgress } from '@/types'
 
 interface MissionCardProps {
@@ -6,6 +7,13 @@ interface MissionCardProps {
   onContinue: () => void
   onView: () => void
 }
+
+// Lock icon for gated missions
+const LockIcon = () => (
+  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+  </svg>
+)
 
 // Icon mapping for mission icons
 const iconMap: Record<string, React.ReactNode> = {
@@ -94,32 +102,58 @@ function getStatusBadge(status: string) {
 }
 
 export function MissionCard({ mission, onStart, onContinue, onView }: MissionCardProps) {
-  const { mission: m, progress } = mission
+  const navigate = useNavigate()
+  const { mission: m, progress, access } = mission
   const Icon = iconMap[m.icon || 'wave'] || iconMap.wave
   const completedSteps = progress.completed_steps.length
   const totalSteps = m.steps.length
   const progressPercent = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
 
+  // Check if mission is locked (requires upgrade)
+  const isLocked = access && !access.has_access
+  const requiredPlan = access?.required_plan || 'free'
+
+  const handleUpgradeClick = () => {
+    navigate('/billing?tab=plans')
+  }
+
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-5 hover:shadow-md dark:hover:shadow-neutral-900/50 transition-shadow">
+    <div className={`bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-5 transition-shadow ${
+      isLocked
+        ? 'opacity-75 hover:opacity-100'
+        : 'hover:shadow-md dark:hover:shadow-neutral-900/50'
+    }`}>
       {/* Header */}
       <div className="flex items-start gap-4">
         {/* Icon */}
         <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
-          m.category === 'skill_sprint'
-            ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
-            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+          isLocked
+            ? 'bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500'
+            : m.category === 'skill_sprint'
+              ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
         }`}>
-          {Icon}
+          {isLocked ? <LockIcon /> : Icon}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{m.name}</h3>
-            {getStatusBadge(progress.status)}
+            <h3 className={`text-lg font-semibold truncate ${
+              isLocked ? 'text-gray-500 dark:text-neutral-500' : 'text-gray-900 dark:text-white'
+            }`}>{m.name}</h3>
+            {isLocked ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                <LockIcon />
+                {requiredPlan.charAt(0).toUpperCase() + requiredPlan.slice(1)}
+              </span>
+            ) : (
+              getStatusBadge(progress.status)
+            )}
           </div>
-          <p className="text-sm text-gray-600 dark:text-neutral-400 line-clamp-2 mb-3">{m.description}</p>
+          <p className={`text-sm line-clamp-2 mb-3 ${
+            isLocked ? 'text-gray-400 dark:text-neutral-500' : 'text-gray-600 dark:text-neutral-400'
+          }`}>{m.description}</p>
 
           {/* Meta info */}
           <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-neutral-400">
@@ -142,8 +176,8 @@ export function MissionCard({ mission, onStart, onContinue, onView }: MissionCar
         </div>
       </div>
 
-      {/* Progress bar (if in progress) */}
-      {progress.status === 'in_progress' && (
+      {/* Progress bar (if in progress and not locked) */}
+      {!isLocked && progress.status === 'in_progress' && (
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-neutral-400 mb-1">
             <span>Progress</span>
@@ -160,29 +194,41 @@ export function MissionCard({ mission, onStart, onContinue, onView }: MissionCar
 
       {/* Action button */}
       <div className="mt-4 flex justify-end">
-        {progress.status === 'not_started' && (
+        {isLocked ? (
           <button
-            onClick={onStart}
-            className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+            onClick={handleUpgradeClick}
+            className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-violet-700 hover:to-purple-700 transition-colors flex items-center gap-2"
           >
-            Start Mission
+            <LockIcon />
+            Upgrade to Unlock
           </button>
-        )}
-        {progress.status === 'in_progress' && (
-          <button
-            onClick={onContinue}
-            className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
-          >
-            Continue
-          </button>
-        )}
-        {progress.status === 'completed' && (
-          <button
-            onClick={onView}
-            className="px-4 py-2 bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
-          >
-            Review
-          </button>
+        ) : (
+          <>
+            {progress.status === 'not_started' && (
+              <button
+                onClick={onStart}
+                className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+              >
+                Start Mission
+              </button>
+            )}
+            {progress.status === 'in_progress' && (
+              <button
+                onClick={onContinue}
+                className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors"
+              >
+                Continue
+              </button>
+            )}
+            {progress.status === 'completed' && (
+              <button
+                onClick={onView}
+                className="px-4 py-2 bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-neutral-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                Review
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

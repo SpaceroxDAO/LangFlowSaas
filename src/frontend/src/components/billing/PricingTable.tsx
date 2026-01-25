@@ -225,8 +225,8 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
         {/* Plan headers */}
         <div className="grid grid-cols-4 border-b border-slate-200 dark:border-neutral-800">
           <div className="p-6 bg-slate-50 dark:bg-neutral-900/50">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Compare Plans</h3>
-            <p className="text-sm text-slate-500 dark:text-neutral-400 mt-1">Find the right plan for your needs</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Your AI Learning Journey</h3>
+            <p className="text-sm text-slate-500 dark:text-neutral-400 mt-1">Where will you be in 30 days?</p>
           </div>
 
           {plans.map((plan) => {
@@ -336,7 +336,7 @@ export function PricingTable({ currentPlanId = 'free', onSelectPlan, compact = f
         {/* Footer */}
         <div className="p-6 bg-slate-50 dark:bg-neutral-900/50 text-center">
           <p className="text-sm text-slate-500 dark:text-neutral-400">
-            All plans include a 14-day money-back guarantee. No credit card required for Free plan.
+            Start learning free, upgrade when you're ready for more. 14-day money-back guarantee on all paid plans.
           </p>
         </div>
       </div>

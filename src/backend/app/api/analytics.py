@@ -16,6 +16,7 @@ from app.models.user import User
 from app.services.user_service import UserService
 from app.services.workflow_service import WorkflowService
 from app.services.langflow_client import langflow_client, LangflowClientError
+from app.services.mission_service import MissionService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -47,6 +48,20 @@ class MessagesResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class LearningProgressResponse(BaseModel):
+    """Learning progress analytics for education-first pricing."""
+    missions_completed: int
+    total_missions_available: int
+    skills_acquired: List[str]
+    learning_streak_days: int
+    estimated_capability_level: str
+    next_recommended_mission: Optional[str] = None
+    # Additional context
+    missions_in_progress: int
+    completion_percent: int
+    user_plan: str
 
 
 async def get_user_from_clerk(
@@ -178,3 +193,34 @@ async def get_workflow_messages(
             status_code=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch messages: {e.message}",
         )
+
+
+@router.get(
+    "/learning-progress",
+    response_model=LearningProgressResponse,
+    summary="Get learning progress analytics",
+    description="Get comprehensive learning progress including missions completed, skills acquired, and capability level.",
+)
+async def get_learning_progress(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+) -> LearningProgressResponse:
+    """
+    Get user's learning progress analytics.
+
+    Returns:
+    - Missions completed and total available
+    - Skills acquired from completed missions
+    - Learning streak (consecutive days of activity)
+    - Estimated capability level (beginner/intermediate/advanced)
+    - Next recommended mission to take
+
+    This endpoint powers the education-first value proposition by showing
+    users their learning journey progress.
+    """
+    user = await get_user_from_clerk(clerk_user, session)
+    mission_service = MissionService(session)
+
+    progress = await mission_service.get_learning_progress(str(user.id))
+
+    return LearningProgressResponse(**progress)

@@ -91,6 +91,8 @@ import type {
   CanvasStartResponse,
   CanvasEvent,
   CanvasEventResponse,
+  // Learning analytics
+  LearningProgress,
   // Connection types (Composio OAuth)
   Connection,
   ConnectionInitiateRequest,
@@ -243,6 +245,10 @@ class ApiClient {
     offset: number = 0
   ): Promise<MessagesResponse> {
     return this.request(`/api/v1/analytics/agents/${agentId}/messages?limit=${limit}&offset=${offset}`)
+  }
+
+  async getLearningProgress(): Promise<LearningProgress> {
+    return this.request('/api/v1/analytics/learning-progress')
   }
 
   // Projects

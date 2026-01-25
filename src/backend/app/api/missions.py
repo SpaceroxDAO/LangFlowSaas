@@ -78,11 +78,20 @@ class MissionProgressResponse(BaseModel):
     completed_at: Optional[str] = None
 
 
+class MissionAccessResponse(BaseModel):
+    """Response model for mission access status."""
+
+    has_access: bool
+    required_plan: str
+    user_plan: str
+
+
 class MissionWithProgressResponse(BaseModel):
-    """Mission with user's progress."""
+    """Mission with user's progress and access status."""
 
     mission: MissionResponse
     progress: MissionProgressResponse
+    access: Optional[MissionAccessResponse] = None
 
 
 class MissionListResponse(BaseModel):
@@ -152,7 +161,11 @@ async def get_user_from_clerk(clerk_user: CurrentUser, session: AsyncSessionDep)
     return await user_service.get_or_create_from_clerk(clerk_user)
 
 
-def mission_to_response(mission, progress_data: Optional[Dict] = None) -> MissionWithProgressResponse:
+def mission_to_response(
+    mission,
+    progress_data: Optional[Dict] = None,
+    access_data: Optional[Dict] = None,
+) -> MissionWithProgressResponse:
     """Convert mission model to response."""
     return MissionWithProgressResponse(
         mission=MissionResponse(
@@ -179,6 +192,11 @@ def mission_to_response(mission, progress_data: Optional[Dict] = None) -> Missio
             started_at=progress_data.get("started_at") if progress_data else None,
             completed_at=progress_data.get("completed_at") if progress_data else None,
         ),
+        access=MissionAccessResponse(
+            has_access=access_data.get("has_access", True) if access_data else True,
+            required_plan=access_data.get("required_plan", "free") if access_data else "free",
+            user_plan=access_data.get("user_plan", "free") if access_data else "free",
+        ) if access_data else None,
     )
 
 
@@ -217,7 +235,7 @@ async def list_missions(
 
     return MissionListResponse(
         missions=[
-            mission_to_response(mp["mission"], mp["progress"])
+            mission_to_response(mp["mission"], mp["progress"], mp.get("access"))
             for mp in missions_with_progress
         ],
         categories=categories,

@@ -78,30 +78,31 @@ class Plan:
         return ""
 
 
-# Plan definitions - aligned with user spec
+# Plan definitions - education-first positioning
+# See docs/19_PRICING_STRATEGY.md for full strategy
 PLANS: Dict[str, Plan] = {
     "free": Plan(
         id="free",
         name="Free",
         price_monthly=0,
         stripe_price_id=None,
-        description="Get started building AI agents",
+        description="Learn AI fundamentals and build your first agent",
         limits=PlanLimits(
-            agents=3,
+            agents=1,  # 1 live agent (education entry point)
             workflows=2,
             mcp_servers=2,
             projects=1,
             file_storage_mb=50,
-            monthly_credits=500,
+            monthly_credits=500,  # ~1000 runs
             knowledge_files=5,
             team_members=1,
         ),
         features=[
-            "3 AI agents",
-            "500 AI credits/month",
+            "3 Starter Missions",
+            "1 Live Agent",
+            "1,000 test runs/month",
+            "Canvas preview (read-only)",
             "Basic playground",
-            "Community support",
-            "2 workflows",
             "5 knowledge files",
         ],
     ),
@@ -110,30 +111,30 @@ PLANS: Dict[str, Plan] = {
         name="Individual",
         price_monthly=1900,  # $19.00
         stripe_price_id=os.getenv("STRIPE_INDIVIDUAL_MONTHLY_PRICE_ID"),
-        description="Perfect for creators and solopreneurs",
+        description="Master AI agents with full curriculum access",
         highlight=True,  # Recommended plan
         price_yearly=18000,  # $180.00/year (save $48)
         stripe_yearly_price_id=os.getenv("STRIPE_INDIVIDUAL_YEARLY_PRICE_ID"),
         limits=PlanLimits(
-            agents=10,
+            agents=-1,  # Unlimited agents
             workflows=20,
             mcp_servers=10,
             projects=5,
             file_storage_mb=500,
-            monthly_credits=5000,
+            monthly_credits=5000,  # Unlimited runs
             knowledge_files=50,
             team_members=1,
         ),
         features=[
-            "10 AI agents",
-            "5,000 AI credits/month",
-            "Canvas editor unlock",
-            "Advanced analytics",
-            "Custom components",
+            "Full Mission Library (20+)",
+            "Unlimited Agents",
+            "Unlimited test runs",
+            "Full Canvas editor",
+            "AI Agent Academy",
+            "Community access",
             "Export & embed agents",
             "50 knowledge files",
             "Email support",
-            "Buy additional credits",
         ],
     ),
     "business": Plan(
@@ -141,7 +142,7 @@ PLANS: Dict[str, Plan] = {
         name="Business",
         price_monthly=0,  # Custom pricing
         stripe_price_id=None,
-        description="For teams and organizations",
+        description="Transform your team's AI capabilities",
         is_custom=True,
         limits=PlanLimits(
             agents=-1,  # -1 = unlimited
@@ -154,16 +155,16 @@ PLANS: Dict[str, Plan] = {
             team_members=-1,
         ),
         features=[
-            "Unlimited agents",
-            "50,000+ AI credits/month",
-            "Team collaboration",
+            "Everything in Individual",
+            "Custom learning paths",
+            "Live weekly workshops",
+            "Team workspace",
+            "Team progress tracking",
             "SSO (SAML/OIDC)",
             "Audit logs",
-            "Custom branding",
-            "API access",
-            "Dedicated support",
-            "Volume discounts",
-            "SLA guarantees",
+            "Priority support",
+            "Dedicated onboarding",
+            "Custom SLAs",
         ],
     ),
 }
@@ -448,44 +449,72 @@ def get_pricing_comparison() -> List[Dict]:
     Get pricing comparison data for the pricing page.
 
     Returns a list of feature rows with plan availability.
-    Aligned with marketing site at teachcharlie.ai/pricing
+    Education-first positioning: Learning features come before building features.
+    See docs/19_PRICING_STRATEGY.md for full strategy.
     """
     return [
         {
-            "category": "Accounts",
+            "category": "Learning Journey",
+            "description": "Build your AI skills step by step",
             "features": [
-                {"name": "Agents", "free": "1 Live Agent", "individual": "Unlimited", "business": "Unlimited"},
-                {"name": "Runs / month", "free": "1,000 Runs", "individual": "Unlimited", "business": "Unlimited"},
-                {"name": "Team / users", "free": "1 User", "individual": "1 User", "business": "Team workspace + collaborators"},
+                {"name": "Learning Missions", "free": "3 Starter", "individual": "Full Library (20+)", "business": "Full + Custom"},
+                {"name": "Skill Sprints", "free": "Basics only", "individual": True, "business": True},
+                {"name": "Applied Builds", "free": False, "individual": True, "business": True},
+                {"name": "AI Agent Academy", "free": False, "individual": True, "business": True},
+                {"name": "Live weekly workshops", "free": False, "individual": False, "business": True},
+                {"name": "Custom learning paths", "free": False, "individual": False, "business": True},
             ]
         },
         {
-            "category": "AI & Tool Access",
+            "category": "Building",
+            "description": "Create production-ready AI agents",
             "features": [
-                {"name": "1000+ tools & models", "free": True, "individual": True, "business": True},
+                {"name": "Live Agents", "free": "1", "individual": "Unlimited", "business": "Unlimited"},
+                {"name": "Test runs / month", "free": "1,000", "individual": "Unlimited", "business": "Unlimited"},
+                {"name": "Canvas editor", "free": "Preview only", "individual": True, "business": True},
+                {"name": "Export & embed", "free": False, "individual": True, "business": True},
+                {"name": "Knowledge base files", "free": "5", "individual": "50", "business": "Unlimited"},
+                {"name": "1000+ tools & integrations", "free": True, "individual": True, "business": True},
                 {"name": "Bring your own API key", "free": True, "individual": True, "business": True},
             ]
         },
         {
-            "category": "Learning & Community",
+            "category": "Community & Support",
+            "description": "Get help when you need it",
             "features": [
-                {"name": "Prebuilt templates", "free": True, "individual": True, "business": True},
-                {"name": "Guided lessons", "free": True, "individual": True, "business": True},
                 {"name": "Community access", "free": False, "individual": True, "business": True},
-                {"name": "AI agent academy", "free": False, "individual": True, "business": True},
-                {"name": "Live weekly workshops", "free": False, "individual": False, "business": True},
-                {"name": "Custom lessons", "free": False, "individual": False, "business": True},
-                {"name": "Custom onboarding", "free": False, "individual": False, "business": True},
+                {"name": "Email support", "free": False, "individual": True, "business": True},
+                {"name": "Priority support", "free": False, "individual": False, "business": True},
+                {"name": "Dedicated onboarding", "free": False, "individual": False, "business": True},
             ]
         },
         {
-            "category": "Team, Admin & Support",
+            "category": "Team & Admin",
+            "description": "Scale AI capabilities across your organization",
             "features": [
                 {"name": "Team workspace", "free": False, "individual": False, "business": True},
+                {"name": "Team progress tracking", "free": False, "individual": False, "business": True},
                 {"name": "Collaborators", "free": False, "individual": False, "business": True},
-                {"name": "Granular permissions", "free": False, "individual": False, "business": True},
-                {"name": "Priority support", "free": False, "individual": False, "business": True},
-                {"name": "Custom SLAs / MSAs", "free": False, "individual": False, "business": True},
+                {"name": "SSO / SAML", "free": False, "individual": False, "business": True},
+                {"name": "Audit logs", "free": False, "individual": False, "business": True},
+                {"name": "Custom SLAs", "free": False, "individual": False, "business": True},
             ]
         },
     ]
+
+
+# =============================================================================
+# PLAN OUTCOMES (for UI display)
+# =============================================================================
+
+PLAN_OUTCOMES: Dict[str, str] = {
+    "free": "I understand AI agents and built my first one",
+    "individual": "I can build any AI agent I need",
+    "business": "Our whole team can build AI agents",
+}
+
+
+def get_plan_outcome(plan_id: str) -> str:
+    """Get the outcome statement for a plan."""
+    plan_id = LEGACY_PLAN_MAPPING.get(plan_id, plan_id)
+    return PLAN_OUTCOMES.get(plan_id, PLAN_OUTCOMES["free"])

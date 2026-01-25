@@ -1137,9 +1137,16 @@ export interface MissionProgress {
   completed_at: string | null
 }
 
+export interface MissionAccess {
+  has_access: boolean
+  required_plan: string
+  user_plan: string
+}
+
 export interface MissionWithProgress {
   mission: Mission
   progress: MissionProgress
+  access?: MissionAccess
 }
 
 export interface MissionCategory {
@@ -1199,6 +1206,19 @@ export interface CanvasEventResponse {
   event_processed: boolean
   step_completed: boolean
   current_step: number
+}
+
+// Learning progress analytics (education-first pricing)
+export interface LearningProgress {
+  missions_completed: number
+  total_missions_available: number
+  skills_acquired: string[]
+  learning_streak_days: number
+  estimated_capability_level: 'beginner' | 'intermediate' | 'advanced'
+  next_recommended_mission: string | null
+  missions_in_progress: number
+  completion_percent: number
+  user_plan: string
 }
 
 // ===========================================================================

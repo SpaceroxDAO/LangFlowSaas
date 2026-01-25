@@ -124,10 +124,10 @@ export function BillingPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-          Usage & Billing
+          Your Learning Plan
         </h1>
         <p className="text-slate-500 dark:text-neutral-400 mt-1">
-          Manage your AI credits, subscription, and spending controls
+          Manage your learning journey, credits, and subscription
         </p>
       </div>
 
@@ -183,7 +183,7 @@ export function BillingPage() {
               : 'bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-neutral-400 hover:bg-slate-200 dark:hover:bg-neutral-700'
           }`}
         >
-          Compare Plans
+          Learning Plans
         </button>
       </div>
 

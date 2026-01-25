@@ -11,6 +11,10 @@ import type { PlanId } from '@/types'
 // FAQ data
 const FAQ_ITEMS = [
   {
+    question: "What are Learning Missions?",
+    answer: "Learning Missions are guided, hands-on tutorials that teach you AI skills while building real agents. Each mission walks you through creating a working AI agent step-by-step. Free plans include 3 starter missions to learn the fundamentals, while paid plans unlock the full library of 20+ missions covering advanced topics."
+  },
+  {
     question: "What are AI credits?",
     answer: "AI credits are the currency that powers your agents. When Charlie runs your AI agents, credits are consumed based on the model used. Different models have different credit costs. If you bring your own API keys, those calls don't consume credits."
   },
@@ -28,7 +32,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "What's included in the Business plan?",
-    answer: "Business plans include everything in Individual, plus SSO authentication, audit logs, custom branding, API access, dedicated support, and volume discounts on credits. Contact us to discuss your specific needs."
+    answer: "Business plans include everything in Individual, plus SSO authentication, audit logs, custom branding, API access, dedicated support, and volume discounts on credits. Perfect for teams who want to build AI capabilities together."
   },
 ]
 
@@ -108,14 +112,14 @@ export function PricingPage() {
       <section className="relative z-10 px-6 pt-16 pb-12 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white tracking-tight mb-4">
-            Simple, transparent
+            Learn to build
             <span className="block bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              pricing for everyone
+              powerful AI agents
             </span>
           </h1>
           <p className="text-xl text-slate-600 dark:text-neutral-400 max-w-2xl mx-auto">
-            Start free, then scale as you grow. No hidden fees, no surprises.
-            Bring your own API keys to save even more.
+            Guided missions teach you AI skills while building real solutions.
+            Start free, then unlock the full curriculum as you grow.
           </p>
         </div>
       </section>
@@ -212,10 +216,10 @@ export function PricingPage() {
       <section className="relative z-10 px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white text-center mb-4">
-            Compare all features
+            Compare learning plans
           </h2>
           <p className="text-slate-600 dark:text-neutral-400 text-center mb-12 max-w-2xl mx-auto">
-            Everything you need to build, deploy, and scale AI agents for your business
+            Every plan includes guided missions, hands-on building, and real AI agents you can use
           </p>
 
           {comparison && (
@@ -323,10 +327,10 @@ export function PricingPage() {
       <section className="relative z-10 px-6 py-20">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
-            Ready to build your AI agents?
+            Ready to start your AI learning journey?
           </h2>
           <p className="text-xl text-slate-600 dark:text-neutral-400 mb-8">
-            Start for free. No credit card required.
+            Begin with starter missions for free. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
