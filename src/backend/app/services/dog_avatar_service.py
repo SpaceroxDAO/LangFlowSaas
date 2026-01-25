@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 PROMPT_VERSION = "v2"  # Bumped for description-based fallback
 
 # Paths - Use /app as base when running in Docker, otherwise use file-based detection
-APP_DIR = Path(__file__).parent.parent  # /app/app -> /app (in Docker) or src/backend/app -> src/backend (local)
+# __file__ = /app/app/services/dog_avatar_service.py (Docker) or src/backend/app/services/... (local)
+# .parent = services, .parent.parent = app, .parent.parent.parent = /app or src/backend
+APP_DIR = Path(__file__).parent.parent.parent  # Go up 3 levels to reach project root (/app or src/backend)
 # STATIC_DIR is where we store generated avatars
 STATIC_DIR = APP_DIR / "static" / "avatars"
 # ASSETS_DIR for base images (also in static for simplicity)
