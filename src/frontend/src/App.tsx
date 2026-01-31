@@ -29,6 +29,8 @@ import { GuidePage } from '@/pages/resources/GuidePage'
 import { DevelopersPage } from '@/pages/resources/DevelopersPage'
 import { DeveloperDocPage } from '@/pages/resources/DeveloperDocPage'
 import { ChangelogPage } from '@/pages/resources/ChangelogPage'
+import { PrivacyPolicyPage } from '@/pages/resources/PrivacyPolicyPage'
+import { TermsOfServicePage } from '@/pages/resources/TermsOfServicePage'
 
 // Use dev mode or Clerk components based on environment
 const AuthSignedIn = isDevMode ? DevSignedIn : SignedIn
@@ -88,6 +90,8 @@ function App() {
           <Route path="developers" element={<DevelopersPage />} />
           <Route path="developers/:slug" element={<DeveloperDocPage />} />
           <Route path="changelog" element={<ChangelogPage />} />
+          <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="terms-of-service" element={<TermsOfServicePage />} />
         </Route>
 
         {/* Protected routes with AppShell (sidebar) */}

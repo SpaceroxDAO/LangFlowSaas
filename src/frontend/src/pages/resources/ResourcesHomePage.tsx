@@ -479,7 +479,7 @@ export function ResourcesHomePage() {
             Can't find what you're looking for? Our team is here to help you close the AI gap.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
             <a
               href="https://github.com/SpaceroxDAO/LangFlowSaas/issues"
               target="_blank"
@@ -497,6 +497,23 @@ export function ResourcesHomePage() {
             >
               Go to dashboard
               <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Legal links */}
+          <div className="flex items-center justify-center gap-4 pt-6 border-t border-gray-200 dark:border-neutral-800">
+            <Link
+              to="/resources/privacy-policy"
+              className="text-sm text-gray-600 dark:text-neutral-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+            >
+              Privacy Policy
+            </Link>
+            <span className="text-gray-300 dark:text-neutral-700">•</span>
+            <Link
+              to="/resources/terms-of-service"
+              className="text-sm text-gray-600 dark:text-neutral-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+            >
+              Terms of Service
             </Link>
           </div>
         </div>
