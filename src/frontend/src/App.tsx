@@ -31,6 +31,15 @@ import { DeveloperDocPage } from '@/pages/resources/DeveloperDocPage'
 import { ChangelogPage } from '@/pages/resources/ChangelogPage'
 import { PrivacyPolicyPage } from '@/pages/resources/PrivacyPolicyPage'
 import { TermsOfServicePage } from '@/pages/resources/TermsOfServicePage'
+import { ContactPage } from '@/pages/resources/ContactPage'
+import { SecurityPage } from '@/pages/resources/SecurityPage'
+import { CareersPage } from '@/pages/resources/CareersPage'
+import { DPAPage } from '@/pages/resources/DPAPage'
+import { CookiePolicyPage } from '@/pages/resources/CookiePolicyPage'
+import { TrustCenterPage } from '@/pages/resources/TrustCenterPage'
+import { CustomerServicePage } from '@/pages/resources/CustomerServicePage'
+import { AffiliatesPage } from '@/pages/resources/AffiliatesPage'
+import { BlogPage } from '@/pages/resources/BlogPage'
 
 // Use dev mode or Clerk components based on environment
 const AuthSignedIn = isDevMode ? DevSignedIn : SignedIn
@@ -92,6 +101,15 @@ function App() {
           <Route path="changelog" element={<ChangelogPage />} />
           <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="terms-of-service" element={<TermsOfServicePage />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="security" element={<SecurityPage />} />
+          <Route path="careers" element={<CareersPage />} />
+          <Route path="dpa" element={<DPAPage />} />
+          <Route path="cookie-policy" element={<CookiePolicyPage />} />
+          <Route path="trust-center" element={<TrustCenterPage />} />
+          <Route path="customer-service" element={<CustomerServicePage />} />
+          <Route path="affiliates" element={<AffiliatesPage />} />
+          <Route path="blog" element={<BlogPage />} />
         </Route>
 
         {/* Protected routes with AppShell (sidebar) */}
