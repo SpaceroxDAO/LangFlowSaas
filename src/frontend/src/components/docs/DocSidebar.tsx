@@ -24,6 +24,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
+  Shield,
+  Mail,
+  Briefcase,
+  Cookie,
+  Building2,
+  Headphones,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -66,10 +72,23 @@ const developerDocs: NavItem[] = [
   { title: 'Self-hosting', slug: 'self-hosting', path: '/resources/developers/self-hosting', icon: Server },
 ]
 
+const companyLegal: NavItem[] = [
+  { title: 'Contact us', slug: 'contact', path: '/resources/contact', icon: Mail },
+  { title: 'Customer service', slug: 'customer-service', path: '/resources/customer-service', icon: Headphones },
+  { title: 'Security', slug: 'security', path: '/resources/security', icon: Shield },
+  { title: 'Trust center', slug: 'trust-center', path: '/resources/trust-center', icon: Lock },
+  { title: 'Privacy policy', slug: 'privacy-policy', path: '/resources/privacy-policy', icon: FileText },
+  { title: 'Terms of service', slug: 'terms-of-service', path: '/resources/terms-of-service', icon: FileText },
+  { title: 'DPA', slug: 'dpa', path: '/resources/dpa', icon: FileText },
+  { title: 'Cookie policy', slug: 'cookie-policy', path: '/resources/cookie-policy', icon: Cookie },
+  { title: 'Careers', slug: 'careers', path: '/resources/careers', icon: Briefcase },
+]
+
 // All docs for search
 const allDocs = [
   ...userGuides.map(g => ({ ...g, category: 'Guides' })),
   ...developerDocs.map(d => ({ ...d, category: 'Developer' })),
+  ...companyLegal.map(c => ({ ...c, category: 'Company & Legal' })),
   { title: 'Changelog', slug: 'changelog', path: '/resources/changelog', category: 'Updates', icon: ClipboardList },
 ]
 
@@ -83,6 +102,11 @@ const sections: NavSection[] = [
     title: 'Developer docs',
     items: developerDocs,
     icon: <FileText className="w-4 h-4" strokeWidth={1.5} />,
+  },
+  {
+    title: 'Company & Legal',
+    items: companyLegal,
+    icon: <Building2 className="w-4 h-4" strokeWidth={1.5} />,
   },
 ]
 
@@ -143,6 +167,25 @@ export function DocSidebar({ collapsed = false, onToggle }: DocSidebarProps) {
             title="Developer docs"
           >
             <FileText className="w-5 h-5" strokeWidth={1.5} />
+          </Link>
+          <Link
+            to="/resources/contact"
+            className={`p-2 rounded-lg transition-colors ${
+              location.pathname.includes('/contact') ||
+              location.pathname.includes('/security') ||
+              location.pathname.includes('/privacy') ||
+              location.pathname.includes('/terms') ||
+              location.pathname.includes('/dpa') ||
+              location.pathname.includes('/cookie') ||
+              location.pathname.includes('/trust') ||
+              location.pathname.includes('/careers') ||
+              location.pathname.includes('/customer-service')
+                ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+                : 'text-gray-500 dark:text-neutral-500 hover:bg-gray-100 dark:hover:bg-neutral-800'
+            }`}
+            title="Company & Legal"
+          >
+            <Building2 className="w-5 h-5" strokeWidth={1.5} />
           </Link>
           <Link
             to="/resources/changelog"
@@ -304,4 +347,4 @@ export function DocSidebar({ collapsed = false, onToggle }: DocSidebarProps) {
   )
 }
 
-export { userGuides, developerDocs }
+export { userGuides, developerDocs, companyLegal }
