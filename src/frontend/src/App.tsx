@@ -13,6 +13,8 @@ import { EditAgentPage } from '@/pages/EditAgentPage'
 import { PlaygroundPage } from '@/pages/PlaygroundPage'
 import { FrameworkPage } from '@/pages/FrameworkPage'
 import { PricingPage } from '@/pages/PricingPage'
+import { CheckoutPage } from '@/pages/CheckoutPage'
+import { RedirectPage } from '@/pages/RedirectPage'
 import { CanvasViewerPage } from '@/pages/CanvasViewerPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { FilesPage } from '@/pages/FilesPage'
@@ -90,6 +92,8 @@ function App() {
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/framework" element={<FrameworkPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/checkout/:planId" element={<CheckoutPage />} />
+        <Route path="/go" element={<RedirectPage />} />
 
         {/* Resources - Public Documentation (GitBook-style) */}
         <Route path="/resources" element={<ResourcesLayout />}>

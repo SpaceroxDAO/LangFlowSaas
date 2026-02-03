@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import { SignedIn, SignedOut } from '@clerk/clerk-react'
+import { isDevMode, DevSignedIn, DevSignedOut } from '@/providers/DevModeProvider'
 import { DocSidebar } from '@/components/docs/DocSidebar'
 import { Dog, Sun, Moon, Menu, ArrowRight } from 'lucide-react'
+
+// Use dev or Clerk components based on environment
+const AuthSignedIn = isDevMode ? DevSignedIn : SignedIn
+const AuthSignedOut = isDevMode ? DevSignedOut : SignedOut
 
 export function ResourcesLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -92,14 +98,43 @@ export function ResourcesLayout() {
             </svg>
           </a>
 
-          {/* Go to app button */}
-          <Link
-            to="/dashboard"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors"
-          >
-            Go to App
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+          {/* Auth-aware buttons */}
+          {isDevMode ? (
+            <Link
+              to="/dashboard"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors"
+            >
+              Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
+            <>
+              <AuthSignedOut>
+                <Link
+                  to="/sign-in"
+                  className="hidden sm:inline-flex text-sm font-medium text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/sign-up"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors"
+                >
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </AuthSignedOut>
+              <AuthSignedIn>
+                <Link
+                  to="/dashboard"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors"
+                >
+                  Dashboard
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </AuthSignedIn>
+            </>
+          )}
         </div>
       </header>
 
