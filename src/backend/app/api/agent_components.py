@@ -5,11 +5,13 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select, and_
 
 from app.database import AsyncSessionDep
 from app.middleware.clerk_auth import CurrentUser
 from app.middleware.redis_rate_limit import check_rate_limit_with_user
 from app.models.user import User
+from app.models.agent_component import AgentComponent
 from app.schemas.agent_component import (
     AgentComponentCreateFromQA,
     AgentComponentResponse,
@@ -371,3 +373,75 @@ async def generate_and_save_avatar(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate avatar: {str(e)}",
         )
+
+
+@router.post(
+    "/{component_id}/publish",
+    response_model=AgentComponentResponse,
+    summary="Publish agent as live agent",
+    description="Publish this agent as the user's live OpenClaw agent. Unpublishes any other published agent (1-live-agent limit on Free plan).",
+)
+async def publish_agent(
+    component_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Publish an agent component as the user's live agent."""
+    user = await get_user_from_clerk(clerk_user, session)
+    service = AgentComponentService(session)
+
+    component = await service.get_by_id(component_id, user_id=user.id)
+    if not component:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Agent component not found.",
+        )
+
+    # Unpublish any other published agents for this user (1-live-agent limit)
+    result = await session.execute(
+        select(AgentComponent).where(
+            and_(
+                AgentComponent.user_id == user.id,
+                AgentComponent.is_published == True,
+                AgentComponent.id != component_id,
+            )
+        )
+    )
+    for other in result.scalars().all():
+        other.is_published = False
+
+    # Publish this agent
+    component.is_published = True
+    await session.commit()
+    await session.refresh(component)
+
+    return component
+
+
+@router.post(
+    "/{component_id}/unpublish",
+    response_model=AgentComponentResponse,
+    summary="Unpublish live agent",
+    description="Remove this agent from being the user's live OpenClaw agent.",
+)
+async def unpublish_agent(
+    component_id: uuid.UUID,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Unpublish an agent component."""
+    user = await get_user_from_clerk(clerk_user, session)
+    service = AgentComponentService(session)
+
+    component = await service.get_by_id(component_id, user_id=user.id)
+    if not component:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Agent component not found.",
+        )
+
+    component.is_published = False
+    await session.commit()
+    await session.refresh(component)
+
+    return component

@@ -142,9 +142,21 @@ function ExpandableProject({
                       : 'text-gray-600 dark:text-neutral-400 hover:bg-gray-50 dark:hover:bg-neutral-800/50 hover:text-gray-900 dark:hover:text-neutral-200'
                   }`}
                 >
-                  <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  {agent.is_published ? (
+                    <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="url(#sidebarPurpleGradient)">
+                      <defs>
+                        <linearGradient id="sidebarPurpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#8B5CF6" />
+                          <stop offset="100%" stopColor="#A855F7" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  )}
                   <span className="truncate">{agent.name}</span>
                 </Link>
               ))}

@@ -4,6 +4,61 @@
 
 ---
 
+## 2026-02-16 - OpenClaw Integration Phase 1: UI Foundation & Backend Infrastructure
+
+### Summary
+Implemented the foundation for OpenClaw agent integration. Users can now publish an agent as their "live" AI agent and mark workflows as skills that the agent can execute. This Phase 1 builds the complete UI flow and backend infrastructure; the TC Connector desktop app (Phase 2) will provide the local execution environment.
+
+### Design Decision
+**Wrapper-only approach**: All changes are in Teach Charlie's layer. No modifications to Langflow or OpenClaw core. The MCP bridge translates between Teach Charlie workflows and MCP-compatible tool format, allowing OpenClaw to discover and execute skills without knowing about Langflow.
+
+### Key Features
+- **Agent Publishing**: 1-live-agent limit with purple "Publish Agent 0/1" button, confirmation modal with replace flow
+- **Visual Indicators**: Purple gradient star in sidebar, purple card border + "Live" pill badge on project cards
+- **Workflow Skill Toggles**: "Agent skill" toggle on every workflow card (grid + list views)
+- **MCP Bridge**: REST endpoints that expose skill-enabled workflows as MCP-compatible tools
+- **WebSocket Relay**: Foundation for bidirectional communication between frontend and local agent
+- **Connection Indicator**: PlaygroundPage shows "Agent Offline" for published agents (Phase 2 enables "Live Agent")
+
+### Architecture
+```
+Frontend ─── Publish Button ──→ Backend /publish endpoint
+                                    ↓ sets is_published=true
+Frontend ─── Skill Toggle ───→ Backend /agent-skill endpoint
+                                    ↓ sets is_agent_skill=true
+TC Connector ── GET /tools ──→ MCP Bridge ── lists skill workflows
+TC Connector ── POST /call ──→ MCP Bridge ── routes to workflow chat
+TC Connector ── WS connect ──→ WS Relay ── maintains user↔agent mapping
+```
+
+### QA Bug Fix
+During manual QA, discovered the Publish button and connection indicator were not showing on the Playground page when accessed via workflow route (`/playground/workflow/...`). Root cause: the page only fetched `agentComponent` in agent mode, but the publish UI referenced it in both modes. Fixed by introducing `resolvedAgentComponent` that resolves to the correct data source in either mode.
+
+### E2E Tests (18 tests, all passing)
+New file: `src/frontend/e2e/tests/openclaw-publish.spec.ts`
+- Publish button visibility (Edit Agent + Playground pages)
+- Publish modal (first-time flow + replace flow)
+- API publish/unpublish with 1-live-agent enforcement
+- Live badge in grid and list views
+- Purple gradient styling on published cards
+- Workflow skill toggle (UI clicks + API)
+- MCP bridge endpoints (tools list + tool call)
+- Connection indicator for published agents
+
+### Files Created (6)
+- `src/backend/app/api/mcp_bridge.py` - MCP bridge router (GET /tools, POST /tools/call)
+- `src/backend/app/api/ws_relay.py` - WebSocket relay (auth, connection map, ping/pong)
+- `src/backend/alembic/versions/20260216_0001_add_is_agent_skill_to_workflows.py` - Migration
+- `src/frontend/src/hooks/usePublishedAgent.ts` - React Query hook for published state
+- `src/frontend/src/components/PublishAgentModal.tsx` - Publish confirmation modal
+- `src/frontend/e2e/tests/openclaw-publish.spec.ts` - 18 E2E tests
+
+### Files Modified (13)
+- Backend: workflow model, workflow schema, agent_components API, workflows API, api/__init__.py, main.py
+- Frontend: types/index.ts, lib/api.ts, EditAgentPage, PlaygroundPage, Sidebar, ProjectDetailPage, WorkflowsTab
+
+---
+
 ## 2026-01-24 - Resources Section: GitBook-Style Documentation
 
 ### Summary

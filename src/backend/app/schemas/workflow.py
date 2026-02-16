@@ -118,6 +118,7 @@ class WorkflowResponse(BaseModel):
     agent_component_ids: Optional[List[uuid.UUID]]
     is_active: bool
     is_public: bool
+    is_agent_skill: bool = False
     created_at: datetime
     updated_at: datetime
 

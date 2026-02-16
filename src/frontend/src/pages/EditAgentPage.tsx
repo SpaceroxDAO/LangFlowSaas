@@ -10,6 +10,8 @@ import { api } from '@/lib/api'
 import { ToolCard } from '@/components/ToolCard'
 import { AdvancedEditorModal } from '@/components/AdvancedEditorModal'
 import { KnowledgeSourcesModal } from '@/components/KnowledgeSourcesModal'
+import { PublishAgentModal } from '@/components/PublishAgentModal'
+import { usePublishedAgent } from '@/hooks/usePublishedAgent'
 import { inferJobFromDescription } from '@/lib/avatarJobInference'
 import type { AgentComponent, AgentComponentAdvancedConfig } from '@/types'
 
@@ -99,6 +101,9 @@ export function EditAgentPage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isCreatingWorkflow, setIsCreatingWorkflow] = useState(false)
   const [existingWorkflowId, setExistingWorkflowId] = useState<string | null>(null)
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
+  const [agentData, setAgentData] = useState<AgentComponent | null>(null)
+  const { publishedAgent, isPublished, publishCount } = usePublishedAgent()
 
   // Track original values for change detection
   const [originalValues, setOriginalValues] = useState<{
@@ -120,6 +125,7 @@ export function EditAgentPage() {
       if (!agentId) return
       try {
         const agent: AgentComponent = await api.getAgentComponent(agentId)
+        setAgentData(agent)
         setName(agent.name)
         setPersona(agent.qa_who)
         setInstructions(agent.qa_rules)
@@ -441,6 +447,24 @@ export function EditAgentPage() {
               </svg>
               Talk to Agent
             </Link>
+            {agentId && agentData && (
+              isPublished(agentId) ? (
+                <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg opacity-80 cursor-default">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  Published 1/1
+                </span>
+              ) : (
+                <button
+                  onClick={() => setIsPublishModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-lg transition-all hover:shadow-lg hover:shadow-violet-500/25 hover:-translate-y-0.5"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  Publish Agent {publishCount}/1
+                </button>
+              )
+            )}
             <button
               onClick={() => setIsAdvancedModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-300 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors border border-gray-200 dark:border-neutral-700"
@@ -689,6 +713,16 @@ export function EditAgentPage() {
         selectedSourceIds={knowledgeSourceIds}
         onSelectionChange={handleKnowledgeSourcesChange}
       />
+
+      {/* Publish Agent Modal */}
+      {agentData && (
+        <PublishAgentModal
+          agent={agentData}
+          currentPublished={publishedAgent}
+          isOpen={isPublishModalOpen}
+          onClose={() => setIsPublishModalOpen(false)}
+        />
+      )}
     </div>
   )
 }

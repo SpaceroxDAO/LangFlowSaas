@@ -591,6 +591,12 @@ function AgentRow({
         >
           {agent.name}
         </Link>
+        {agent.is_published && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-r from-violet-500 to-purple-500 text-white flex-shrink-0">
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+            Live
+          </span>
+        )}
         <span className="text-gray-400 dark:text-neutral-500 text-sm flex-shrink-0">
           Edited {getRelativeTime(agent.updated_at)}
         </span>
@@ -673,19 +679,28 @@ function AgentCard({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const gradientColor = getGradientColor(colorIndex)
+  const isLive = agent.is_published
 
   return (
-    <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-4 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all group">
+    <div className={`${isLive ? 'bg-gradient-to-br from-violet-50 via-white to-purple-50 dark:from-violet-950/30 dark:via-neutral-800 dark:to-purple-950/30 border-violet-400 dark:border-violet-600' : 'bg-white dark:bg-neutral-800 border-gray-200 dark:border-neutral-700'} border rounded-lg p-4 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all group`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-full ${agent.avatar_url ? 'bg-violet-100 dark:bg-violet-900/40' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
-          {agent.avatar_url ? (
-            <img
-              src={agent.avatar_url}
-              alt={agent.name}
-              className="w-full h-full object-contain scale-150"
-            />
-          ) : (
-            <Dog className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2">
+          <div className={`w-10 h-10 rounded-full ${agent.avatar_url ? 'bg-violet-100 dark:bg-violet-900/40' : `bg-gradient-to-br ${gradientColor}`} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+            {agent.avatar_url ? (
+              <img
+                src={agent.avatar_url}
+                alt={agent.name}
+                className="w-full h-full object-contain scale-150"
+              />
+            ) : (
+              <Dog className="w-5 h-5 text-white" />
+            )}
+          </div>
+          {isLive && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gradient-to-r from-violet-500 to-purple-500 text-white">
+              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+              Live
+            </span>
           )}
         </div>
         <div className="relative">

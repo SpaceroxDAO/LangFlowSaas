@@ -100,6 +100,13 @@ class Workflow(BaseModel):
         comment="Whether this workflow can be accessed via public link",
     )
 
+    is_agent_skill: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Whether this workflow is exposed as a skill for the user's OpenClaw agent",
+    )
+
     # Relationships
     user: Mapped["User"] = relationship(
         "User",

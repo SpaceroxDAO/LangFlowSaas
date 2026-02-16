@@ -414,6 +414,18 @@ class ApiClient {
     })
   }
 
+  async publishAgent(id: string): Promise<AgentComponent> {
+    return this.request<AgentComponent>(`/api/v1/agent-components/${id}/publish`, {
+      method: 'POST',
+    })
+  }
+
+  async unpublishAgent(id: string): Promise<AgentComponent> {
+    return this.request<AgentComponent>(`/api/v1/agent-components/${id}/unpublish`, {
+      method: 'POST',
+    })
+  }
+
   // ===========================================================================
   // Dog Avatars (GPT Image Edit)
   // ===========================================================================
@@ -522,6 +534,13 @@ class ApiClient {
 
   async exportWorkflow(id: string): Promise<Record<string, unknown>> {
     return this.request(`/api/v1/workflows/${id}/export`)
+  }
+
+  async toggleWorkflowSkill(id: string, isAgentSkill: boolean): Promise<Workflow> {
+    return this.request<Workflow>(`/api/v1/workflows/${id}/agent-skill`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_agent_skill: isAgentSkill }),
+    })
   }
 
   async chatWithWorkflow(workflowId: string, data: ChatRequest): Promise<ChatResponse> {

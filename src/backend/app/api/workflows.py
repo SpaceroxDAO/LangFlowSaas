@@ -819,6 +819,43 @@ async def update_workflow(
         )
 
 
+@router.patch(
+    "/{workflow_id}/agent-skill",
+    response_model=WorkflowResponse,
+    summary="Toggle workflow as agent skill",
+    description="Enable or disable this workflow as an OpenClaw agent skill.",
+)
+async def toggle_workflow_agent_skill(
+    workflow_id: uuid.UUID,
+    body: dict,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Toggle whether a workflow is exposed as an agent skill."""
+    user = await get_user_from_clerk(clerk_user, session)
+    service = WorkflowService(session)
+
+    workflow = await service.get_by_id(workflow_id, user_id=user.id)
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found.",
+        )
+
+    is_agent_skill = body.get("is_agent_skill")
+    if is_agent_skill is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="is_agent_skill field is required.",
+        )
+
+    workflow.is_agent_skill = bool(is_agent_skill)
+    await session.commit()
+    await session.refresh(workflow)
+
+    return workflow
+
+
 @router.delete(
     "/{workflow_id}",
     status_code=status.HTTP_204_NO_CONTENT,

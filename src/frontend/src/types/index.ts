@@ -351,6 +351,7 @@ export interface Workflow {
   agent_component_ids: string[]
   is_active: boolean
   is_public: boolean
+  is_agent_skill: boolean
   created_at: string
   updated_at: string
 }

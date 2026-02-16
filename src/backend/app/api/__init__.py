@@ -23,6 +23,8 @@ from app.api.dashboard import router as dashboard_router
 from app.api.missions import router as missions_router
 from app.api.embed import router as embed_router
 from app.api.connections import router as connections_router
+from app.api.mcp_bridge import router as mcp_bridge_router
+from app.api.ws_relay import router as ws_relay_router
 
 __all__ = [
     "health_router",
@@ -44,4 +46,6 @@ __all__ = [
     "missions_router",
     "embed_router",
     "connections_router",
+    "mcp_bridge_router",
+    "ws_relay_router",
 ]

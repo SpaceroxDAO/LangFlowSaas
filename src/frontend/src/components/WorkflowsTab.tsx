@@ -59,6 +59,18 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
     },
   })
 
+  const toggleSkillMutation = useMutation({
+    mutationFn: ({ id, isAgentSkill }: { id: string; isAgentSkill: boolean }) =>
+      api.toggleWorkflowSkill(id, isAgentSkill),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows', projectId] })
+    },
+  })
+
+  const handleToggleSkill = (workflow: Workflow) => {
+    toggleSkillMutation.mutate({ id: workflow.id, isAgentSkill: !workflow.is_agent_skill })
+  }
+
   const workflows = data?.workflows || []
 
   // Filter workflows by search query
@@ -247,6 +259,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
                 onDelete={handleDeleteWorkflow}
                 onExport={handleExportWorkflow}
                 onDuplicate={handleDuplicateWorkflow}
+                onToggleSkill={handleToggleSkill}
               />
             ))}
           </div>
@@ -264,6 +277,7 @@ export function WorkflowsTab({ projectId }: WorkflowsTabProps) {
                 onDelete={handleDeleteWorkflow}
                 onExport={handleExportWorkflow}
                 onDuplicate={handleDuplicateWorkflow}
+                onToggleSkill={handleToggleSkill}
               />
             ))}
           </div>
@@ -366,6 +380,7 @@ function WorkflowRow({
   onDelete,
   onExport,
   onDuplicate,
+  onToggleSkill,
 }: {
   workflow: Workflow
   colorIndex: number
@@ -373,6 +388,7 @@ function WorkflowRow({
   onDelete: (workflow: Workflow) => void
   onExport: (workflow: Workflow) => void
   onDuplicate: (workflow: Workflow) => void
+  onToggleSkill: (workflow: Workflow) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const gradientColor = getGradientColor(colorIndex)
@@ -395,6 +411,21 @@ function WorkflowRow({
         <span className="text-gray-400 dark:text-neutral-500 text-sm flex-shrink-0">
           Edited {getRelativeTime(workflow.updated_at)}
         </span>
+      </div>
+
+      {/* Agent Skill Toggle */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <span className="text-xs text-gray-400 dark:text-neutral-500">Skill</span>
+        <button
+          onClick={() => onToggleSkill(workflow)}
+          className={`relative w-8 h-4 rounded-full transition-colors ${
+            workflow.is_agent_skill ? 'bg-purple-600' : 'bg-gray-200 dark:bg-neutral-700'
+          }`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+            workflow.is_agent_skill ? 'translate-x-4' : ''
+          }`} />
+        </button>
       </div>
 
       {/* Actions */}
@@ -473,6 +504,7 @@ function WorkflowCard({
   onDelete,
   onExport,
   onDuplicate,
+  onToggleSkill,
 }: {
   workflow: Workflow
   colorIndex: number
@@ -480,6 +512,7 @@ function WorkflowCard({
   onDelete: (workflow: Workflow) => void
   onExport: (workflow: Workflow) => void
   onDuplicate: (workflow: Workflow) => void
+  onToggleSkill: (workflow: Workflow) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const gradientColor = getGradientColor(colorIndex)
@@ -552,6 +585,21 @@ function WorkflowCard({
           Edited {getRelativeTime(workflow.updated_at)}
         </p>
       </Link>
+
+      {/* Agent Skill Toggle */}
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-neutral-700">
+        <span className="text-xs text-gray-500 dark:text-neutral-400">Agent skill</span>
+        <button
+          onClick={() => onToggleSkill(workflow)}
+          className={`relative w-8 h-4 rounded-full transition-colors ${
+            workflow.is_agent_skill ? 'bg-purple-600' : 'bg-gray-200 dark:bg-neutral-700'
+          }`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+            workflow.is_agent_skill ? 'translate-x-4' : ''
+          }`} />
+        </button>
+      </div>
     </div>
   )
 }
