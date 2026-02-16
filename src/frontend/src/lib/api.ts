@@ -1314,6 +1314,24 @@ class ApiClient {
     })
   }
 
+  // ===========================================================================
+  // MCP Bridge Token (OpenClaw Connection)
+  // ===========================================================================
+
+  async generateMCPToken(): Promise<{ token: string; message: string }> {
+    return this.request<{ token: string; message: string }>('/api/v1/settings/mcp-token', {
+      method: 'POST',
+    })
+  }
+
+  async getMCPTokenStatus(): Promise<{ has_token: boolean; token_preview: string | null }> {
+    return this.request('/api/v1/settings/mcp-token')
+  }
+
+  async revokeMCPToken(): Promise<void> {
+    return this.request('/api/v1/settings/mcp-token', { method: 'DELETE' })
+  }
+
   async enhancedChatStream(
     data: EnhancedChatRequest,
     onEvent: (event: StreamEvent) => void,

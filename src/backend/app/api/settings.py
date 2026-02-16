@@ -1,6 +1,8 @@
 """
 User settings management endpoints.
 """
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 
@@ -231,3 +233,67 @@ async def complete_onboarding(
     )
 
     return build_settings_response(updated, settings_service)
+
+
+# ---------------------------------------------------------------------------
+# MCP Bridge Token (for TC Connector / OpenClaw integration)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/mcp-token",
+    summary="Generate MCP bridge token",
+    description="Generate a new MCP bridge token for TC Connector authentication. "
+                "Replaces any existing token.",
+)
+async def generate_mcp_token(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Generate a new MCP bridge token. The token is only shown once."""
+    user = await get_user_from_clerk(clerk_user, session)
+
+    # Generate a cryptographically secure token
+    token = f"tc_{secrets.token_urlsafe(48)}"
+    user.mcp_bridge_token = token
+    await session.commit()
+
+    return {
+        "token": token,
+        "message": "Token generated. Copy it now — it won't be shown again.",
+    }
+
+
+@router.get(
+    "/mcp-token",
+    summary="Check MCP token status",
+    description="Check if an MCP bridge token has been generated.",
+)
+async def get_mcp_token_status(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Check if a token exists (does not reveal the token)."""
+    user = await get_user_from_clerk(clerk_user, session)
+    has_token = bool(user.mcp_bridge_token)
+    return {
+        "has_token": has_token,
+        "token_preview": f"{user.mcp_bridge_token[:8]}...{user.mcp_bridge_token[-4:]}" if has_token else None,
+    }
+
+
+@router.delete(
+    "/mcp-token",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Revoke MCP bridge token",
+    description="Revoke the current MCP bridge token. "
+                "The TC Connector will stop working until a new token is generated.",
+)
+async def revoke_mcp_token(
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Revoke the current MCP bridge token."""
+    user = await get_user_from_clerk(clerk_user, session)
+    user.mcp_bridge_token = None
+    await session.commit()
+    return None

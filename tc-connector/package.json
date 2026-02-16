@@ -1,0 +1,41 @@
+{
+  "name": "tc-connector",
+  "version": "1.0.0",
+  "description": "Teach Charlie AI MCP Connector — bridges your Teach Charlie workflows to local AI agents via MCP",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "tc-connector": "./bin/tc-connector.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "teach-charlie",
+    "ai-agent",
+    "openclaw",
+    "model-context-protocol"
+  ],
+  "author": "Teach Charlie AI",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ]
+}

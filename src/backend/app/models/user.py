@@ -58,6 +58,14 @@ class User(BaseModel):
         nullable=True,
     )
 
+    # MCP bridge token for TC Connector authentication
+    mcp_bridge_token: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=True,
+    )
+
     # Account status
     is_active: Mapped[bool] = mapped_column(
         Boolean,

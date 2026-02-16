@@ -1,7 +1,7 @@
 # Technical Architecture: Teach Charlie AI
 
-**Last Updated**: 2026-01-24
-**Status**: MVP Complete (Phase 13) - Production Hardening Complete
+**Last Updated**: 2026-02-16
+**Status**: MVP Complete (Phase 13) + OpenClaw Integration (Phase 2)
 **Owner**: Claude Code (Technical) + Adam (Product)
 
 ## Executive Summary
@@ -54,6 +54,34 @@ This architecture is designed for a **solo, non-technical founder using AI-assis
 │  Users, Orgs, Agents, Flows, Conversations, Messages        │
 │  + pgvector for future RAG/embeddings                        │
 └─────────────────────────────────────────────────────────────┘
+
+### OpenClaw Integration (MCP Bridge + TC Connector)
+
+```
+┌───────────────────────────────┐
+│       OpenClaw Agent          │  (user's local AI agent)
+│       (local machine)         │
+└───────────┬───────────────────┘
+            │ stdio (MCP protocol)
+            ▼
+┌───────────────────────────────┐
+│      TC Connector CLI         │  npm package: tc-connector
+│   (@modelcontextprotocol/sdk) │  runs as local MCP server
+└───────────┬───────────────────┘
+            │ HTTPS + Bearer token (mcp_bridge_token)
+            ▼
+┌───────────────────────────────┐
+│   Teach Charlie API           │
+│   /api/v1/mcp/bridge/*        │  FastAPI endpoints
+│   ├─ GET  /tools              │  list skill-enabled workflows
+│   └─ POST /tools/call         │  execute via WorkflowService.chat()
+└───────────┬───────────────────┘
+            │ internal
+            ▼
+┌───────────────────────────────┐
+│       Langflow                │  executes the workflow
+└───────────────────────────────┘
+```
 ```
 
 ### Component Breakdown

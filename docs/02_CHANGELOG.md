@@ -4,6 +4,59 @@
 
 ---
 
+## 2026-02-16 - OpenClaw Integration Phase 2: MCP Bridge Execution + TC Connector CLI
+
+### Summary
+Implemented real MCP tool execution in the bridge endpoint, token-based authentication for secure remote access, and a lightweight Node.js CLI connector package (`tc-connector`) that acts as a local MCP server for OpenClaw.
+
+### Design Decision
+**Node.js CLI over desktop app**: Instead of an Electron/Tauri desktop app (originally planned), chose a lightweight Node.js CLI package using `@modelcontextprotocol/sdk` v1.26.0 with stdio transport. This is simpler to distribute (via `npx`), has zero dependencies beyond the MCP SDK, and aligns with how OpenClaw expects MCP servers to be configured (as CLI commands in `.mcp.json`).
+
+### Key Features
+- **Real MCP Execution**: Bridge endpoint now executes workflows via `WorkflowService.chat()` instead of placeholder responses
+- **Stateless Calls**: Each MCP tool call creates a new conversation (`conversation_id=None`) — the calling agent manages context
+- **120s Timeout**: `asyncio.wait_for()` wraps execution, returns MCP-formatted error on timeout
+- **MCP Bridge Token**: Cryptographic token (`tc_` prefix, `secrets.token_urlsafe(48)`) stored on User model for auth
+- **Token Auth Endpoints**: `GET/POST /api/v1/mcp/bridge/tools` (no user_id in URL) with Bearer token auth
+- **TC Connector CLI**: npm package that bridges OpenClaw ↔ Teach Charlie via stdio MCP transport
+- **Settings UI**: OpenClaw Connection section with token generation, masked preview, revocation
+- **ConnectOpenClawModal**: 3-step setup guide (install → configure → restart)
+
+### Architecture
+```
+OpenClaw Agent (local)
+    ↓ stdio (MCP protocol)
+TC Connector (local Node.js process)
+    ↓ HTTPS + Bearer token
+Teach Charlie API (/api/v1/mcp/bridge/*)
+    ↓ WorkflowService.chat()
+Langflow (executes workflow)
+```
+
+### E2E Tests (33 tests across 6 groups)
+New file: `src/frontend/e2e/tests/openclaw-phase2.spec.ts`
+- MCP bridge real execution (6 tests)
+- MCP token API (5 tests)
+- Token-based bridge auth (6 tests)
+- Settings page UI (8 tests)
+- ConnectOpenClaw modal (6 tests)
+- Full integration flow (1 test — end-to-end: generate token → enable skill → list tools → call tool)
+
+### Files Created (12)
+- `tc-connector/` — Complete npm package (package.json, tsconfig.json, bin/, src/, README.md, .npmignore)
+- `src/backend/alembic/versions/20260216_0002_add_mcp_bridge_token_to_users.py` — Migration
+- `src/frontend/src/components/ConnectOpenClawModal.tsx` — Setup guide modal
+- `src/frontend/e2e/tests/openclaw-phase2.spec.ts` — 33 E2E tests
+
+### Files Modified (5)
+- `src/backend/app/api/mcp_bridge.py` — Real execution, Pydantic schemas, token auth, dual endpoints
+- `src/backend/app/models/user.py` — Added `mcp_bridge_token` column
+- `src/backend/app/api/settings.py` — MCP token generate/status/revoke endpoints
+- `src/frontend/src/lib/api.ts` — Token management API methods
+- `src/frontend/src/pages/SettingsPage.tsx` — OpenClaw Connection section
+
+---
+
 ## 2026-02-16 - OpenClaw Integration Phase 1: UI Foundation & Backend Infrastructure
 
 ### Summary

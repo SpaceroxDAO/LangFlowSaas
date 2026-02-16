@@ -1,14 +1,14 @@
 # Project Status: Teach Charlie AI
 
 **Last Updated**: 2026-02-16
-**Current Phase**: MVP Complete + OpenClaw Integration (Phase 1)
+**Current Phase**: MVP Complete + OpenClaw Integration (Phase 2)
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: OpenClaw Integration Phase 1 - UI Foundation & Backend Infrastructure
-**Status**: ✅ Phase 1 Implementation Complete
-**Next Milestone**: OpenClaw Phase 2 (TC Connector Desktop App)
+**Phase**: OpenClaw Integration Phase 2 - MCP Bridge Execution + TC Connector CLI
+**Status**: ✅ Phase 2 Implementation Complete
+**Next Milestone**: Production deployment & first OpenClaw user testing
 
 ## Health Indicators
 
@@ -25,7 +25,7 @@
 | Tour System | ✅ Tested | Driver.js integrated and working |
 | Canvas Viewer | ✅ Fixed | Updated for AgentComponent/Workflow architecture |
 | Streaming | ✅ Added | Backend streaming support enabled |
-| Testing | ✅ Complete | 29 E2E files (18 OpenClaw) + 45 component tests (Vitest) |
+| Testing | ✅ Complete | 30 E2E files (18+33 OpenClaw) + 45 component tests (Vitest) |
 | Resources/Docs | ✅ Complete | GitBook-style docs: 10 User Guides + 10 Developer Docs + Changelog |
 | Knowledge Sources | ✅ Working | Text, File Upload, URL - all tested |
 | RAG Search | ⚠️ Partial | Keyword-based fallback working; vector ingestion needs work |
@@ -34,7 +34,7 @@
 | Avatar System | ✅ Complete | Auto-inference (40+ job types), three-tier generation |
 | Custom Components | ✅ Complete | Publish agent → Langflow sidebar working |
 | Chat Playground | ✅ Fixed | Multi-turn conversations with memory + streaming |
-| OpenClaw Integration | ✅ Phase 1 | Publish flow, skill toggles, MCP bridge, WS relay |
+| OpenClaw Integration | ✅ Phase 2 | Publish flow, skill toggles, real MCP execution, token auth, TC Connector CLI |
 
 Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
@@ -554,24 +554,54 @@ Agent Presets allow users to select from pre-configured agent templates during o
 
 ---
 
-### OpenClaw Integration Phase 2: TC Connector (Planned)
+### OpenClaw Integration Phase 2: MCP Bridge Execution + TC Connector CLI ✅
 
-**Goal**: Build the TC Connector - a lightweight desktop app (Electron or Tauri) that runs locally and connects to the user's published agent via WebSocket relay.
+**Goal**: Real MCP tool execution via WorkflowService.chat(), token-based auth, and a lightweight Node.js CLI connector package.
 
-**Planned Features:**
-- [ ] TC Connector desktop app (Electron/Tauri)
-- [ ] Auto-connect to WebSocket relay on launch
-- [ ] Discover and execute MCP tools via bridge endpoint
-- [ ] Local OpenClaw agent orchestration
-- [ ] System tray icon with connection status
-- [ ] Auto-update mechanism
+**Completed Features:**
+- [x] MCP bridge executes actual workflow chat via `WorkflowService.chat()` (non-streaming, stateless)
+- [x] 120-second timeout with MCP-formatted error responses
+- [x] Pydantic schemas (`MCPToolCallRequest`, `MCPContentBlock`, `MCPToolCallResponse`)
+- [x] Token-based auth: `mcp_bridge_token` on User model with Bearer token auth
+- [x] MCP token management: generate (`tc_` prefix), check status (masked preview), revoke
+- [x] Token-authenticated endpoints (`GET /tools`, `POST /tools/call`) — no user_id in URL
+- [x] Backward-compatible URL-based endpoints (`/{user_id}/tools`, `/{user_id}/tools/call`)
+- [x] TC Connector CLI (`tc-connector` npm package) — local MCP server for OpenClaw
+- [x] TC Connector uses `@modelcontextprotocol/sdk` v1.26.0, stdio transport
+- [x] Settings page: OpenClaw Connection section with token management UI
+- [x] ConnectOpenClawModal: 3-step setup guide (install, configure, restart)
+- [x] E2E tests: `openclaw-phase2.spec.ts` (33 tests across 6 groups)
 
-**Planned Features (Teach Charlie Side):**
-- [ ] PlaygroundPage connection indicator shows "Live Agent" when connected (green dot)
-- [ ] Real-time message relay through WebSocket (frontend -> relay -> TC Connector)
-- [ ] MCP bridge executes actual workflow chat instead of placeholder
-- [ ] Settings page: TC Connector download link, connection management
-- [ ] E2E test: `openclaw-publish.spec.ts`
+**Architecture:**
+```
+OpenClaw Agent (local)
+    ↓ stdio (MCP protocol)
+TC Connector (local Node.js process)
+    ↓ HTTPS + Bearer token
+Teach Charlie API (/api/v1/mcp/bridge/*)
+    ↓ WorkflowService.chat()
+Langflow (executes workflow)
+```
+
+**Files Created (12):**
+- `tc-connector/package.json` — npm package config
+- `tc-connector/tsconfig.json` — TypeScript config
+- `tc-connector/bin/tc-connector.js` — CLI entry point
+- `tc-connector/src/index.ts` — MCP server (stdio transport)
+- `tc-connector/src/config.ts` — Configuration loader (CLI flags → env vars → config file)
+- `tc-connector/src/api-client.ts` — Teach Charlie API client
+- `tc-connector/README.md` — Setup documentation
+- `tc-connector/.npmignore` — Publish exclusions
+- `src/backend/alembic/versions/20260216_0002_add_mcp_bridge_token_to_users.py` — Migration
+- `src/frontend/src/components/ConnectOpenClawModal.tsx` — Setup guide modal
+- `src/frontend/e2e/tests/openclaw-phase2.spec.ts` — 33 E2E tests
+
+**Files Modified (5):**
+- `src/backend/app/api/mcp_bridge.py` — Real execution, Pydantic schemas, token auth
+- `src/backend/app/models/user.py` — Added `mcp_bridge_token` column
+- `src/backend/app/api/settings.py` — MCP token generate/status/revoke endpoints
+- `src/frontend/src/lib/api.ts` — Token management API methods
+- `src/frontend/src/pages/SettingsPage.tsx` — OpenClaw Connection section
 
 ---
 
@@ -660,8 +690,17 @@ The Mission System introduces gamified learning with guided tours, achievements,
 ### MCP Bridge (`/api/v1/mcp/bridge`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/{user_id}/tools` | List skill-enabled workflows as MCP tools |
-| POST | `/{user_id}/tools/call` | Execute tool call via workflow |
+| GET | `/tools` | List MCP tools (token auth) |
+| POST | `/tools/call` | Call MCP tool (token auth) |
+| GET | `/{user_id}/tools` | List MCP tools (legacy URL auth) |
+| POST | `/{user_id}/tools/call` | Call MCP tool (legacy URL auth) |
+
+### Settings — MCP Token (`/api/v1/settings`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/mcp-token` | Generate new MCP bridge token |
+| GET | `/mcp-token` | Check token status (masked preview) |
+| DELETE | `/mcp-token` | Revoke MCP bridge token |
 
 ### WebSocket Relay
 | Protocol | Endpoint | Description |
