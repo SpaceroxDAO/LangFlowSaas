@@ -6,10 +6,11 @@
  */
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Copy, Check, ExternalLink } from 'lucide-react'
+import { Download, Copy, Check, ExternalLink, Terminal } from 'lucide-react'
 import { api } from '@/lib/api'
 import { detectOS, getOpenClawConfigDir, getFinderHint } from '@/lib/osDetect'
 import { downloadOpenClawConfig, type AgentPersonality } from '@/lib/mcpConfigGenerator'
+import { downloadInstaller } from '@/lib/installerGenerator'
 import type { AgentComponent, PublishWithSkillsResponse } from '@/types'
 
 interface PublishAgentModalProps {
@@ -93,20 +94,22 @@ export function PublishAgentModal({
     })
   }
 
-  const handleDownload = () => {
-    if (!publishResult) return
-    // Use raw token if newly generated, otherwise we need existing token
-    const token = publishResult.mcp_token
-    if (token) {
-      const personality: AgentPersonality = {
-        name: agent.name,
-        systemPrompt: agent.system_prompt,
-        avatarUrl: agent.avatar_url,
-        skills: publishResult.enabled_skills,
-        channels: agent.advanced_config?.channel_preferences,
-      }
-      downloadOpenClawConfig(token, personality)
-    }
+  const buildPersonality = (): AgentPersonality => ({
+    name: agent.name,
+    systemPrompt: agent.system_prompt,
+    avatarUrl: agent.avatar_url,
+    skills: publishResult?.enabled_skills,
+    channels: agent.advanced_config?.channel_preferences,
+  })
+
+  const handleDownloadInstaller = () => {
+    if (!publishResult?.mcp_token) return
+    downloadInstaller(publishResult.mcp_token, buildPersonality())
+  }
+
+  const handleDownloadConfig = () => {
+    if (!publishResult?.mcp_token) return
+    downloadOpenClawConfig(publishResult.mcp_token, buildPersonality())
   }
 
   const copyPath = () => {
@@ -260,79 +263,79 @@ export function PublishAgentModal({
             {/* Connect steps - only show if we have a token to offer */}
             {publishResult?.mcp_token ? (
               <div className="space-y-5">
-                {/* Step 1: Download */}
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                    <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">1</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                      Download your agent config
-                    </h3>
+                {/* Primary: One-click installer */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    Install your agent locally
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-neutral-400 mb-3">
+                    Download and run this script to automatically install OpenClaw and configure your agent.
+                  </p>
+                  <button
+                    onClick={handleDownloadInstaller}
+                    className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-xl transition-all w-full justify-center"
+                  >
+                    <Terminal className="w-4 h-4" />
+                    Download Installer ({os === 'windows' ? '.ps1' : '.sh'})
+                  </button>
+                  <p className="text-xs text-gray-400 dark:text-neutral-500 mt-2">
+                    {os === 'windows'
+                      ? 'Right-click the file → "Run with PowerShell"'
+                      : `Run: bash ~/Downloads/install-${agent.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.sh`}
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-neutral-700" />
+                  <span className="text-xs text-gray-400 dark:text-neutral-500">or</span>
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-neutral-700" />
+                </div>
+
+                {/* Secondary: Manual config download */}
+                <div>
+                  <button
+                    onClick={handleDownloadConfig}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-400 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 rounded-xl transition-colors w-full justify-center"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Config File Only
+                  </button>
+                  <div className="flex items-center gap-2 mt-2">
+                    <code className="text-xs font-mono text-gray-500 dark:text-neutral-400 flex-1 truncate">
+                      Save to {configDir}
+                    </code>
                     <button
-                      onClick={handleDownload}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-xl transition-all w-full justify-center"
+                      onClick={copyPath}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded transition-colors flex-shrink-0"
                     >
-                      <Download className="w-4 h-4" />
-                      Download Config File
+                      {pathCopied ? (
+                        <Check className="w-3 h-3 text-green-500" />
+                      ) : (
+                        <Copy className="w-3 h-3 text-gray-400" />
+                      )}
                     </button>
                   </div>
                 </div>
 
-                {/* Step 2: Save to folder */}
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                    <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">2</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                      Save it to your OpenClaw config folder
-                    </h3>
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-neutral-800 rounded-lg px-3 py-2 mb-1.5">
-                      <code className="text-sm font-mono text-gray-800 dark:text-neutral-200 flex-1 truncate">
-                        {configDir}
-                      </code>
-                      <button
-                        onClick={copyPath}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded transition-colors flex-shrink-0"
-                      >
-                        {pathCopied ? (
-                          <Check className="w-3.5 h-3.5 text-green-500" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5 text-gray-400" />
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-neutral-500">
-                      {finderHint}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 3: Restart */}
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                    <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">3</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                      Restart OpenClaw
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-neutral-400">
-                      Restart OpenClaw to load your new skills.
-                    </p>
-                  </div>
-                </div>
-
                 <p className="text-xs text-gray-400 dark:text-neutral-500 text-center pt-2 border-t border-gray-100 dark:border-neutral-800">
-                  Don't have OpenClaw?{' '}
+                  Requires{' '}
+                  <a
+                    href="https://nodejs.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-violet-500 hover:text-violet-600"
+                  >
+                    Node.js 18+
+                  </a>
+                  {' and '}
                   <a
                     href="https://openclaw.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-violet-500 hover:text-violet-600 inline-flex items-center gap-0.5"
                   >
-                    Install it first
+                    OpenClaw
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </p>
