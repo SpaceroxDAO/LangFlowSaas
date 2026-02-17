@@ -145,6 +145,12 @@ class AgentComponentCreateFromQA(BaseModel):
         description="URL to AI-generated avatar image",
     )
 
+    # Channel preferences (where the agent should live)
+    channel_preferences: Optional[List[str]] = Field(
+        default=None,
+        description="Preferred channels for the agent (e.g., ['whatsapp', 'telegram', 'slack', 'discord'])",
+    )
+
 
 class AgentComponentCreate(AgentComponentBase):
     """Schema for direct agent component creation (advanced)."""

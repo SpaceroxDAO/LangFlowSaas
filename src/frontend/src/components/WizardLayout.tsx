@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react'
 
-type StepTheme = 'violet' | 'pink' | 'orange'
+type StepTheme = 'violet' | 'pink' | 'orange' | 'cyan'
 
 interface WizardLayoutProps {
   step: number
@@ -30,6 +30,11 @@ const themeStyles: Record<StepTheme, { bg: string; iconBg: string; dotActive: st
   },
   orange: {
     bg: 'bg-emerald-500',
+    iconBg: 'bg-white/20',
+    dotActive: 'bg-white',
+  },
+  cyan: {
+    bg: 'bg-cyan-600',
     iconBg: 'bg-white/20',
     dotActive: 'bg-white',
   },

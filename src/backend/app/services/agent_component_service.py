@@ -333,6 +333,9 @@ class AgentComponentService:
             selected_tools=qa_data.selected_tools or [],  # Store selected tool IDs
             knowledge_source_ids=qa_data.knowledge_source_ids or [],  # Store knowledge source IDs
             system_prompt=system_prompt,
+            advanced_config={
+                "channel_preferences": qa_data.channel_preferences or [],
+            } if qa_data.channel_preferences else None,
             is_published=False,  # Not published by default
             is_active=True,
         )

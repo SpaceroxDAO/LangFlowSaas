@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, Copy, Check, ExternalLink } from 'lucide-react'
 import { api } from '@/lib/api'
 import { detectOS, getOpenClawConfigDir, getFinderHint } from '@/lib/osDetect'
-import { downloadOpenClawConfig } from '@/lib/mcpConfigGenerator'
+import { downloadOpenClawConfig, type AgentPersonality } from '@/lib/mcpConfigGenerator'
 import type { AgentComponent, PublishWithSkillsResponse } from '@/types'
 
 interface PublishAgentModalProps {
@@ -98,7 +98,14 @@ export function PublishAgentModal({
     // Use raw token if newly generated, otherwise we need existing token
     const token = publishResult.mcp_token
     if (token) {
-      downloadOpenClawConfig(token, agent.name)
+      const personality: AgentPersonality = {
+        name: agent.name,
+        systemPrompt: agent.system_prompt,
+        avatarUrl: agent.avatar_url,
+        skills: publishResult.enabled_skills,
+        channels: agent.advanced_config?.channel_preferences,
+      }
+      downloadOpenClawConfig(token, personality)
     }
   }
 

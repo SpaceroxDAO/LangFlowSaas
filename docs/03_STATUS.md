@@ -1,14 +1,14 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-02-16
-**Current Phase**: MVP Complete + OpenClaw Integration (Phase 2)
+**Last Updated**: 2026-02-17
+**Current Phase**: MVP Complete + OpenClaw Integration (Phase 3 Complete, Phase 4 In Progress)
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: OpenClaw Integration Phase 2 - MCP Bridge Execution + TC Connector CLI
-**Status**: ✅ Phase 2 Implementation Complete
-**Next Milestone**: Production deployment & first OpenClaw user testing
+**Phase**: OpenClaw Integration Phase 4 - Full Agent Bundle
+**Status**: Phase 3 ✅ Complete, Phase 4 🔄 In Progress
+**Next Milestone**: Publish tc-connector to npm, build OpenClaw installer bundle
 
 ## Health Indicators
 
@@ -25,7 +25,7 @@
 | Tour System | ✅ Tested | Driver.js integrated and working |
 | Canvas Viewer | ✅ Fixed | Updated for AgentComponent/Workflow architecture |
 | Streaming | ✅ Added | Backend streaming support enabled |
-| Testing | ✅ Complete | 30 E2E files (18+33 OpenClaw) + 45 component tests (Vitest) |
+| Testing | ✅ Complete | 30 E2E files (159 passed) + 45 component tests (Vitest) |
 | Resources/Docs | ✅ Complete | GitBook-style docs: 10 User Guides + 10 Developer Docs + Changelog |
 | Knowledge Sources | ✅ Working | Text, File Upload, URL - all tested |
 | RAG Search | ⚠️ Partial | Keyword-based fallback working; vector ingestion needs work |
@@ -34,7 +34,7 @@
 | Avatar System | ✅ Complete | Auto-inference (40+ job types), three-tier generation |
 | Custom Components | ✅ Complete | Publish agent → Langflow sidebar working |
 | Chat Playground | ✅ Fixed | Multi-turn conversations with memory + streaming |
-| OpenClaw Integration | ✅ Phase 2 | Publish flow, skill toggles, real MCP execution, token auth, TC Connector CLI |
+| OpenClaw Integration | ✅ Phase 3 | Unified publish + skills modal, one-click config download, auto-token, OS detection |
 
 Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
@@ -605,6 +605,67 @@ Langflow (executes workflow)
 
 ---
 
+### OpenClaw Integration Phase 3: Unified Publish Flow + One-Click Download ✅
+
+**Goal**: Collapse the 7-step OpenClaw setup into 2 steps: (1) Publish with skills, (2) Download ready-to-use config file.
+
+**Completed (2026-02-17):**
+
+**New Backend Endpoint:**
+- [x] `POST /api/v1/agent-components/{id}/publish-with-skills` — single transaction:
+  - Unpublishes other agents (1-live-agent limit)
+  - Publishes target agent
+  - Clears/sets workflow skill flags based on selection
+  - Auto-generates MCP token (`tc_` prefix) if none exists
+  - Returns agent + skills + token (raw token only if new)
+- [x] Pydantic schemas: `PublishWithSkillsRequest`, `EnabledSkillInfo`, `PublishWithSkillsResponse`
+
+**Frontend — Two-Phase Publish Modal:**
+- [x] Phase A: Skill checkboxes (fetches workflows, pre-checks `is_agent_skill`) + Publish button
+- [x] Phase B: Success message + 3-step download instructions (Download Config → Save to OS-detected folder → Restart OpenClaw)
+- [x] Config file browser download via blob URL (no terminal commands needed)
+- [x] Edge cases: no skills, re-publish with existing token, user already has OpenClaw
+
+**Frontend Utilities:**
+- [x] `osDetect.ts` — `detectOS()`, `getOpenClawConfigDir()`, `getFinderHint()` for macOS/Windows/Linux
+- [x] `mcpConfigGenerator.ts` — `generateOpenClawConfig()`, `downloadOpenClawConfig()` with blob download
+
+**Settings Page Simplification:**
+- [x] Renamed "OpenClaw Connection" → "Agent Connection (Advanced)"
+- [x] Collapsed by default (accordion pattern)
+- [x] Removed "Generate Token" button (auto-generated during publish now)
+- [x] Removed "View Guide" button + ConnectOpenClawModal reference
+- [x] Kept Regenerate/Revoke for power users
+
+**Files Created (2):**
+- `src/frontend/src/lib/osDetect.ts`
+- `src/frontend/src/lib/mcpConfigGenerator.ts`
+
+**Files Modified (5):**
+- `src/backend/app/api/agent_components.py` — publish-with-skills endpoint
+- `src/backend/app/schemas/agent_component.py` — new request/response schemas
+- `src/frontend/src/lib/api.ts` — `publishAgentWithSkills()` method
+- `src/frontend/src/components/PublishAgentModal.tsx` — complete rewrite (two-phase modal)
+- `src/frontend/src/pages/SettingsPage.tsx` — collapsed advanced section
+
+**E2E Test Results**: 159 passed, 33 skipped, 0 failures (1.7h run)
+
+---
+
+### OpenClaw Integration Phase 4: Full Agent Bundle 🔄 In Progress
+
+**Goal**: Evolve the config download into a full customized OpenClaw package. Users double-click to launch — no Node.js knowledge, no config editing, no terminal.
+
+**Planned Tasks:**
+- [x] Deploy Phase 3 to production
+- [ ] Publish tc-connector to npm (`npx tc-connector` works globally)
+- [ ] Build OpenClaw installer bundle (pre-configured OpenClaw + tc-connector)
+- [ ] Add channel config to Q&A wizard (WhatsApp, Telegram, Slack, Discord)
+- [ ] Embed agent personality in download (system prompt, name, avatar)
+- [ ] Update docs for Phase 3 + Phase 4 roadmap
+
+---
+
 ### Phases 14-17: Mission-Based Learning System (Planned)
 
 **Status**: ⏳ Documented, planned for post-launch
@@ -666,6 +727,7 @@ The Mission System introduces gamified learning with guided tours, achievements,
 | PATCH | `/{id}` | Update component |
 | DELETE | `/{id}` | Delete component |
 | POST | `/{id}/publish` | Publish as live OpenClaw agent |
+| POST | `/{id}/publish-with-skills` | Publish with skills in one step (Phase 3) |
 | POST | `/{id}/unpublish` | Remove from live status |
 | POST | `/{id}/duplicate` | Duplicate component |
 | GET | `/{id}/export` | Export as JSON |
@@ -806,44 +868,34 @@ All MVP features committed and pushed to origin/main.
 
 ## Immediate Next Steps
 
-1. **Run Alembic Migration** (Now)
-   - `cd src/backend && alembic upgrade head` to apply `is_agent_skill` column
-   - Verify with: `curl -X PATCH localhost:8000/api/v1/workflows/{id}/agent-skill`
+1. **Publish tc-connector to npm** (Now)
+   - Package fully built and tested, ready to publish
+   - Enables `npx tc-connector --token tc_xxx` from any machine
+   - Blocked on: npm login authentication
 
-2. **Manual QA of OpenClaw Phase 1** (Now)
-   - Test publish flow: Edit Agent → click "Publish Agent" → confirm modal → verify sidebar star
-   - Test skill toggle: Workflows tab → toggle "Agent skill" on/off → verify persistence
-   - Test MCP bridge: `curl localhost:8000/api/v1/mcp/bridge/{clerk_id}/tools`
-   - Test WebSocket relay: connect to `ws://localhost:8000/ws/agent/relay`
+2. **Build OpenClaw Installer Bundle** (Next)
+   - Create one-click installer bundling OpenClaw + tc-connector
+   - Pre-configured with user's token and agent settings
+   - Target: macOS .dmg, Windows .exe, Linux AppImage
 
-3. **Deploy to Production** (This Week)
-   - Commit and push OpenClaw Phase 1 changes
-   - Run migration on production database
-   - Verify publish flow in production at app.teachcharlie.ai
+3. **Add Channel Config to Q&A Wizard** (Next Sprint)
+   - Add step 4 to wizard: "Where should Charlie live?"
+   - Checkboxes for WhatsApp, Telegram, Slack, Discord
+   - Channel preferences baked into downloaded config
 
-4. **E2E Test Coverage** (This Week)
-   - Create `e2e/tests/openclaw-publish.spec.ts` covering:
-     - Publish/unpublish agent flow
-     - Sidebar star icon appears/disappears
-     - Live badge on project cards
-     - Workflow skill toggle persistence
-     - Replace agent confirmation flow
+4. **Embed Agent Personality in Download** (Next Sprint)
+   - Include system prompt, agent name, avatar in config
+   - Local OpenClaw reads personality from bundled config
+   - No separate "configure personality" step needed
 
-5. **OpenClaw Phase 2: TC Connector** (Next Sprint)
-   - Choose desktop framework (Electron vs Tauri)
-   - Build minimal connector that connects to WebSocket relay
-   - Implement MCP tool discovery and execution
-   - Wire up real workflow execution in MCP bridge
-   - Update connection indicator to show live status
-
-6. **Ongoing**
-   - Collect user feedback on publish flow UX
-   - Monitor WebSocket relay connection stability
+5. **Ongoing**
+   - Collect user feedback on publish + download flow
+   - Monitor MCP bridge usage and token management
    - Plan multi-agent support (paid tier feature)
 
 ---
 
-**Status Summary**: ✅ Green - OpenClaw Phase 1 Complete. MVP feature-complete with 15+ E2E tests passing. OpenClaw integration Phase 1 adds agent publishing, workflow skill toggles, MCP bridge, and WebSocket relay foundation. Platform is stable and production-ready. Next: manual QA, deploy, then Phase 2 (TC Connector desktop app).
+**Status Summary**: ✅ Green - OpenClaw Phase 3 Complete. Phases 1-3 deliver full publish + skills + download flow. 159 E2E tests passing. Platform deployed to production. Next: npm publish tc-connector, then Phase 4 installer bundle.
 
 ---
 
@@ -854,7 +906,7 @@ All MVP features committed and pushed to origin/main.
 | `00_PROJECT_SPEC.md` | Product requirements, personas | 2026-01-03 |
 | `01_ARCHITECTURE.md` | Technical architecture, DB schema | 2026-01-03 |
 | `02_CHANGELOG.md` | Major decisions & rationale | 2026-01-24 |
-| `03_STATUS.md` | **This file** - Current status | 2026-01-24 |
+| `03_STATUS.md` | **This file** - Current status | 2026-02-17 |
 | `04_DEVELOPMENT_PLAN.md` | Original development plan | 2026-01-03 |
 | `05_EDUCATIONAL_OVERLAY_RESEARCH.md` | UX patterns research | 2026-01-05 |
 | `06_MISSION_BASED_LEARNING_SYSTEM.md` | Mission system design | 2026-01-14 |

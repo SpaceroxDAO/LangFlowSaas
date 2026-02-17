@@ -268,6 +268,7 @@ export interface AgentComponentAdvancedConfig {
   verbose: boolean
   handle_parsing_errors: boolean
   chat_history_enabled: boolean
+  channel_preferences?: string[]
 }
 
 export interface AgentComponent {
@@ -309,6 +310,7 @@ export interface AgentComponentCreateFromQA {
   tricks?: string
   selected_tools?: string[]
   knowledge_source_ids?: string[]
+  channel_preferences?: string[]
   project_id?: string
   icon?: string
   color?: string

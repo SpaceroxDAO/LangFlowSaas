@@ -23,6 +23,10 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  MessageCircle,
+  Send,
+  Hash,
+  Gamepad2,
 } from 'lucide-react'
 
 // Icon mapping for presets
@@ -94,6 +98,38 @@ const AVAILABLE_TOOLS = [
   },
 ]
 
+// Available channels for Step 4
+const AVAILABLE_CHANNELS = [
+  {
+    id: 'whatsapp',
+    title: 'WhatsApp',
+    description: 'Chat with your agent on WhatsApp — the most popular messaging app.',
+    icon: MessageCircle,
+    color: 'text-green-500',
+  },
+  {
+    id: 'telegram',
+    title: 'Telegram',
+    description: 'Add your agent to Telegram for fast, secure conversations.',
+    icon: Send,
+    color: 'text-blue-500',
+  },
+  {
+    id: 'slack',
+    title: 'Slack',
+    description: 'Bring your agent into your Slack workspace as a bot.',
+    icon: Hash,
+    color: 'text-purple-500',
+  },
+  {
+    id: 'discord',
+    title: 'Discord',
+    description: 'Deploy your agent as a Discord bot for your community.',
+    icon: Gamepad2,
+    color: 'text-indigo-500',
+  },
+]
+
 // Types
 interface FormData {
   name: string
@@ -101,6 +137,7 @@ interface FormData {
   rules: string
   tools: string[]
   knowledgeSourceIds: string[]
+  channels: string[]
   avatarUrl: string | null
 }
 
@@ -118,6 +155,7 @@ type WizardAction =
   | { type: 'PREV_STEP' }
   | { type: 'UPDATE_FIELD'; field: keyof FormData; value: string | string[] | null }
   | { type: 'TOGGLE_TOOL'; toolId: string }
+  | { type: 'TOGGLE_CHANNEL'; channelId: string }
   | { type: 'SET_KNOWLEDGE_SOURCES'; sourceIds: string[] }
   | { type: 'SET_ERROR'; field: string; message: string }
   | { type: 'CLEAR_ERROR'; field: string }
@@ -160,6 +198,7 @@ const initialState: WizardState = {
     rules: DEFAULT_AGENT_RULES,
     tools: [],
     knowledgeSourceIds: [],
+    channels: [],
     avatarUrl: null,
   },
   errors: {},
@@ -171,7 +210,7 @@ const initialState: WizardState = {
 function reducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'NEXT_STEP':
-      return { ...state, currentStep: Math.min(state.currentStep + 1, 3) }
+      return { ...state, currentStep: Math.min(state.currentStep + 1, 4) }
     case 'PREV_STEP':
       return { ...state, currentStep: Math.max(state.currentStep - 1, 1) }
     case 'UPDATE_FIELD':
@@ -218,6 +257,15 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
           tools,
           knowledgeSourceIds: action.sourceIds,
         },
+      }
+    }
+    case 'TOGGLE_CHANNEL': {
+      const channels = state.formData.channels.includes(action.channelId)
+        ? state.formData.channels.filter((c) => c !== action.channelId)
+        : [...state.formData.channels, action.channelId]
+      return {
+        ...state,
+        formData: { ...state.formData, channels },
       }
     }
     case 'SET_ERROR':
@@ -459,6 +507,7 @@ export function CreateAgentPage() {
         tricks: formData.tools.join(', '), // Convert tools array to string
         selected_tools: formData.tools,
         knowledge_source_ids: formData.knowledgeSourceIds,
+        channel_preferences: formData.channels.length > 0 ? formData.channels : undefined,
         project_id: projectId || undefined,
         avatar_url: formData.avatarUrl || undefined,
       })
@@ -490,6 +539,8 @@ export function CreateAgentPage() {
         return `bg-pink-500 hover:bg-pink-600 hover:shadow-pink-500/25 ${baseClass}`
       case 3:
         return `bg-emerald-500 hover:bg-emerald-600 hover:shadow-emerald-500/25 ${baseClass}`
+      case 4:
+        return `bg-cyan-600 hover:bg-cyan-700 hover:shadow-cyan-600/25 ${baseClass}`
       default:
         return `bg-emerald-500 hover:bg-emerald-600 hover:shadow-emerald-500/25 ${baseClass}`
     }
@@ -501,7 +552,7 @@ export function CreateAgentPage() {
       {currentStep === 1 && (
         <WizardLayout
           step={1}
-          totalSteps={3}
+          totalSteps={4}
           theme="violet"
           title="Step 1: Identity"
           description="Just as you define the breed and temperament of a dog based on the work it needs to do, you must define your agent's identity. We are taking a blank slate and giving it a name and a job description to differentiate it from a generic model."
@@ -684,7 +735,7 @@ export function CreateAgentPage() {
       {currentStep === 2 && (
         <WizardLayout
           step={2}
-          totalSteps={3}
+          totalSteps={4}
           theme="pink"
           title="Step 2: Coaching"
           description="Forget complex coding. Think of this as coaching. You are simply writing a set of instructions for your agent to follow, just like an employee handbook. If the agent makes a mistake, you don't rewrite code—you simply adjust your coaching instructions in plain English."
@@ -757,7 +808,7 @@ export function CreateAgentPage() {
       {currentStep === 3 && (
         <WizardLayout
           step={3}
-          totalSteps={3}
+          totalSteps={4}
           theme="orange"
           title="Step 3: Actions"
           description={`Finally, what actions does your agent need to perform? Does it need to search the web? Check the weather? Give your agent the actions required to execute its tasks.`}
@@ -826,10 +877,101 @@ export function CreateAgentPage() {
                 </button>
               </div>
               <button
+                onClick={handleNext}
+                data-tour="create-button"
+                className={`px-6 py-3 text-white rounded-xl font-medium flex items-center gap-2 ${getStepButtonClass(3)}`}
+              >
+                Next Step
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </WizardLayout>
+      )}
+
+      {/* Step 4: Channels */}
+      {currentStep === 4 && (
+        <WizardLayout
+          step={4}
+          totalSteps={4}
+          theme="cyan"
+          title="Step 4: Channels"
+          description="Where should your agent live? Choose the messaging platforms where people can talk to your agent. You can always add or change channels later."
+          icon={
+            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+          }
+        >
+          <div className="space-y-6">
+            {/* Channel Selection Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {AVAILABLE_CHANNELS.map((channel) => {
+                const isSelected = formData.channels.includes(channel.id)
+                const IconComponent = channel.icon
+
+                return (
+                  <button
+                    key={channel.id}
+                    type="button"
+                    onClick={() => dispatch({ type: 'TOGGLE_CHANNEL', channelId: channel.id })}
+                    className={`relative flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                      isSelected
+                        ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30 ring-2 ring-cyan-200 dark:ring-cyan-700'
+                        : 'border-gray-200 dark:border-neutral-700 hover:border-cyan-300 dark:hover:border-cyan-600 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-800 flex items-center justify-center ${isSelected ? 'bg-cyan-100 dark:bg-cyan-900/30' : ''}`}>
+                      <IconComponent className={`w-5 h-5 ${channel.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-white text-sm">
+                        {channel.title}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-neutral-400 mt-0.5">
+                        {channel.description}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2">
+                        <svg className="w-5 h-5 text-cyan-500" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="text-xs text-gray-400 dark:text-neutral-500">
+              {formData.channels.length === 0
+                ? 'No channels selected yet. You can skip this step and add channels later.'
+                : `${formData.channels.length} channel${formData.channels.length !== 1 ? 's' : ''} selected. Channel setup will happen after your agent is created.`}
+            </p>
+
+            {/* Submit Error */}
+            {submitError && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-between pt-4 border-t border-gray-100 dark:border-neutral-700">
+              <button
+                onClick={handleBack}
+                disabled={isSubmitting}
+                className="px-6 py-3 border border-gray-300 dark:border-neutral-600 rounded-xl font-medium text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              >
+                Back
+              </button>
+              <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                data-tour="create-button"
-                className={`px-6 py-3 text-white rounded-xl font-medium flex items-center gap-2 disabled:opacity-50 ${getStepButtonClass(3)}`}
+                className={`px-6 py-3 text-white rounded-xl font-medium flex items-center gap-2 disabled:opacity-50 ${getStepButtonClass(4)}`}
               >
                 {isSubmitting ? (
                   <>
