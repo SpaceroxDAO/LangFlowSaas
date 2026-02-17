@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sun, Moon, Bell, CreditCard, Key, User, Palette, Zap, ExternalLink, Plug, Copy, Check, RotateCcw } from 'lucide-react'
+import { Sun, Moon, Bell, CreditCard, Key, User, Palette, Zap, ExternalLink, Plug, Copy, Check, RotateCcw, ChevronDown } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/providers/DevModeProvider'
 import { useTheme } from '@/providers/ThemeProvider'
-import { ConnectOpenClawModal } from '@/components/ConnectOpenClawModal'
 
 export function SettingsPage() {
   const { getToken } = useAuth()
@@ -14,7 +13,7 @@ export function SettingsPage() {
   const [defaultProvider, setDefaultProvider] = useState('openai')
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [usageAlerts, setUsageAlerts] = useState(true)
-  const [showOpenClawModal, setShowOpenClawModal] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [generatedToken, setGeneratedToken] = useState<string | null>(null)
   const [tokenCopied, setTokenCopied] = useState(false)
 
@@ -276,65 +275,60 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* OpenClaw Connection Section */}
-      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
+      {/* Agent Connection (Advanced) - Collapsible */}
+      <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 mb-6">
+        <button
+          onClick={() => setAdvancedOpen(!advancedOpen)}
+          className="flex items-center gap-3 w-full p-6 text-left"
+        >
           <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
             <Plug className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">OpenClaw Connection</h2>
-            <p className="text-sm text-gray-500 dark:text-neutral-400">Connect your workflow skills to local AI agents</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Agent Connection (Advanced)</h2>
+            <p className="text-sm text-gray-500 dark:text-neutral-400">
+              {tokenStatus?.has_token
+                ? `Token active: ${tokenStatus.token_preview}`
+                : 'Your connection token is automatically created when you publish an agent.'}
+            </p>
           </div>
-        </div>
+          <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-        <div className="space-y-4">
-          {/* Token Status */}
-          <div className="py-3">
-            <div className="flex items-center justify-between mb-3">
+        {advancedOpen && (
+          <div className="px-6 pb-6 space-y-4 border-t border-gray-100 dark:border-neutral-800 pt-4">
+            {/* Token Status */}
+            <div className="flex items-center justify-between py-2">
               <div>
                 <div className="font-medium text-gray-900 dark:text-white">MCP Bridge Token</div>
                 <div className="text-sm text-gray-500 dark:text-neutral-400">
                   {tokenStatus?.has_token
                     ? `Active: ${tokenStatus.token_preview}`
-                    : 'No token generated'}
+                    : 'No token — publish an agent to auto-generate one'}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {tokenStatus?.has_token && (
-                  <button
-                    onClick={() => {
-                      if (confirm('Regenerate token? The current token will stop working.')) {
-                        generateTokenMutation.mutate()
-                      }
-                    }}
-                    disabled={generateTokenMutation.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Regenerate
-                  </button>
-                )}
+              {tokenStatus?.has_token && (
                 <button
-                  onClick={() => generateTokenMutation.mutate()}
+                  onClick={() => {
+                    if (confirm('Regenerate token? The current token will stop working and you\'ll need to re-download your config.')) {
+                      generateTokenMutation.mutate()
+                    }
+                  }}
                   disabled={generateTokenMutation.isPending}
-                  className="px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
                 >
-                  {generateTokenMutation.isPending
-                    ? 'Generating...'
-                    : tokenStatus?.has_token
-                      ? 'New Token'
-                      : 'Generate Token'}
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  {generateTokenMutation.isPending ? 'Regenerating...' : 'Regenerate'}
                 </button>
-              </div>
+              )}
             </div>
 
-            {/* Show generated token (only right after generation) */}
+            {/* Show generated token (only right after regeneration) */}
             {generatedToken && (
-              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mt-3">
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
-                    Your MCP Token (copy now — it won't be shown again)
+                    New token (copy now — it won't be shown again)
                   </span>
                   <button
                     onClick={() => copyToken(generatedToken)}
@@ -358,51 +352,30 @@ export function SettingsPage() {
                 </code>
               </div>
             )}
-          </div>
 
-          {/* Connect OpenClaw button */}
-          <div className="flex items-center justify-between py-3 border-t border-gray-100 dark:border-neutral-800">
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">Setup Guide</div>
-              <div className="text-sm text-gray-500 dark:text-neutral-400">Step-by-step instructions to connect OpenClaw</div>
-            </div>
-            <button
-              onClick={() => setShowOpenClawModal(true)}
-              className="px-3 py-1.5 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
-            >
-              View Guide
-            </button>
-          </div>
-
-          {/* Revoke token */}
-          {tokenStatus?.has_token && (
-            <div className="flex items-center justify-between py-3 border-t border-gray-100 dark:border-neutral-800">
-              <div>
-                <div className="font-medium text-gray-900 dark:text-white">Revoke Token</div>
-                <div className="text-sm text-gray-500 dark:text-neutral-400">Disconnect all external agents</div>
+            {/* Revoke token */}
+            {tokenStatus?.has_token && (
+              <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-neutral-800">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">Revoke Token</div>
+                  <div className="text-sm text-gray-500 dark:text-neutral-400">Disconnect all external agents</div>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm('Revoke token? All connected agents will lose access.')) {
+                      revokeTokenMutation.mutate()
+                    }
+                  }}
+                  disabled={revokeTokenMutation.isPending}
+                  className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                >
+                  Revoke
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  if (confirm('Revoke token? All connected agents will lose access.')) {
-                    revokeTokenMutation.mutate()
-                  }
-                }}
-                disabled={revokeTokenMutation.isPending}
-                className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              >
-                Revoke
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* OpenClaw Setup Modal */}
-      <ConnectOpenClawModal
-        isOpen={showOpenClawModal}
-        onClose={() => setShowOpenClawModal(false)}
-        token={generatedToken || (tokenStatus?.has_token ? tokenStatus.token_preview : null)}
-      />
 
       {/* Account & Billing Section */}
       <div className="bg-white dark:bg-neutral-900 rounded-xl border border-gray-200 dark:border-neutral-800 p-6">

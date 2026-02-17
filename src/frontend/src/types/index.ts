@@ -337,6 +337,14 @@ export interface AgentComponentListResponse {
   page_size: number
 }
 
+// Publish with Skills (unified publish flow)
+export interface PublishWithSkillsResponse {
+  agent: AgentComponent
+  enabled_skills: Array<{ id: string; name: string }>
+  mcp_token: string | null
+  has_mcp_token: boolean
+}
+
 // =============================================================================
 // Workflow Types (Langflow Flows)
 // =============================================================================

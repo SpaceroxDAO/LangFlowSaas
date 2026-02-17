@@ -235,3 +235,35 @@ class AgentComponentListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class PublishWithSkillsRequest(BaseModel):
+    """Request to publish an agent and set workflow skills in one call."""
+
+    skill_workflow_ids: List[uuid.UUID] = Field(
+        default=[],
+        description="Workflow IDs to enable as agent skills",
+    )
+
+
+class EnabledSkillInfo(BaseModel):
+    """Info about an enabled skill workflow."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+
+
+class PublishWithSkillsResponse(BaseModel):
+    """Response from publish-with-skills endpoint."""
+
+    agent: AgentComponentResponse
+    enabled_skills: List[EnabledSkillInfo]
+    mcp_token: Optional[str] = Field(
+        None,
+        description="Raw MCP token (only returned if newly generated)",
+    )
+    has_mcp_token: bool = Field(
+        description="Whether the user has an MCP bridge token",
+    )

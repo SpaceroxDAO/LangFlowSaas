@@ -107,6 +107,8 @@ import type {
   ToolAvailabilityResponse,
   EnhancedChatRequest,
   EnhancedChatResponse,
+  // Publish with Skills
+  PublishWithSkillsResponse,
 } from '@/types'
 
 // Stream event type for SSE
@@ -424,6 +426,19 @@ class ApiClient {
     return this.request<AgentComponent>(`/api/v1/agent-components/${id}/unpublish`, {
       method: 'POST',
     })
+  }
+
+  async publishAgentWithSkills(
+    agentId: string,
+    skillWorkflowIds: string[]
+  ): Promise<PublishWithSkillsResponse> {
+    return this.request<PublishWithSkillsResponse>(
+      `/api/v1/agent-components/${agentId}/publish-with-skills`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ skill_workflow_ids: skillWorkflowIds }),
+      }
+    )
   }
 
   // ===========================================================================

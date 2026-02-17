@@ -1,6 +1,7 @@
 """
 Agent component management endpoints.
 """
+import secrets
 import uuid
 from typing import Optional
 
@@ -12,6 +13,7 @@ from app.middleware.clerk_auth import CurrentUser
 from app.middleware.redis_rate_limit import check_rate_limit_with_user
 from app.models.user import User
 from app.models.agent_component import AgentComponent
+from app.models.workflow import Workflow
 from app.schemas.agent_component import (
     AgentComponentCreateFromQA,
     AgentComponentResponse,
@@ -19,6 +21,9 @@ from app.schemas.agent_component import (
     AgentComponentListResponse,
     GenerateAvatarRequest,
     GenerateAvatarResponse,
+    PublishWithSkillsRequest,
+    PublishWithSkillsResponse,
+    EnabledSkillInfo,
 )
 from app.services.user_service import UserService
 from app.services.agent_component_service import (
@@ -416,6 +421,90 @@ async def publish_agent(
     await session.refresh(component)
 
     return component
+
+
+@router.post(
+    "/{component_id}/publish-with-skills",
+    response_model=PublishWithSkillsResponse,
+    summary="Publish agent with skills in one step",
+    description="Publish this agent and set workflow skills in a single call. "
+                "Auto-generates an MCP bridge token if the user doesn't have one.",
+)
+async def publish_agent_with_skills(
+    component_id: uuid.UUID,
+    body: PublishWithSkillsRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Publish agent + configure skills + ensure MCP token exists."""
+    user = await get_user_from_clerk(clerk_user, session)
+    service = AgentComponentService(session)
+
+    component = await service.get_by_id(component_id, user_id=user.id)
+    if not component:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Agent component not found.",
+        )
+
+    # 1. Unpublish any other published agents (1-live-agent limit)
+    result = await session.execute(
+        select(AgentComponent).where(
+            and_(
+                AgentComponent.user_id == user.id,
+                AgentComponent.is_published == True,
+                AgentComponent.id != component_id,
+            )
+        )
+    )
+    for other in result.scalars().all():
+        other.is_published = False
+
+    # 2. Publish this agent
+    component.is_published = True
+
+    # 3. Clear all user's is_agent_skill flags, then set selected ones
+    all_workflows_result = await session.execute(
+        select(Workflow).where(
+            and_(
+                Workflow.user_id == user.id,
+                Workflow.is_agent_skill == True,
+            )
+        )
+    )
+    for wf in all_workflows_result.scalars().all():
+        wf.is_agent_skill = False
+
+    enabled_skills = []
+    if body.skill_workflow_ids:
+        selected_result = await session.execute(
+            select(Workflow).where(
+                and_(
+                    Workflow.user_id == user.id,
+                    Workflow.id.in_(body.skill_workflow_ids),
+                    Workflow.is_active == True,
+                )
+            )
+        )
+        for wf in selected_result.scalars().all():
+            wf.is_agent_skill = True
+            enabled_skills.append(EnabledSkillInfo(id=wf.id, name=wf.name))
+
+    # 4. Auto-generate MCP bridge token if user doesn't have one
+    new_token = None
+    if not user.mcp_bridge_token:
+        new_token = f"tc_{secrets.token_urlsafe(48)}"
+        user.mcp_bridge_token = new_token
+
+    await session.commit()
+    await session.refresh(component)
+
+    return PublishWithSkillsResponse(
+        agent=AgentComponentResponse.model_validate(component),
+        enabled_skills=enabled_skills,
+        mcp_token=new_token,
+        has_mcp_token=bool(user.mcp_bridge_token),
+    )
 
 
 @router.post(
