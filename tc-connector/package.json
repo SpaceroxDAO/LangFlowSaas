@@ -1,6 +1,6 @@
 {
   "name": "tc-connector",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Teach Charlie AI MCP Connector — bridges your Teach Charlie workflows to local AI agents via MCP",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

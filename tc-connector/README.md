@@ -21,11 +21,21 @@ Langflow (executes workflow)
 
 ## Quick Start
 
-### 1. Generate an MCP Token
+### Option A: Interactive Setup
+
+```bash
+npx tc-connector --setup
+```
+
+This walks you through entering your token, verifies it, and saves config to `~/.tc-connector/config.json`.
+
+### Option B: Manual Setup
+
+#### 1. Generate an MCP Token
 
 Go to **Settings > OpenClaw Connection** in your Teach Charlie dashboard and click **Generate MCP Token**.
 
-### 2. Add to OpenClaw
+#### 2. Add to OpenClaw
 
 Add this to your `.mcp.json` (or OpenClaw MCP config):
 
@@ -53,9 +63,42 @@ Or if installed globally:
 }
 ```
 
-### 3. Restart OpenClaw
+#### 3. Restart OpenClaw
 
 Restart OpenClaw and your Teach Charlie workflow skills will appear as available tools.
+
+## Commands
+
+### Check Status
+
+Verify your token and see available tools:
+
+```bash
+npx tc-connector --status
+```
+
+Output:
+```
+  TC Connector — Status
+  ─────────────────────
+  Version:    1.1.0
+  API URL:    https://app.teachcharlie.ai
+  Token:      tc_Hmn...A9lm
+  Connection:  OK
+  Tools:       2 available
+```
+
+### Run as MCP Server
+
+```bash
+npx tc-connector --token tc_YOUR_TOKEN
+```
+
+Or if you ran `--setup`, just:
+
+```bash
+npx tc-connector
+```
 
 ## Configuration
 
@@ -65,10 +108,11 @@ Restart OpenClaw and your Teach Charlie workflow skills will appear as available
 tc-connector [options]
 
 Options:
-  --token <token>     MCP bridge token (required)
+  --token <token>     MCP bridge token (required unless configured)
   --api-url <url>     Teach Charlie API URL (default: https://app.teachcharlie.ai)
   --config <path>     Config file path (default: ~/.tc-connector/config.json)
   --setup             Interactive setup wizard
+  --status            Check connection and token validity
   --version, -v       Show version
   --help, -h          Show help
 ```
@@ -82,7 +126,7 @@ TC_API_URL=https://...    # API URL (optional)
 
 ### Config File
 
-Create `~/.tc-connector/config.json`:
+Create `~/.tc-connector/config.json` (or use `--setup`):
 
 ```json
 {

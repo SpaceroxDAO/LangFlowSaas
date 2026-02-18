@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
+  "productName": "Teach Charlie",
+  "identifier": "ai.teachcharlie.desktop",
+  "version": "0.1.0",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Teach Charlie",
+        "width": 480,
+        "height": 720,
+        "resizable": true,
+        "minWidth": 400,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' https://app.teachcharlie.ai https://*.clerk.accounts.dev https://*.clerk.dev https://clerk.teachcharlie.ai https://api.clerk.dev https://api.clerk.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.dev; style-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.dev; img-src 'self' https: data: blob:; font-src 'self' https: data:; frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/tc-connector"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    }
+  }
+}

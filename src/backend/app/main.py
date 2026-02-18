@@ -40,6 +40,7 @@ from app.api import (
     embed_router,
     connections_router,
     mcp_bridge_router,
+    desktop_router,
     ws_relay_router,
 )
 
@@ -446,6 +447,7 @@ app.include_router(missions_router, prefix="/api/v1")
 app.include_router(embed_router, prefix="/api/v1")
 app.include_router(connections_router, prefix="/api/v1")
 app.include_router(mcp_bridge_router, prefix="/api/v1")
+app.include_router(desktop_router, prefix="/api/v1")
 app.include_router(ws_relay_router)
 
 # Mount static files for serving generated avatars

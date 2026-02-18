@@ -14,14 +14,17 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, VERSION } from "./config.js";
 import { TeachCharlieClient } from "./api-client.js";
 import type { MCPTool } from "./api-client.js";
 
 async function main() {
   const config = loadConfig();
   if (!config) {
-    process.exit(1);
+    // loadConfig returns null for --setup and --status (they handle their own exit)
+    // Wait briefly for async handlers to complete
+    await new Promise((resolve) => setTimeout(resolve, 30000));
+    return;
   }
 
   const client = new TeachCharlieClient(config.apiUrl, config.token);
@@ -48,7 +51,7 @@ async function main() {
   const server = new Server(
     {
       name: "tc-connector",
-      version: "1.0.0",
+      version: VERSION,
     },
     {
       capabilities: {

@@ -1,14 +1,14 @@
 # Project Status: Teach Charlie AI
 
-**Last Updated**: 2026-02-17
-**Current Phase**: MVP Complete + OpenClaw Integration (Phase 3 Complete, Phase 4 In Progress)
+**Last Updated**: 2026-02-18
+**Current Phase**: MVP Complete + Desktop App (Built & Auth Verified)
 **Owner**: Adam (Product) + Claude Code (Technical)
 
 ## Current Phase
 
-**Phase**: OpenClaw Integration Phase 4 - Full Agent Bundle
-**Status**: Phase 3 ✅ Complete, Phase 4 🔄 In Progress
-**Next Milestone**: Publish tc-connector to npm, build OpenClaw installer bundle
+**Phase**: Teach Charlie Desktop App (Tauri v2)
+**Status**: Build ✅ Complete, Clerk Auth ✅ Verified, Backend Deploy ⏳ Pending
+**Next Milestone**: Deploy backend bootstrap endpoint, end-to-end sign-in → sidecar → MCP test
 
 ## Health Indicators
 
@@ -35,6 +35,7 @@
 | Custom Components | ✅ Complete | Publish agent → Langflow sidebar working |
 | Chat Playground | ✅ Fixed | Multi-turn conversations with memory + streaming |
 | OpenClaw Integration | ✅ Phase 3 | Unified publish + skills modal, one-click config download, auto-token, OS detection |
+| Desktop App | ✅ Auth Verified | Tauri v2 .app (69MB) + .dmg (29MB), Clerk sign-in works in WebView |
 
 Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
@@ -98,6 +99,44 @@ Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
 - ✅ Fix 14: Rate limiting on critical endpoints (chat, billing, avatar)
 - ✅ Fix 15: Pagination standardization (page/page_size everywhere)
 - ✅ Fix 16: Composite database indexes (11 indexes for query performance)
+
+### Desktop App (Tauri v2): Scaffold Complete, Build In Progress
+
+**Goal**: Native desktop app so non-technical users can connect their agent to OpenClaw without CLI knowledge
+
+#### Completed (2026-02-17)
+- [x] Backend `GET /api/v1/desktop/bootstrap` endpoint (agent + skills + MCP token)
+- [x] Tauri v2 project scaffold (`tc-agent/`, 38 files)
+- [x] Rust core: AppState, 6 IPC commands, system tray, hide-on-close
+- [x] React frontend: 4 pages, 4 components, 3 hooks, API client
+- [x] Framer Motion "Coming Alive" animation sequence (5 steps + confetti)
+- [x] Sidecar build script (`bun build --compile` = 58MB standalone binary)
+- [x] GitHub Actions CI/CD for macOS (arm64 + x64) + Windows builds
+- [x] npm install + Vite build: zero errors (420KB JS bundle)
+- [x] TypeScript strict mode: zero type errors
+- [x] Rust `cargo check`: compiles clean
+- [x] Sidecar binary verified working (`tc-connector --version` / `--help`)
+
+- [x] Full `tauri build`: release binary compiled + .app bundle created (69MB)
+- [x] DMG created: 29MB compressed installer
+- [x] Verified .app structure: Tauri binary (11MB) + tc-connector sidecar (61MB)
+
+#### Build Artifacts
+```
+Teach Charlie.app          69 MB  (.app bundle)
+Teach Charlie_0.1.0.dmg    29 MB  (compressed installer)
+tc-connector sidecar       58 MB  (standalone MCP server)
+Frontend JS bundle        420 KB  (React + Clerk + Tailwind)
+```
+
+#### Remaining
+- [ ] Test Clerk `<SignIn />` in Tauri webview (add `tauri://localhost` to Clerk origins)
+- [ ] End-to-end test: sign in → bootstrap → sidecar start → MCP connected
+- [ ] Replace placeholder icons with branded assets
+- [ ] Code signing (Apple Developer ID $99/yr, Windows cert)
+- [ ] Auto-updater configuration (tauri-plugin-updater endpoints)
+- [ ] Fix Tauri DMG bundler (currently using manual `hdiutil` as workaround)
+- [ ] Download page on teachcharlie.ai
 
 ### Phases 0-13: Complete ✅
 

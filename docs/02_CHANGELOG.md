@@ -4,6 +4,107 @@
 
 ---
 
+## 2026-02-17 - Teach Charlie Desktop App (Tauri v2) — Phase 1-3 Scaffold
+
+### Summary
+Scaffolded the entire Teach Charlie Desktop application using Tauri v2 (Rust + React). The desktop app eliminates the need for CLI/terminal knowledge to connect AI agents to OpenClaw — users download, sign in, and everything connects automatically. This replaces the `npx tc-connector --setup` workflow for non-technical users.
+
+### Design Decision
+**Tauri v2 over Electron**: ~5MB base runtime vs 150MB. Native system tray, auto-start, and sidecar management. The existing `tc-connector` is compiled into a standalone binary via `bun build --compile` and bundled as a Tauri sidecar — no Node.js runtime needed on the user's machine.
+
+### Architecture
+```
+Teach Charlie Desktop (Tauri v2)
+├── WebView (React + Tailwind + Framer Motion)
+│   ├── Splash → Sign-in (Clerk) → Agent Dashboard → Settings
+│   └── "Coming Alive" animation sequence
+├── Rust Core
+│   ├── System tray (hide-on-close)
+│   ├── Sidecar management (start/stop/restart tc-connector)
+│   ├── Config I/O (~/.teach-charlie/config.json)
+│   └── Auto-start plugin
+└── tc-connector sidecar (bun compiled binary)
+    └── Standalone MCP server — no Node.js required
+```
+
+### User Flow
+1. Download & install (.dmg on macOS, .msi on Windows)
+2. Open app → sign in with Clerk
+3. App auto-fetches published agent + generates MCP token (single bootstrap call)
+4. Animated "agent coming alive" sequence (avatar, skills lighting up, confetti)
+5. MCP bridge starts in background → green status indicator
+6. Close window → app continues in system tray
+7. OpenClaw / Claude Desktop discovers the agent via auto-generated `.mcp.json`
+
+### Files Created (38 new files)
+
+**Backend:**
+- `src/backend/app/api/desktop.py` — `GET /api/v1/desktop/bootstrap` (returns agent + skills + MCP token in one call)
+- Modified `api/__init__.py` and `main.py` to register `desktop_router`
+
+**Tauri Project — `tc-agent/` (36 files):**
+
+| Layer | Key Files |
+|-------|-----------|
+| Config | `package.json`, `vite.config.ts`, `tsconfig.json` (strict: true), `tauri.conf.json` |
+| Rust | `lib.rs` (tray + hide-on-close), `commands.rs` (6 IPC commands), `state.rs` (AppState) |
+| Pages | `SplashPage`, `SignInPage`, `AgentDashboardPage`, `SettingsPage` |
+| Components | `AgentCard`, `AgentComingAlive` (5-step Framer Motion), `SkillsList`, `MCPStatus` |
+| Hooks | `useAgent` (bootstrap API), `useSidecar` (Tauri invoke), `useMCPToken` (local config) |
+| API | `lib/api.ts` (desktop bootstrap client) |
+| Build | `scripts/build-sidecar.sh` (bun compile for macOS/Windows) |
+
+**CI/CD:**
+- `.github/workflows/build-desktop.yml` — Builds macOS (arm64 + x64) + Windows, creates GitHub Releases
+
+### Key Technical Decisions
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Framework | Tauri v2 | 5MB vs 150MB Electron, native feel |
+| Auth | Clerk `<SignIn />` in webview | In-app auth, consistent with web platform |
+| Sidecar | `bun build --compile` of tc-connector | Single binary, no Node.js dependency |
+| Animations | Framer Motion | Spring physics, staggered reveals |
+| Auto-update | tauri-plugin-updater + GitHub Releases | Official Tauri approach |
+| Config location | `~/.teach-charlie/config.json` | Standard XDG-style, separate from tc-connector |
+
+### Build Verification (Same Day)
+All compilation steps verified:
+- **Frontend**: Vite build 420KB JS bundle, TypeScript strict zero errors
+- **Rust**: `cargo check` clean, release binary 11MB, compiled in ~90s
+- **Sidecar**: `bun build --compile` → 58MB standalone binary, `--version` / `--help` verified
+- **.app bundle**: 69MB (Tauri 11MB + sidecar 61MB)
+- **.dmg installer**: 29MB compressed via UDZO
+
+### Build Notes
+- Rust fix: `use tauri::Emitter;` needed for `app.emit()` (Tauri v2 trait import)
+- Rust fix: `app.default_window_icon()` instead of `Image::from_bytes()` for tray icon
+- Rust fix: Removed `macos-ahp` feature from `tauri-plugin-autostart` (doesn't exist)
+- PostCSS fix: Added `@tailwindcss/postcss` to devDependencies for Tailwind v4
+- DMG fix: Tauri's built-in `bundle_dmg.sh` fails; manual `hdiutil create` works
+
+### Auth Verification (2026-02-17, Same Day)
+Clerk `<SignIn />` confirmed working in Tauri WebView — **no browser redirect fallback needed**.
+
+**What was tested:**
+- Launched .app bundle → Splash screen → Sign-in page transition (AnimatePresence fade)
+- Clerk component renders: Google sign-in button, email/password fields, Sign up link
+- Zero console errors (1 expected Clerk dev mode warning)
+- CSP configured for all Clerk domains (connect-src, script-src, style-src, frame-src, worker-src)
+- App process runs at ~90MB RAM, 69MB on disk
+
+**Bug fixed:** Moved `setScreen()` state transitions from render to `useEffect` in `App.tsx` to avoid React state-during-render warnings.
+
+**Note:** "Sign in to My Application" text comes from the Clerk dashboard application name setting, not from our code. Change it in Clerk dashboard → Application → General.
+
+### Remaining Work
+- Deploy backend to production (bootstrap endpoint returns 404 until deployed)
+- Add `tauri://localhost` to Clerk allowed origins (for actual Tauri webview, not Vite dev server)
+- End-to-end test: sign in → bootstrap API → sidecar start → MCP bridge live
+- Real branded icons (replace placeholder purple PNGs with proper .icns/.ico)
+- Code signing (Apple Developer ID, Windows cert)
+
+---
+
 ## 2026-02-16 - OpenClaw Integration Phase 2: MCP Bridge Execution + TC Connector CLI
 
 ### Summary
