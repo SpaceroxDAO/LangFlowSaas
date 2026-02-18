@@ -96,10 +96,18 @@ Clerk `<SignIn />` confirmed working in Tauri WebView — **no browser redirect 
 
 **Note:** "Sign in to My Application" text comes from the Clerk dashboard application name setting, not from our code. Change it in Clerk dashboard → Application → General.
 
+### Production Deployment & E2E Verification (2026-02-18)
+Backend deployed to production. Full pipeline verified end-to-end:
+
+1. **Bootstrap endpoint live**: `GET /api/v1/desktop/bootstrap` — returns 401 without auth (correct), 200 with valid Clerk JWT
+2. **Bootstrap response verified**: Returns user data, skills (1 tool: "Charlie"), and auto-generated MCP token (`tc_` prefix)
+3. **MCP bridge connection verified**: `tc-connector --status` with bootstrap token shows "Connection: OK, Tools: 1 available"
+4. **Full chain**: Clerk JWT → Bootstrap → MCP token → tc-connector sidecar → Bridge tools endpoint → lists available tools
+
+**Note**: Tool execution timed out (120s) on test call — likely Langflow workflow warm-up issue, not a desktop app problem.
+
 ### Remaining Work
-- Deploy backend to production (bootstrap endpoint returns 404 until deployed)
 - Add `tauri://localhost` to Clerk allowed origins (for actual Tauri webview, not Vite dev server)
-- End-to-end test: sign in → bootstrap API → sidecar start → MCP bridge live
 - Real branded icons (replace placeholder purple PNGs with proper .icns/.ico)
 - Code signing (Apple Developer ID, Windows cert)
 

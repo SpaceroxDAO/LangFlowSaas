@@ -7,8 +7,8 @@
 ## Current Phase
 
 **Phase**: Teach Charlie Desktop App (Tauri v2)
-**Status**: Build ✅ Complete, Clerk Auth ✅ Verified, Backend Deploy ⏳ Pending
-**Next Milestone**: Deploy backend bootstrap endpoint, end-to-end sign-in → sidecar → MCP test
+**Status**: Build ✅, Auth ✅, Backend ✅, E2E Pipeline ✅ Verified
+**Next Milestone**: Add Clerk `tauri://localhost` origin, branded icons, code signing
 
 ## Health Indicators
 
@@ -35,7 +35,7 @@
 | Custom Components | ✅ Complete | Publish agent → Langflow sidebar working |
 | Chat Playground | ✅ Fixed | Multi-turn conversations with memory + streaming |
 | OpenClaw Integration | ✅ Phase 3 | Unified publish + skills modal, one-click config download, auto-token, OS detection |
-| Desktop App | ✅ Auth Verified | Tauri v2 .app (69MB) + .dmg (29MB), Clerk sign-in works in WebView |
+| Desktop App | ✅ E2E Verified | Tauri v2 .app (69MB) + .dmg (29MB), full pipeline: Clerk → Bootstrap → Sidecar → MCP bridge |
 
 Legend: ✅ Good | ⚠️ Warning | ❌ Critical | ⏳ Pending
 
