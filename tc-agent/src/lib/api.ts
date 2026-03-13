@@ -24,12 +24,30 @@ export interface BootstrapData {
   mcp_token: string;
 }
 
-export async function fetchBootstrap(
-  clerkToken: string
-): Promise<BootstrapData> {
-  const res = await fetch(`${API_URL}/api/v1/desktop/bootstrap`, {
+export async function activateDesktop(code: string): Promise<BootstrapData> {
+  const res = await fetch(`${API_URL}/api/v1/desktop/activate`, {
+    method: "POST",
     headers: {
-      Authorization: `Bearer ${clerkToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    const detail = body?.detail || `Activation failed: ${res.status}`;
+    throw new Error(detail);
+  }
+
+  return res.json();
+}
+
+export async function fetchBootstrapByToken(
+  token: string
+): Promise<BootstrapData> {
+  const res = await fetch(`${API_URL}/api/v1/desktop/bootstrap-by-token`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
   });

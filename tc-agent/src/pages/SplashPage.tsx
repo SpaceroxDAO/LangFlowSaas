@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { getStoredToken } from "../lib/store";
 
 interface SplashPageProps {
   onAuthenticated: () => void;
@@ -8,22 +8,34 @@ interface SplashPageProps {
 }
 
 export function SplashPage({ onAuthenticated, onNeedsAuth }: SplashPageProps) {
-  const { isLoaded, isSignedIn } = useAuth();
-
   useEffect(() => {
-    if (!isLoaded) return;
-
-    // Small delay for visual polish
-    const timer = setTimeout(() => {
-      if (isSignedIn) {
-        onAuthenticated();
-      } else {
+    const checkToken = async () => {
+      try {
+        const token = await getStoredToken();
+        if (token) {
+          onAuthenticated();
+        } else {
+          onNeedsAuth();
+        }
+      } catch {
         onNeedsAuth();
       }
-    }, 800);
+    };
 
-    return () => clearTimeout(timer);
-  }, [isLoaded, isSignedIn, onAuthenticated, onNeedsAuth]);
+    // Brief delay for splash branding
+    const timer = setTimeout(checkToken, 800);
+
+    // Fallback: if token check hangs, go to setup code page
+    const fallback = setTimeout(() => {
+      console.warn("Token check did not complete within 5s, falling through to setup code");
+      onNeedsAuth();
+    }, 5000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(fallback);
+    };
+  }, [onAuthenticated, onNeedsAuth]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">

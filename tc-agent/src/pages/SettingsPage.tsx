@@ -1,21 +1,24 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useClerk } from "@clerk/clerk-react";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { clearStoredToken } from "../lib/store";
 
 interface SettingsPageProps {
   onBack: () => void;
+  onDisconnected: () => void;
 }
 
-export function SettingsPage({ onBack }: SettingsPageProps) {
-  const { signOut } = useClerk();
+export function SettingsPage({ onBack, onDisconnected }: SettingsPageProps) {
   const [autoStart, setAutoStart] = useState(false);
   const [configPath, setConfigPath] = useState("");
+  const [appVersion, setAppVersion] = useState("0.1.0");
 
   useEffect(() => {
     isEnabled().then(setAutoStart).catch(() => {});
     invoke<string>("get_config_path").then(setConfigPath).catch(() => {});
+    getVersion().then(setAppVersion).catch(() => {});
   }, []);
 
   const handleAutoStartToggle = async () => {
@@ -32,13 +35,14 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     }
   };
 
-  const handleSignOut = async () => {
+  const handleDisconnect = async () => {
     try {
-      await invoke("stop_sidecar");
+      await invoke("control_openclaw_daemon", { action: "stop" });
     } catch {
-      // Sidecar might not be running
+      // Daemon might not be running
     }
-    await signOut();
+    await clearStoredToken();
+    onDisconnected();
   };
 
   return (
@@ -105,17 +109,17 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white text-sm font-medium">Version</p>
-              <p className="text-gray-500 text-xs mt-0.5">0.1.0</p>
+              <p className="text-gray-500 text-xs mt-0.5">{appVersion}</p>
             </div>
           </div>
         </div>
 
-        {/* Sign out */}
+        {/* Disconnect */}
         <button
-          onClick={handleSignOut}
+          onClick={handleDisconnect}
           className="w-full p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors text-left"
         >
-          Sign out
+          Disconnect
         </button>
       </motion.div>
     </div>

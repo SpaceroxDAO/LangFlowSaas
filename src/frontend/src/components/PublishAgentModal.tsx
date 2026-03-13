@@ -2,16 +2,22 @@
  * PublishAgentModal - Two-phase modal for publishing an agent.
  *
  * Phase A: Choose skills (workflow checkboxes) + publish
- * Phase B: Connect your agent (download config instructions)
+ * Phase B: Download Teach Charlie desktop app (primary) + advanced options
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Copy, Check, ExternalLink, Terminal } from 'lucide-react'
+import { Download, Copy, Check, Terminal, ChevronDown, Monitor, KeyRound, RefreshCw } from 'lucide-react'
 import { api } from '@/lib/api'
-import { detectOS, getOpenClawConfigDir, getFinderHint } from '@/lib/osDetect'
+import { detectOS, getOpenClawConfigDir } from '@/lib/osDetect'
 import { downloadOpenClawConfig, type AgentPersonality } from '@/lib/mcpConfigGenerator'
 import { downloadInstaller } from '@/lib/installerGenerator'
 import type { AgentComponent, PublishWithSkillsResponse } from '@/types'
+
+/** Absolute download URLs served by nginx (must be absolute to bypass SPA routing) */
+const DOWNLOAD_FILES: Record<string, string> = {
+  mac: 'https://app.teachcharlie.ai/downloads/TeachCharlie-0.1.0-mac-arm64.dmg',
+  windows: 'https://app.teachcharlie.ai/downloads/TeachCharlie-0.1.0-win-x64.msi',
+}
 
 interface PublishAgentModalProps {
   agent: AgentComponent
@@ -36,13 +42,18 @@ export function PublishAgentModal({
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
   const [publishResult, setPublishResult] = useState<PublishWithSkillsResponse | null>(null)
   const [pathCopied, setPathCopied] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [setupCode, setSetupCode] = useState<string | null>(null)
+  const [setupCodeExpiry, setSetupCodeExpiry] = useState<number>(0)
+  const [setupCodeLoading, setSetupCodeLoading] = useState(false)
+  const [setupCodeCopied, setSetupCodeCopied] = useState(false)
+  const expiryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const os = detectOS()
   const configDir = getOpenClawConfigDir(os)
-  const finderHint = getFinderHint(os)
 
   // Fetch user's workflows for skill selection
-  const { data: workflowsData } = useQuery({
+  const { data: workflowsData, isLoading: isLoadingWorkflows } = useQuery({
     queryKey: ['workflows-for-skills'],
     queryFn: () => api.listWorkflows(undefined, 1, 100, true),
     enabled: isOpen,
@@ -50,13 +61,15 @@ export function PublishAgentModal({
 
   const workflows = workflowsData?.workflows || []
 
-  // Pre-check workflows that already have is_agent_skill enabled
+  // Track whether the initial auto-select has fired for this modal session.
+  // Prevents background React Query refetches from overwriting user's checkbox changes.
+  const hasAutoSelected = useRef(false)
+
+  // Auto-select all workflows when modal opens (first load only).
   useEffect(() => {
-    if (workflows.length > 0) {
-      const preSelected = new Set(
-        workflows.filter((w) => w.is_agent_skill).map((w) => w.id)
-      )
-      setSelectedSkills(preSelected)
+    if (workflows.length > 0 && !hasAutoSelected.current) {
+      setSelectedSkills(new Set(workflows.map((w) => w.id)))
+      hasAutoSelected.current = true
     }
   }, [workflows])
 
@@ -66,8 +79,50 @@ export function PublishAgentModal({
       setPhase('skills')
       setPublishResult(null)
       setPathCopied(false)
+      setShowAdvanced(false)
+      setSetupCode(null)
+      setSetupCodeExpiry(0)
+      setSetupCodeCopied(false)
+      hasAutoSelected.current = false
+    }
+    return () => {
+      if (expiryTimerRef.current) clearInterval(expiryTimerRef.current)
     }
   }, [isOpen])
+
+  const handleGenerateSetupCode = useCallback(async () => {
+    setSetupCodeLoading(true)
+    try {
+      const result = await api.generateDesktopSetupCode()
+      setSetupCode(result.code)
+      setSetupCodeExpiry(result.expires_in)
+      setSetupCodeCopied(false)
+
+      // Start countdown timer
+      if (expiryTimerRef.current) clearInterval(expiryTimerRef.current)
+      expiryTimerRef.current = setInterval(() => {
+        setSetupCodeExpiry((prev) => {
+          if (prev <= 1) {
+            if (expiryTimerRef.current) clearInterval(expiryTimerRef.current)
+            setSetupCode(null)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } catch {
+      // Silently fail — user can retry
+    } finally {
+      setSetupCodeLoading(false)
+    }
+  }, [])
+
+  const copySetupCode = useCallback(() => {
+    if (!setupCode) return
+    navigator.clipboard.writeText(setupCode)
+    setSetupCodeCopied(true)
+    setTimeout(() => setSetupCodeCopied(false), 2000)
+  }, [setupCode])
 
   const publishMutation = useMutation({
     mutationFn: () =>
@@ -76,7 +131,12 @@ export function PublishAgentModal({
       setPublishResult(data)
       setPhase('connect')
       queryClient.invalidateQueries({ queryKey: ['agent-components'] })
+      queryClient.invalidateQueries({ queryKey: ['agent-component'] })
+      queryClient.invalidateQueries({ queryKey: ['agent-component-for-workflow'] })
       queryClient.invalidateQueries({ queryKey: ['workflows'] })
+      queryClient.invalidateQueries({ queryKey: ['workflow'] })
+      queryClient.invalidateQueries({ queryKey: ['workflows-for-component'] })
+      queryClient.invalidateQueries({ queryKey: ['workflows-for-skills'] })
       queryClient.invalidateQueries({ queryKey: ['mcp-token-status'] })
       onSuccess?.()
     },
@@ -164,12 +224,38 @@ export function PublishAgentModal({
               </p>
             )}
 
+            {/* Channel preferences summary */}
+            {agent.advanced_config?.channel_preferences && agent.advanced_config.channel_preferences.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                {agent.advanced_config.channel_preferences.map((ch) => (
+                  <span key={ch} className="px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                    {ch.charAt(0).toUpperCase() + ch.slice(1)}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Skills selection */}
             {workflows.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-neutral-300 mb-3">
-                  Choose skills for your agent
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-neutral-300">
+                    Choose workflows for your agent
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedSkills.size === workflows.length) {
+                        setSelectedSkills(new Set())
+                      } else {
+                        setSelectedSkills(new Set(workflows.map((w) => w.id)))
+                      }
+                    }}
+                    className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 font-medium"
+                  >
+                    {selectedSkills.size === workflows.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
                 <div className="space-y-1 max-h-48 overflow-y-auto border border-gray-200 dark:border-neutral-700 rounded-xl p-2">
                   {workflows.map((workflow) => (
                     <label
@@ -197,8 +283,8 @@ export function PublishAgentModal({
                 </div>
                 <p className="text-xs text-gray-400 dark:text-neutral-500 mt-2">
                   {selectedSkills.size === 0
-                    ? 'No skills selected. You can add skills later in the Workflows tab.'
-                    : `${selectedSkills.size} skill${selectedSkills.size !== 1 ? 's' : ''} selected`}
+                    ? 'No workflows selected. You can add workflows later in the Workflows tab.'
+                    : `${selectedSkills.size} workflow${selectedSkills.size !== 1 ? 's' : ''} selected`}
                 </p>
               </div>
             )}
@@ -206,7 +292,7 @@ export function PublishAgentModal({
             {workflows.length === 0 && (
               <div className="bg-gray-50 dark:bg-neutral-800/50 rounded-lg p-3 mb-6">
                 <p className="text-sm text-gray-500 dark:text-neutral-400">
-                  No workflows yet. You can create workflows and add them as skills later.
+                  No workflows yet. You can create workflows and add them later.
                 </p>
               </div>
             )}
@@ -227,10 +313,12 @@ export function PublishAgentModal({
               </button>
               <button
                 onClick={() => publishMutation.mutate()}
-                disabled={publishMutation.isPending}
+                disabled={publishMutation.isPending || isLoadingWorkflows}
                 className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-xl transition-all disabled:opacity-50"
               >
-                {publishMutation.isPending
+                {isLoadingWorkflows
+                  ? 'Loading workflows...'
+                  : publishMutation.isPending
                   ? 'Publishing...'
                   : isReplacing
                     ? 'Replace & Publish'
@@ -240,7 +328,7 @@ export function PublishAgentModal({
           </div>
         ) : (
           /* ============================================================
-             PHASE B: Connect Your Agent (Download Instructions)
+             PHASE B: Download the Desktop App
              ============================================================ */
           <div className="p-6 overflow-y-auto">
             {/* Success header */}
@@ -256,102 +344,164 @@ export function PublishAgentModal({
             </h2>
             <p className="text-sm text-gray-500 dark:text-neutral-400 text-center mb-6">
               {publishResult && publishResult.enabled_skills.length > 0
-                ? `${publishResult.enabled_skills.length} skill${publishResult.enabled_skills.length !== 1 ? 's' : ''} enabled`
-                : 'No skills enabled'}
+                ? `${publishResult.enabled_skills.length} workflow${publishResult.enabled_skills.length !== 1 ? 's' : ''} enabled`
+                : 'No workflows enabled'}
             </p>
 
-            {/* Connect steps - only show if we have a token to offer */}
-            {publishResult?.mcp_token ? (
-              <div className="space-y-5">
-                {/* Primary: One-click installer */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                    Install your agent locally
+            {/* Setup Code Section */}
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl border border-violet-200 dark:border-violet-800/50 bg-violet-50/50 dark:bg-violet-950/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <KeyRound className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    Setup Code
                   </h3>
-                  <p className="text-xs text-gray-500 dark:text-neutral-400 mb-3">
-                    Download and run this script to automatically install OpenClaw and configure your agent.
-                  </p>
-                  <button
-                    onClick={handleDownloadInstaller}
-                    className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-xl transition-all w-full justify-center"
-                  >
-                    <Terminal className="w-4 h-4" />
-                    Download Installer ({os === 'windows' ? '.ps1' : '.sh'})
-                  </button>
-                  <p className="text-xs text-gray-400 dark:text-neutral-500 mt-2">
-                    {os === 'windows'
-                      ? 'Right-click the file → "Run with PowerShell"'
-                      : `Run: bash ~/Downloads/install-${agent.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.sh`}
-                  </p>
                 </div>
+                <p className="text-xs text-gray-500 dark:text-neutral-400 mb-3">
+                  Enter this code in the Teach Charlie desktop app to connect your agent.
+                </p>
 
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-neutral-700" />
-                  <span className="text-xs text-gray-400 dark:text-neutral-500">or</span>
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-neutral-700" />
-                </div>
-
-                {/* Secondary: Manual config download */}
-                <div>
-                  <button
-                    onClick={handleDownloadConfig}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-400 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 rounded-xl transition-colors w-full justify-center"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download Config File Only
-                  </button>
-                  <div className="flex items-center gap-2 mt-2">
-                    <code className="text-xs font-mono text-gray-500 dark:text-neutral-400 flex-1 truncate">
-                      Save to {configDir}
-                    </code>
+                {setupCode ? (
+                  <div className="space-y-2">
+                    {/* Large code display */}
                     <button
-                      onClick={copyPath}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded transition-colors flex-shrink-0"
+                      onClick={copySetupCode}
+                      className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 hover:border-violet-300 dark:hover:border-violet-600 transition-colors group"
                     >
-                      {pathCopied ? (
-                        <Check className="w-3 h-3 text-green-500" />
+                      <span className="text-2xl font-mono font-bold tracking-[0.3em] text-gray-900 dark:text-white">
+                        {setupCode}
+                      </span>
+                      {setupCodeCopied ? (
+                        <Check className="w-4 h-4 text-green-500 shrink-0" />
                       ) : (
-                        <Copy className="w-3 h-3 text-gray-400" />
+                        <Copy className="w-4 h-4 text-gray-400 group-hover:text-violet-500 shrink-0" />
                       )}
                     </button>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400 dark:text-neutral-500">
+                        Expires in {Math.floor(setupCodeExpiry / 60)}:{String(setupCodeExpiry % 60).padStart(2, '0')}
+                      </p>
+                      <button
+                        onClick={handleGenerateSetupCode}
+                        disabled={setupCodeLoading}
+                        className="flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${setupCodeLoading ? 'animate-spin' : ''}`} />
+                        New code
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <button
+                    onClick={handleGenerateSetupCode}
+                    disabled={setupCodeLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {setupCodeLoading ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <KeyRound className="w-4 h-4" />
+                    )}
+                    {setupCodeLoading ? 'Generating...' : 'Generate Setup Code'}
+                  </button>
+                )}
+              </div>
 
-                <p className="text-xs text-gray-400 dark:text-neutral-500 text-center pt-2 border-t border-gray-100 dark:border-neutral-800">
-                  Requires{' '}
-                  <a
-                    href="https://nodejs.org"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-violet-500 hover:text-violet-600"
-                  >
-                    Node.js 18+
-                  </a>
-                  {' and '}
-                  <a
-                    href="https://openclaw.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-violet-500 hover:text-violet-600 inline-flex items-center gap-0.5"
-                  >
-                    OpenClaw
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+              {/* Download button */}
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  Download Teach Charlie
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-neutral-400 mb-2">
+                  Install the desktop app to run your agent locally.
                 </p>
               </div>
-            ) : (
-              /* Already has a token - simpler message */
-              <div className="bg-violet-50 dark:bg-violet-950/30 rounded-lg p-4 mb-2">
-                <p className="text-sm text-violet-700 dark:text-violet-300">
-                  Your existing config still works — no need to re-download.
-                  You can re-download the config anytime from Settings.
-                </p>
+
+              <a
+                href={DOWNLOAD_FILES[os] || DOWNLOAD_FILES['mac']}
+                download
+                className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 dark:text-neutral-300 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 rounded-xl transition-all w-full justify-center"
+              >
+                <Monitor className="w-4 h-4" />
+                Download for {os === 'mac' ? 'macOS' : os === 'windows' ? 'Windows' : 'Desktop'}
+                <Download className="w-3.5 h-3.5 opacity-60" />
+              </a>
+
+              {/* How it works — 3 steps */}
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                {[
+                  { step: '1', label: 'Download', desc: 'Install the desktop app' },
+                  { step: '2', label: 'Enter code', desc: 'Use your setup code' },
+                  { step: '3', label: 'Done', desc: 'Agent connects automatically' },
+                ].map((s) => (
+                  <div key={s.step} className="text-center">
+                    <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 text-xs font-bold flex items-center justify-center mx-auto mb-1.5">
+                      {s.step}
+                    </div>
+                    <p className="text-xs font-medium text-gray-900 dark:text-white">{s.label}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-neutral-400 mt-0.5">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400 dark:text-neutral-500 text-center mt-4">
+              Already have the app? Your agent will update automatically within 30 seconds.
+            </p>
+
+            {/* Advanced: collapsible installer script + config download */}
+            {publishResult?.mcp_token && (
+              <div className="mt-4 border-t border-gray-100 dark:border-neutral-800 pt-4">
+                <button
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300 transition-colors w-full"
+                >
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                  Advanced: terminal installer or config file
+                </button>
+
+                {showAdvanced && (
+                  <div className="mt-3 space-y-3">
+                    {/* Installer script */}
+                    <button
+                      onClick={handleDownloadInstaller}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-400 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 rounded-xl transition-colors w-full justify-center"
+                    >
+                      <Terminal className="w-3.5 h-3.5" />
+                      Download Installer ({os === 'windows' ? '.ps1' : '.sh'})
+                    </button>
+
+                    {/* Config-only download */}
+                    <button
+                      onClick={handleDownloadConfig}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-neutral-400 border border-gray-200 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800 rounded-xl transition-colors w-full justify-center"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download Config File Only
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono text-gray-500 dark:text-neutral-400 flex-1 truncate">
+                        Save to {configDir}
+                      </code>
+                      <button
+                        onClick={copyPath}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded transition-colors flex-shrink-0"
+                      >
+                        {pathCopied ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <Copy className="w-3 h-3 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Done button */}
-            <div className="mt-6">
+            <div className="mt-4">
               <button
                 onClick={handleClose}
                 className="w-full px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-neutral-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 rounded-xl transition-colors"

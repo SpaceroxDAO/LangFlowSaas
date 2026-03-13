@@ -14,6 +14,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::AppleScript,
             None,
@@ -22,13 +24,19 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::load_config,
             commands::store_config,
-            commands::write_mcp_config,
-            commands::start_sidecar,
-            commands::stop_sidecar,
-            commands::sidecar_status,
             commands::get_config_path,
+            commands::check_openclaw,
+            commands::install_openclaw,
+            commands::write_openclaw_config,
+            commands::control_openclaw_daemon,
         ])
         .setup(|app| {
+            // Open devtools in debug builds
+            #[cfg(debug_assertions)]
+            if let Some(window) = app.get_webview_window("main") {
+                window.open_devtools();
+            }
+
             // Build tray menu
             let show_item = MenuItemBuilder::with_id("show", "Show Teach Charlie").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;

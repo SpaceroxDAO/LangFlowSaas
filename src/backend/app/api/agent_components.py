@@ -477,11 +477,14 @@ async def publish_agent_with_skills(
 
     enabled_skills = []
     if body.skill_workflow_ids:
+        # Convert UUIDs to strings for SQLite compatibility (VARCHAR id column)
+        skill_ids_str = [str(wid) for wid in body.skill_workflow_ids]
+
         selected_result = await session.execute(
             select(Workflow).where(
                 and_(
                     Workflow.user_id == user.id,
-                    Workflow.id.in_(body.skill_workflow_ids),
+                    Workflow.id.in_(skill_ids_str),
                     Workflow.is_active == True,
                 )
             )

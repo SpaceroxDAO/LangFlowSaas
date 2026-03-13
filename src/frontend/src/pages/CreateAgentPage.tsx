@@ -23,11 +23,8 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  MessageCircle,
-  Send,
-  Hash,
-  Gamepad2,
 } from 'lucide-react'
+import { AVAILABLE_CHANNELS } from '@/lib/channels'
 
 // Icon mapping for presets
 const presetIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -98,37 +95,6 @@ const AVAILABLE_TOOLS = [
   },
 ]
 
-// Available channels for Step 4
-const AVAILABLE_CHANNELS = [
-  {
-    id: 'whatsapp',
-    title: 'WhatsApp',
-    description: 'Chat with your agent on WhatsApp — the most popular messaging app.',
-    icon: MessageCircle,
-    color: 'text-green-500',
-  },
-  {
-    id: 'telegram',
-    title: 'Telegram',
-    description: 'Add your agent to Telegram for fast, secure conversations.',
-    icon: Send,
-    color: 'text-blue-500',
-  },
-  {
-    id: 'slack',
-    title: 'Slack',
-    description: 'Bring your agent into your Slack workspace as a bot.',
-    icon: Hash,
-    color: 'text-purple-500',
-  },
-  {
-    id: 'discord',
-    title: 'Discord',
-    description: 'Deploy your agent as a Discord bot for your community.',
-    icon: Gamepad2,
-    color: 'text-indigo-500',
-  },
-]
 
 // Types
 interface FormData {
@@ -949,7 +915,7 @@ export function CreateAgentPage() {
             <p className="text-xs text-gray-400 dark:text-neutral-500">
               {formData.channels.length === 0
                 ? 'No channels selected yet. You can skip this step and add channels later.'
-                : `${formData.channels.length} channel${formData.channels.length !== 1 ? 's' : ''} selected. Channel setup will happen after your agent is created.`}
+                : `${formData.channels.length} channel${formData.channels.length !== 1 ? 's' : ''} selected. These preferences are saved with your agent.`}
             </p>
 
             {/* Submit Error */}

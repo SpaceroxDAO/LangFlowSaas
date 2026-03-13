@@ -597,6 +597,11 @@ function AgentRow({
             Live
           </span>
         )}
+        {agent.advanced_config?.channel_preferences?.map((ch) => (
+          <span key={ch} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-neutral-400 flex-shrink-0">
+            {ch}
+          </span>
+        ))}
         <span className="text-gray-400 dark:text-neutral-500 text-sm flex-shrink-0">
           Edited {getRelativeTime(agent.updated_at)}
         </span>
@@ -763,6 +768,15 @@ function AgentCard({
         <h3 className="font-medium text-gray-900 dark:text-white mb-1 truncate hover:text-gray-600 dark:hover:text-neutral-300">
           {agent.name}
         </h3>
+        {agent.advanced_config?.channel_preferences && agent.advanced_config.channel_preferences.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {agent.advanced_config.channel_preferences.map((ch) => (
+              <span key={ch} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-neutral-800 text-gray-500 dark:text-neutral-400">
+                {ch}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="text-sm text-gray-400 dark:text-neutral-500">
           Edited {getRelativeTime(agent.updated_at)}
         </p>

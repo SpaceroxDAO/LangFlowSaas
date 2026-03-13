@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri_plugin_shell::process::CommandChild;
 
 /// Persisted config stored at ~/.teach-charlie/config.json
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -11,17 +10,19 @@ pub struct DesktopConfig {
     pub auto_start: Option<bool>,
 }
 
-/// Sidecar process state
-pub struct SidecarState {
-    pub child: Option<CommandChild>,
-    pub running: bool,
+/// OpenClaw daemon state
+pub struct OpenClawState {
+    pub installed: bool,
+    pub daemon_running: bool,
+    pub config_written: bool,
 }
 
-impl Default for SidecarState {
+impl Default for OpenClawState {
     fn default() -> Self {
         Self {
-            child: None,
-            running: false,
+            installed: false,
+            daemon_running: false,
+            config_written: false,
         }
     }
 }
@@ -29,14 +30,14 @@ impl Default for SidecarState {
 /// Global app state managed by Tauri
 pub struct AppState {
     pub config: Mutex<DesktopConfig>,
-    pub sidecar: Mutex<SidecarState>,
+    pub openclaw: Mutex<OpenClawState>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             config: Mutex::new(DesktopConfig::default()),
-            sidecar: Mutex::new(SidecarState::default()),
+            openclaw: Mutex::new(OpenClawState::default()),
         }
     }
 }

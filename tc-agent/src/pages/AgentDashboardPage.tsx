@@ -1,56 +1,32 @@
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useEffect } from "react";
 import { useAgent } from "../hooks/useAgent";
-import { useSidecar } from "../hooks/useSidecar";
-import { useMCPToken } from "../hooks/useMCPToken";
+import { useOpenClaw } from "../hooks/useOpenClaw";
 import { AgentCard } from "../components/AgentCard";
 import { SkillsList } from "../components/SkillsList";
-import { MCPStatus } from "../components/MCPStatus";
-import { AgentComingAlive } from "../components/AgentComingAlive";
+import { OpenClawStatus } from "../components/OpenClawStatus";
 
 interface AgentDashboardPageProps {
   onSettings: () => void;
 }
 
 export function AgentDashboardPage({ onSettings }: AgentDashboardPageProps) {
-  const { user } = useUser();
   const { data, loading, error: agentError, refresh } = useAgent();
-  const { running, start, stop, error: sidecarError } = useSidecar();
-  const { saveConfig } = useMCPToken();
-  const [showAnimation, setShowAnimation] = useState(false);
-  const hasStarted = useRef(false);
+  const {
+    version,
+    daemonRunning,
+    checkInstalled,
+    checkDaemonStatus,
+    startDaemon,
+    stopDaemon,
+    error: openclawError,
+  } = useOpenClaw();
 
-  // Auto-start sidecar when bootstrap data arrives
+  // Check OpenClaw status on mount
   useEffect(() => {
-    if (!data?.mcp_token || hasStarted.current) return;
-    hasStarted.current = true;
-
-    // Save config locally
-    saveConfig(data.mcp_token).catch(() => {});
-
-    // Show animation and start sidecar
-    setShowAnimation(true);
-  }, [data, saveConfig]);
-
-  const handleAnimationComplete = useCallback(() => {
-    setShowAnimation(false);
-    if (data?.mcp_token) {
-      start(data.mcp_token).catch(() => {});
-    }
-  }, [data, start]);
-
-  // Show coming-alive animation
-  if (showAnimation && data?.published_agent) {
-    return (
-      <AgentComingAlive
-        agentName={data.published_agent.name}
-        avatarUrl={data.published_agent.avatar_url}
-        skills={data.skills.map((s) => s.name)}
-        onComplete={handleAnimationComplete}
-      />
-    );
-  }
+    checkInstalled();
+    checkDaemonStatus();
+  }, [checkInstalled, checkDaemonStatus]);
 
   // Loading state
   if (loading) {
@@ -97,12 +73,21 @@ export function AgentDashboardPage({ onSettings }: AgentDashboardPageProps) {
       <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <div>
           <h2 className="text-white font-semibold text-sm">
-            Hi, {user?.firstName || "there"}
+            Hi, {data?.user?.first_name || "there"}
           </h2>
           <p className="text-gray-500 text-xs">Your agent is ready</p>
         </div>
         <div className="flex items-center gap-2">
-          <MCPStatus running={running} error={sidecarError} />
+          <OpenClawStatus running={daemonRunning} error={openclawError} />
+          <button
+            onClick={refresh}
+            className="w-8 h-8 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-700 transition-colors"
+            title="Refresh agent data"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
           <button
             onClick={onSettings}
             className="w-8 h-8 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-400 hover:text-white hover:border-gray-700 transition-colors"
@@ -148,29 +133,61 @@ export function AgentDashboardPage({ onSettings }: AgentDashboardPageProps) {
           </motion.div>
         )}
 
-        {/* Skills */}
+        {/* Workflows (skills) */}
         {data && <SkillsList skills={data.skills} />}
 
-        {/* Connection controls */}
+        {/* OpenClaw Status section */}
         <div className="space-y-2">
           <h4 className="text-gray-400 text-xs font-medium uppercase tracking-wider px-1">
-            MCP Bridge
+            OpenClaw Agent
           </h4>
-          <div className="flex gap-2">
-            <button
-              onClick={() => data?.mcp_token && start(data.mcp_token)}
-              disabled={running || !data?.mcp_token}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {running ? "Connected" : "Connect"}
-            </button>
-            <button
-              onClick={stop}
-              disabled={!running}
-              className="px-4 py-2.5 rounded-xl bg-gray-800 text-gray-300 text-sm border border-gray-700 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Stop
-            </button>
+          <div className="p-4 rounded-2xl bg-gray-900/50 border border-gray-800/50 space-y-3">
+            {/* Daemon status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    daemonRunning ? "bg-emerald-400" : "bg-gray-600"
+                  }`}
+                />
+                <span className="text-white text-sm">
+                  {daemonRunning ? "Agent Running" : "Agent Stopped"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {daemonRunning ? (
+                  <button
+                    onClick={stopDaemon}
+                    className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-300 text-xs border border-gray-700 hover:bg-gray-700 transition-colors"
+                  >
+                    Stop
+                  </button>
+                ) : (
+                  <button
+                    onClick={startDaemon}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs hover:bg-purple-700 transition-colors"
+                  >
+                    Start
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Version */}
+            {version && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Version</span>
+                <span className="text-gray-400 font-mono">{version}</span>
+              </div>
+            )}
+
+            {/* Config location */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Config</span>
+              <span className="text-gray-400 font-mono text-[11px]">
+                ~/.openclaw/openclaw.json
+              </span>
+            </div>
           </div>
         </div>
       </div>

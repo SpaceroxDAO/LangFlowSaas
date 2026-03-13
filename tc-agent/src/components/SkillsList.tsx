@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { open } from "@tauri-apps/plugin-shell";
 
 interface Skill {
   id: string;
@@ -12,6 +13,14 @@ interface SkillsListProps {
 }
 
 export function SkillsList({ skills }: SkillsListProps) {
+  const openWebDashboard = async () => {
+    try {
+      await open("https://app.teachcharlie.ai/dashboard");
+    } catch {
+      // Fallback: ignore if plugin not available
+    }
+  };
+
   if (skills.length === 0) {
     return (
       <div className="text-center py-6">
@@ -47,6 +56,12 @@ export function SkillsList({ skills }: SkillsListProps) {
           </div>
         </motion.div>
       ))}
+      <button
+        onClick={openWebDashboard}
+        className="w-full text-center text-xs text-purple-400 hover:text-purple-300 transition-colors py-2"
+      >
+        Configure skills on web &rarr;
+      </button>
     </div>
   );
 }

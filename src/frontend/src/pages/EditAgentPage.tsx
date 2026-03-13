@@ -13,6 +13,7 @@ import { KnowledgeSourcesModal } from '@/components/KnowledgeSourcesModal'
 import { PublishAgentModal } from '@/components/PublishAgentModal'
 import { usePublishedAgent } from '@/hooks/usePublishedAgent'
 import { inferJobFromDescription } from '@/lib/avatarJobInference'
+import { AVAILABLE_CHANNELS } from '@/lib/channels'
 import type { AgentComponent, AgentComponentAdvancedConfig } from '@/types'
 
 // Available tools - must match CreateAgentPage.tsx
@@ -96,6 +97,7 @@ export function EditAgentPage() {
   const [isKnowledgeModalOpen, setIsKnowledgeModalOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [advancedConfig, setAdvancedConfig] = useState<Partial<AgentComponentAdvancedConfig> | undefined>()
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([])
   const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false)
   const [_langflowFlowId, setLangflowFlowId] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -113,6 +115,7 @@ export function EditAgentPage() {
     selectedTools: string[]
     knowledgeSourceIds: string[]
     avatarUrl: string | null
+    selectedChannels: string[]
   } | null>(null)
 
   useEffect(() => {
@@ -133,6 +136,7 @@ export function EditAgentPage() {
         setKnowledgeSourceIds(agent.knowledge_source_ids || [])
         setAvatarUrl(agent.avatar_url || null)
         setAdvancedConfig(agent.advanced_config || undefined)
+        setSelectedChannels(agent.advanced_config?.channel_preferences || [])
         // Store original values for change detection
         const tools = parseTools(agent.selected_tools, agent.qa_tricks)
         setOriginalValues({
@@ -142,6 +146,7 @@ export function EditAgentPage() {
           selectedTools: tools,
           knowledgeSourceIds: agent.knowledge_source_ids || [],
           avatarUrl: agent.avatar_url || null,
+          selectedChannels: agent.advanced_config?.channel_preferences || [],
         })
         setIsLoading(false)
       } catch (err) {
@@ -184,7 +189,8 @@ export function EditAgentPage() {
     instructions !== originalValues.instructions ||
     avatarUrl !== originalValues.avatarUrl ||
     JSON.stringify([...selectedTools].sort()) !== JSON.stringify([...originalValues.selectedTools].sort()) ||
-    JSON.stringify([...knowledgeSourceIds].sort()) !== JSON.stringify([...originalValues.knowledgeSourceIds].sort())
+    JSON.stringify([...knowledgeSourceIds].sort()) !== JSON.stringify([...originalValues.knowledgeSourceIds].sort()) ||
+    JSON.stringify([...selectedChannels].sort()) !== JSON.stringify([...originalValues.selectedChannels].sort())
   )
 
   const toggleTool = (toolId: string) => {
@@ -207,6 +213,14 @@ export function EditAgentPage() {
     } else if (sourceIds.length === 0 && selectedTools.includes('knowledge_search')) {
       setSelectedTools(prev => prev.filter(t => t !== 'knowledge_search'))
     }
+  }
+
+  const toggleChannel = (channelId: string) => {
+    setSelectedChannels((prev) =>
+      prev.includes(channelId)
+        ? prev.filter((c) => c !== channelId)
+        : [...prev, channelId]
+    )
   }
 
   const handleGenerateAvatar = async () => {
@@ -281,9 +295,10 @@ export function EditAgentPage() {
         qa_who: persona.trim(),
         qa_rules: instructions.trim(),
         qa_tricks: tricksText,
-        selected_tools: selectedTools,  // Include selected tool IDs
-        knowledge_source_ids: knowledgeSourceIds,  // Include knowledge source IDs
+        selected_tools: selectedTools,
+        knowledge_source_ids: knowledgeSourceIds,
         avatar_url: avatarUrl || undefined,
+        advanced_config: { ...advancedConfig, channel_preferences: selectedChannels },
       })
 
       // Invalidate cache so other pages see updated data
@@ -297,6 +312,7 @@ export function EditAgentPage() {
         selectedTools: [...selectedTools],
         knowledgeSourceIds: [...knowledgeSourceIds],
         avatarUrl: avatarUrl,
+        selectedChannels: [...selectedChannels],
       })
 
       // Show success message (auto-hide after 3 seconds)
@@ -317,8 +333,10 @@ export function EditAgentPage() {
     setSaveError(null)
 
     try {
+      // Preserve current channel selections when saving advanced settings
+      const configWithChannels = { ...config, channel_preferences: selectedChannels }
       const updated = await api.updateAgentComponent(agentId, {
-        advanced_config: config,
+        advanced_config: configWithChannels,
       })
       setAdvancedConfig(updated.advanced_config || undefined)
       setIsAdvancedModalOpen(false)
@@ -598,6 +616,53 @@ export function EditAgentPage() {
               onToggle={() => toggleTool(tool.id)}
             />
           ))}
+        </div>
+      </div>
+
+      {/* Channels Section */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-800 p-6 mb-6">
+        <div className="flex items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Channels</h2>
+          <Tooltip text="Where your agent can be reached — messaging platforms and integrations" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {AVAILABLE_CHANNELS.map((channel) => {
+            const isSelected = selectedChannels.includes(channel.id)
+            const IconComponent = channel.icon
+
+            return (
+              <button
+                key={channel.id}
+                type="button"
+                onClick={() => toggleChannel(channel.id)}
+                className={`relative flex items-start gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                  isSelected
+                    ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30 ring-2 ring-cyan-200 dark:ring-cyan-700'
+                    : 'border-gray-200 dark:border-neutral-700 hover:border-cyan-300 dark:hover:border-cyan-600 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                }`}
+              >
+                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-800 flex items-center justify-center ${isSelected ? 'bg-cyan-100 dark:bg-cyan-900/30' : ''}`}>
+                  <IconComponent className={`w-5 h-5 ${channel.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 dark:text-white text-sm">
+                    {channel.title}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-neutral-400 mt-0.5">
+                    {channel.description}
+                  </div>
+                </div>
+                {isSelected && (
+                  <div className="absolute top-2 right-2">
+                    <svg className="w-5 h-5 text-cyan-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 

@@ -49,6 +49,20 @@ LangflowSaaS/
 │       ├── templates/             # Langflow flow templates
 │       ├── tests/                 # Pytest unit tests
 │       └── requirements.txt
+├── tc-agent/                      # Teach Charlie Desktop App (Tauri v2)
+│   ├── src-tauri/                 # Rust backend (tray, sidecar, config)
+│   │   ├── src/                   # lib.rs, commands.rs, state.rs
+│   │   ├── tauri.conf.json        # Window, bundle, plugin config
+│   │   ├── capabilities/          # Permission declarations
+│   │   └── binaries/              # Compiled tc-connector sidecar
+│   ├── src/                       # React frontend (WebView)
+│   │   ├── pages/                 # Splash, SignIn, Dashboard, Settings
+│   │   ├── components/            # AgentCard, AgentComingAlive, MCPStatus
+│   │   ├── hooks/                 # useAgent, useSidecar, useMCPToken
+│   │   └── lib/                   # API client
+│   └── scripts/                   # build-sidecar.sh
+├── tc-connector/                  # MCP bridge CLI (npm package)
+│   └── src/                       # index.ts, config.ts, api-client.ts
 ├── nginx/                         # Reverse proxy configuration
 │   ├── nginx.conf                 # Development config
 │   ├── nginx.prod.conf            # Production config

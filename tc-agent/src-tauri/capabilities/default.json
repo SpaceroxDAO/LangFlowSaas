@@ -6,12 +6,36 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "store:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://*"
+        }
+      ]
+    },
     {
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "binaries/tc-connector",
-          "sidecar": true,
+          "name": "openclaw",
+          "cmd": "openclaw",
+          "args": true
+        },
+        {
+          "name": "npm",
+          "cmd": "npm",
+          "args": true
+        },
+        {
+          "name": "npx",
+          "cmd": "npx",
+          "args": true
+        },
+        {
+          "name": "node",
+          "cmd": "node",
           "args": true
         }
       ]

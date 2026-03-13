@@ -56,6 +56,7 @@ const userGuides: NavItem[] = [
   { title: 'Publishing agents', slug: 'publishing', path: '/resources/guides/publishing', icon: Package },
   { title: 'Embedding widgets', slug: 'embedding', path: '/resources/guides/embedding', icon: Globe },
   { title: 'Connecting tools', slug: 'mcp-servers', path: '/resources/guides/mcp-servers', icon: Plug },
+  { title: 'Connecting to OpenClaw', slug: 'openclaw', path: '/resources/guides/openclaw', icon: RefreshCw },
   { title: 'Plans & billing', slug: 'billing', path: '/resources/guides/billing', icon: CreditCard },
 ]
 

@@ -596,10 +596,10 @@ export function PlaygroundPage() {
               </div>
               <div>
                 <h1 className="text-base font-semibold text-gray-900 dark:text-white">{entityName}</h1>
-                {resolvedAgentComponent?.is_published ? (
+                {editAgentComponentId && isPublished(editAgentComponentId) ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-neutral-600" />
-                    <span className="text-xs text-gray-500 dark:text-neutral-400">Agent Offline</span>
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-xs text-green-600 dark:text-green-400">Published via OpenClaw</span>
                   </div>
                 ) : (
                   <p className="text-xs text-gray-500 dark:text-neutral-400">Chat Playground</p>
@@ -720,7 +720,7 @@ export function PlaygroundPage() {
           )}
 
           {/* Loading indicator for non-streaming mode */}
-          {isLoading && !useStreaming && messages[messages.length - 1]?.role === 'user' && (
+          {isLoading && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex items-start gap-3">
               {/* Assistant Avatar */}
               <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center overflow-hidden flex-shrink-0">

@@ -19,11 +19,12 @@
         "minWidth": 400,
         "minHeight": 600,
         "center": true,
-        "decorations": true
+        "decorations": true,
+        "useHttpsScheme": true
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://app.teachcharlie.ai https://*.clerk.accounts.dev https://*.clerk.dev https://clerk.teachcharlie.ai https://api.clerk.dev https://api.clerk.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.dev; style-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://*.clerk.dev; img-src 'self' https: data: blob:; font-src 'self' https: data:; frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.dev; worker-src 'self' blob:"
+      "csp": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
     }
   },
   "bundle": {
@@ -35,9 +36,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "externalBin": [
-      "binaries/tc-connector"
     ],
     "macOS": {
       "minimumSystemVersion": "12.0"

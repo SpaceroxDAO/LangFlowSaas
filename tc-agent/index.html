@@ -8,6 +8,40 @@
   </head>
   <body class="bg-gray-950 text-white antialiased">
     <div id="root"></div>
+    <script>
+    // Debug overlay — shows JS errors visually (double-click to dismiss)
+    (function() {
+      var overlay = document.createElement('div');
+      overlay.id = 'error-overlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);color:#ff6b6b;font-family:monospace;font-size:12px;padding:20px;z-index:999999;overflow-y:auto;display:none;white-space:pre-wrap;';
+      window.onerror = function(msg, src, line, col, err) {
+        overlay.style.display = 'block';
+        overlay.innerHTML += '\n[ERROR] ' + msg + '\n  at ' + src + ':' + line + '\n' + (err ? err.stack : '') + '\n---\n';
+        console.error('[ERROR-OVERLAY]', msg, src, line, err);
+      };
+      window.onunhandledrejection = function(e) {
+        overlay.style.display = 'block';
+        var r = e.reason;
+        var detail = '';
+        if (r) {
+          detail += 'Type: ' + typeof r + '\n';
+          if (r.message) detail += 'Message: ' + r.message + '\n';
+          if (r.status) detail += 'Status: ' + r.status + '\n';
+          if (r.statusText) detail += 'StatusText: ' + r.statusText + '\n';
+          if (r.stack) detail += 'Stack: ' + r.stack + '\n';
+          try { detail += 'JSON: ' + JSON.stringify(r, null, 2) + '\n'; } catch(x) { detail += 'String: ' + String(r) + '\n'; }
+        } else {
+          detail = 'reason is ' + String(r);
+        }
+        overlay.innerHTML += '\n[UNHANDLED PROMISE]\n' + detail + '\n---\n';
+        console.error('[ERROR-OVERLAY] Unhandled promise:', r);
+      };
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.appendChild(overlay);
+        overlay.addEventListener('dblclick', function() { overlay.style.display = 'none'; });
+      });
+    })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

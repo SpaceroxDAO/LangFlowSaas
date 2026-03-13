@@ -15,8 +15,10 @@ from sqlalchemy import select, and_
 from typing import Optional
 
 from app.database import AsyncSessionDep
+from app.middleware.clerk_auth import CurrentUser
 from app.models.workflow import Workflow
 from app.models.user import User
+from app.services.user_service import UserService
 from app.services.workflow_service import WorkflowService, WorkflowServiceError
 
 logger = logging.getLogger(__name__)
@@ -312,3 +314,97 @@ async def _execute_tool_call(
             "content": [{"type": "text", "text": f"Error executing tool: {str(e)}"}],
             "isError": True,
         }
+
+
+# ---------------------------------------------------------------------------
+# Playground chat via OpenClaw bridge (Clerk JWT auth)
+# ---------------------------------------------------------------------------
+
+class PlaygroundChatRequest(BaseModel):
+    workflow_id: str
+    message: str
+    conversation_id: Optional[str] = None
+
+
+class PlaygroundChatResponse(BaseModel):
+    message: str
+    conversation_id: str
+    message_id: str
+    via: str = "openclaw"
+
+
+@router.post(
+    "/playground-chat",
+    response_model=PlaygroundChatResponse,
+    summary="Chat via OpenClaw bridge (Playground)",
+    description="Clerk JWT-authenticated chat that routes through the same WorkflowService.chat() used by MCP tool calls.",
+)
+async def playground_chat_via_bridge(
+    body: PlaygroundChatRequest,
+    session: AsyncSessionDep,
+    clerk_user: CurrentUser,
+):
+    """Chat via OpenClaw bridge path — same execution as MCP tools/call but with Clerk auth and multi-turn support."""
+    user_service = UserService(session)
+    user = await user_service.get_or_create_from_clerk(clerk_user)
+
+    # Validate UUID format but use string for SQLite compatibility (VARCHAR id column)
+    try:
+        uuid.UUID(body.workflow_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid workflow_id: {body.workflow_id}",
+        )
+
+    result = await session.execute(
+        select(Workflow).where(
+            and_(
+                Workflow.id == body.workflow_id,
+                Workflow.user_id == user.id,
+                Workflow.is_agent_skill == True,
+                Workflow.is_active == True,
+            )
+        )
+    )
+    workflow = result.scalar_one_or_none()
+
+    if not workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workflow not found or not enabled as a skill.",
+        )
+
+    logger.info(
+        f"Playground OpenClaw chat: user={user.clerk_id}, workflow={workflow.id}"
+    )
+
+    try:
+        service = WorkflowService(session)
+        response_text, conv_id, msg_id = await asyncio.wait_for(
+            service.chat(
+                workflow=workflow,
+                user=user,
+                message=body.message,
+                conversation_id=body.conversation_id,
+            ),
+            timeout=MCP_TOOL_TIMEOUT,
+        )
+
+        return PlaygroundChatResponse(
+            message=response_text,
+            conversation_id=str(conv_id),
+            message_id=str(msg_id),
+            via="openclaw",
+        )
+
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=f"Chat timed out after {int(MCP_TOOL_TIMEOUT)} seconds.",
+        )
+    except WorkflowServiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )

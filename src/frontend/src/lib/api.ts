@@ -565,6 +565,7 @@ class ApiClient {
     })
   }
 
+
   /**
    * Stream chat with a workflow using Server-Sent Events.
    *
@@ -1345,6 +1346,10 @@ class ApiClient {
 
   async revokeMCPToken(): Promise<void> {
     return this.request('/api/v1/settings/mcp-token', { method: 'DELETE' })
+  }
+
+  async generateDesktopSetupCode(): Promise<{ code: string; expires_in: number }> {
+    return this.request('/api/v1/desktop/setup-code', { method: 'POST' })
   }
 
   async enhancedChatStream(

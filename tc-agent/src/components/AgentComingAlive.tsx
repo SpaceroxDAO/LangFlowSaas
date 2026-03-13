@@ -10,9 +10,9 @@ interface AgentComingAliveProps {
 
 const steps = [
   { label: "Connecting to Teach Charlie", icon: "link" },
-  { label: "Loading agent", icon: "agent" },
-  { label: "Activating skills", icon: "skills" },
-  { label: "Starting MCP bridge", icon: "bridge" },
+  { label: "Loading your agent", icon: "agent" },
+  { label: "Configuring OpenClaw", icon: "skills" },
+  { label: "Starting agent daemon", icon: "bridge" },
 ];
 
 export function AgentComingAlive({
